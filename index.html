@@ -58,10 +58,8 @@
       opacity:.45; padding:10px 20px 4px; color:#fff;
     }
     .purple { background:#F3E5F5; color:#7B1FA2; }
-    /* Passwort-Stärke */
     #pw-staerke-bar { margin-top:6px; height:4px; border-radius:2px; background:#D0D7E3; overflow:hidden; }
     #pw-staerke-fill { height:100%; width:0%; transition:width .3s,background .3s; }
-    /* Druck */
     @media print {
       .sidebar,.topbar,.card-footer,.btn,select,input,.tabs { display:none !important; }
       .main-content { margin-left:0 !important; }
@@ -125,18 +123,17 @@
 <main id="main-page"></main>
 </div>
 </div>
-<!-- Scripts – Reihenfolge wichtig -->
+<!-- Scripts in korrekter Reihenfolge -->
 <script src="data.js"></script>
-<script src="sync.js"></script>
+<script src="auth.js"></script>
 <script src="app.js"></script>
 <script src="app2.js"></script>
 <script src="pdf.js"></script>
-<script src="auth.js"></script>
 <script>
 // ── Hilfsfunktionen ──────────────────────────────────────────
-function showLoading(text='Laden...') {
+function showLoading(text) {
   document.getElementById('loading-overlay').style.display='flex';
-  document.getElementById('loading-text').textContent=text;
+  if(text) document.getElementById('loading-text').textContent=text;
 }
 function hideLoading() {
   document.getElementById('loading-overlay').style.display='none';
@@ -176,9 +173,7 @@ async function doLogin() {
   }
   errEl.style.display='none';
   showApp();
-  await initApp();
-  // Sync im Hintergrund starten – blockiert nicht
-  startSync().catch(e=>console.warn('Sync-Start-Fehler:',e.message));
+  initApp();
 }
 
 function doLogout() {
@@ -198,53 +193,36 @@ function zeigePwVergessen() {
       <button class="btn btn-ghost btn-sm" onclick="document.getElementById('pw-vergessen-overlay').remove()">✕</button></div>
     <div class="modal-body">
       <p style="font-size:.88rem;color:#374151;margin-bottom:16px">
-        Geben Sie Ihren Benutzernamen ein. Der Administrator wird Ihr Passwort zurücksetzen.</p>
-      <div class="form-group">
-        <label>Benutzername</label>
-        <input type="text" id="pw-reset-input" placeholder="benutzername" autocomplete="username">
+        Bitte wenden Sie sich an Ihren Administrator für ein neues Passwort.</p>
+      <div id="pw-reset-meldung" class="alert alert-info">
+        <span class="alert-icon">ℹ️</span>
+        <span>Administrator kontaktieren: <strong>bueh</strong> oder <strong>pfe</strong></span>
       </div>
-      <div id="pw-reset-meldung" style="display:none"></div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="document.getElementById('pw-vergessen-overlay').remove()">Abbrechen</button>
-      <button class="btn btn-primary" onclick="sendeResetAnfrage()">Anfrage senden</button>
+      <button class="btn btn-primary" onclick="document.getElementById('pw-vergessen-overlay').remove()">OK</button>
     </div>
   </div>`;
   document.body.appendChild(overlay);
-  setTimeout(()=>document.getElementById('pw-reset-input')?.focus(),100);
-}
-
-async function sendeResetAnfrage() {
-  const input=document.getElementById('pw-reset-input')?.value?.trim()||'';
-  const meldung=document.getElementById('pw-reset-meldung');
-  if (!input) {
-    meldung.innerHTML='<div class="alert alert-warning"><span class="alert-icon">⚠️</span><span>Bitte Benutzernamen eingeben.</span></div>';
-    meldung.style.display='block'; return;
-  }
-  // Nutzer in lokaler DB suchen
-  const nutzer=SLZB_DB.nutzer.find(n=>n.id===input||n.name.toLowerCase().includes(input.toLowerCase()));
-  meldung.innerHTML=`<div class="alert alert-success"><span class="alert-icon">✅</span>
-    <span>Anfrage gesendet. Bitte wenden Sie sich an Ihren Administrator für das neue Passwort.</span></div>`;
-  meldung.style.display='block';
 }
 
 // ── App-Start ────────────────────────────────────────────────
-async function startApp() {
+function startApp() {
   showLoading('SLZB-Erfolge wird geladen...');
   try {
     slzbLoad();
     const user = Auth.restore();
+    hideLoading();
     if (user) {
-      hideLoading(); showApp(); await initApp();
-      setTimeout(()=>{
-        startSync().catch(e=>console.warn('Sync:',e.message));
-      }, 2000);
+      showApp();
+      initApp();
     } else {
-      hideLoading(); showLogin();
+      showLogin();
     }
   } catch(e) {
     console.warn('Start-Fehler:', e.message);
-    hideLoading(); showLogin();
+    hideLoading();
+    showLogin();
   }
 }
 
