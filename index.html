@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+
+<html lang="de">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0" name="viewport"/>
+<title>SLZB-Erfolge</title>
+<link href="style.css" rel="stylesheet"/>
+<style>
+    .login-screen {
+      min-height:100vh; display:flex; align-items:center;
+      justify-content:center;
+      background:linear-gradient(135deg,#003366 0%,#001F4D 100%);
+      padding:20px;
+    }
+    .login-card {
+      background:#fff; border-radius:20px; padding:40px;
+      width:100%; max-width:420px;
+      box-shadow:0 20px 60px rgba(0,0,0,.3);
+    }
+    .login-logo { text-align:center; margin-bottom:28px; }
+    .login-logo .logo-big {
+      width:64px; height:64px; background:#003366;
+      border-radius:16px; display:inline-flex;
+      align-items:center; justify-content:center;
+      font-size:2rem; font-weight:900; color:#fff; margin-bottom:12px;
+    }
+    .login-logo h1 { font-size:1.4rem; color:#003366; margin-bottom:4px; }
+    .login-logo p  { font-size:.82rem; color:#6B7A99; }
+    .login-error {
+      background:#FEF2F2; border:1px solid #FECACA; color:#991B1B;
+      border-radius:8px; padding:10px 14px; font-size:.84rem;
+      margin-bottom:14px; display:none;
+    }
+    .login-hint {
+      background:#EFF6FF; border:1px solid #BFDBFE; color:#1E40AF;
+      border-radius:8px; padding:10px 14px; font-size:.78rem; margin-top:16px;
+    }
+    .loading-overlay {
+      position:fixed; inset:0; background:rgba(255,255,255,.9);
+      z-index:9999; display:flex; align-items:center;
+      justify-content:center; flex-direction:column; gap:14px;
+    }
+    .spinner {
+      width:40px; height:40px; border:4px solid #D0D7E3;
+      border-top-color:#003366; border-radius:50%;
+      animation:spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .loading-text { font-size:.9rem; color:#6B7A99; }
+    .mobile-menu-btn {
+      display:none; background:none; border:none;
+      font-size:1.4rem; cursor:pointer; padding:4px 8px;
+    }
+    @media (max-width:900px) { .mobile-menu-btn { display:block; } }
+    .nav-section-label {
+      font-size:.68rem; text-transform:uppercase; letter-spacing:.08em;
+      opacity:.45; padding:10px 20px 4px; color:#fff;
+    }
+    .purple { background:#F3E5F5; color:#7B1FA2; }
+    /* Passwort-Stärke */
+    #pw-staerke-bar { margin-top:6px; height:4px; border-radius:2px; background:#D0D7E3; overflow:hidden; }
+    #pw-staerke-fill { height:100%; width:0%; transition:width .3s,background .3s; }
+    /* Druck */
+    @media print {
+      .sidebar,.topbar,.card-footer,.btn,select,input,.tabs { display:none !important; }
+      .main-content { margin-left:0 !important; }
+      .chronik-druckkopf { display:block !important; }
+      .card { box-shadow:none !important; border:1px solid #ccc !important; }
+      body { background:white !important; }
+    }
+  </style>
+</head>
+<body>
+<!-- Loading -->
+<div class="loading-overlay" id="loading-overlay">
+<div class="spinner"></div>
+<div class="loading-text" id="loading-text">SLZB-Erfolge wird geladen...</div>
+</div>
+<!-- Login -->
+<div id="login-screen" style="display:none">
+<div class="login-screen">
+<div class="login-card">
+<div class="login-logo">
+<div class="logo-big">S</div>
+<h1>SLZB-Erfolge</h1>
+<p>Schul- und Leistungssportzentrum Berlin</p>
+</div>
+<div class="login-error" id="login-error"></div>
+<div class="form-group">
+<label>Benutzername</label>
+<input autocomplete="username" id="login-username" onkeydown="if(event.key==='Enter')doLogin()" placeholder="benutzername" type="text"/>
+</div>
+<div class="form-group">
+<label>Passwort</label>
+<input autocomplete="current-password" id="login-passwort" onkeydown="if(event.key==='Enter')doLogin()" placeholder="••••••••" type="password"/>
+</div>
+<button class="btn btn-primary w-full" id="login-btn" onclick="doLogin()" style="margin-top:8px">Anmelden</button>
+<div style="text-align:center;margin-top:14px">
+<a href="#" onclick="zeigePwVergessen();return false" style="font-size:.8rem;color:#003366;text-decoration:none">
+          Passwort vergessen?
+        </a>
+</div>
+<div class="login-hint">
+        Bei Problemen wenden Sie sich an Ihren Administrator.
+      </div>
+</div>
+</div>
+</div>
+<!-- Haupt-App -->
+<div id="app" style="display:none">
+<aside class="sidebar" id="sidebar"></aside>
+<div class="main-content">
+<header class="topbar">
+<button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+<div style="flex:1">
+<div class="topbar-title">SLZB-Erfolge</div>
+<div class="topbar-subtitle" id="topbar-subtitle">Schul- und Leistungssportzentrum Berlin</div>
+</div>
+<div class="topbar-actions">
+<button class="btn btn-ghost btn-sm" onclick="navigateTo('neue-meldung')" title="Neue Meldung">➕</button>
+<button class="btn btn-ghost btn-sm" onclick="doLogout()" title="Abmelden">⏻</button>
+</div>
+</header>
+<main id="main-page"></main>
+</div>
+</div>
+<!-- Scripts – Reihenfolge wichtig -->
+<script src="data.js"></script>
+<script src="sync.js"></script>
+<script src="app.js"></script>
+<script src="app2.js"></script>
+<script src="pdf.js"></script>
+<script src="auth.js"></script>
+<script>
+// ── Hilfsfunktionen ──────────────────────────────────────────
+function showLoading(text='Laden...') {
+  document.getElementById('loading-overlay').style.display='flex';
+  document.getElementById('loading-text').textContent=text;
+}
+function hideLoading() {
+  document.getElementById('loading-overlay').style.display='none';
+}
+function showLogin() {
+  document.getElementById('login-screen').style.display='block';
+  document.getElementById('app').style.display='none';
+  setTimeout(()=>document.getElementById('login-username')?.focus(),100);
+}
+function showApp() {
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='flex';
+}
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+// ── Login ────────────────────────────────────────────────────
+async function doLogin() {
+  const username = document.getElementById('login-username').value.trim();
+  const passwort = document.getElementById('login-passwort').value;
+  const errEl = document.getElementById('login-error');
+  const btn   = document.getElementById('login-btn');
+  if (!username||!passwort) {
+    errEl.textContent='Bitte Benutzername und Passwort eingeben.';
+    errEl.style.display='block'; return;
+  }
+  btn.disabled=true; btn.textContent='Anmelden...';
+  const result = await Auth.login(username, passwort);
+  btn.disabled=false; btn.textContent='Anmelden';
+  if (!result.ok) {
+    errEl.textContent='Benutzername oder Passwort falsch.';
+    errEl.style.display='block';
+    document.getElementById('login-passwort').value='';
+    await new Promise(r=>setTimeout(r,800));
+    return;
+  }
+  errEl.style.display='none';
+  showApp();
+  await initApp();
+  // Sync im Hintergrund starten – blockiert nicht
+  startSync().catch(e=>console.warn('Sync-Start-Fehler:',e.message));
+}
+
+function doLogout() {
+  if (!confirm('Wirklich abmelden?')) return;
+  Auth.logout();
+  showLogin();
+  document.getElementById('login-username').value='';
+  document.getElementById('login-passwort').value='';
+}
+
+// ── Passwort vergessen ───────────────────────────────────────
+function zeigePwVergessen() {
+  const overlay=document.createElement('div');
+  overlay.className='modal-overlay'; overlay.id='pw-vergessen-overlay';
+  overlay.innerHTML=`<div class="modal" style="max-width:420px">
+    <div class="modal-header"><h3>🔑 Passwort vergessen</h3>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('pw-vergessen-overlay').remove()">✕</button></div>
+    <div class="modal-body">
+      <p style="font-size:.88rem;color:#374151;margin-bottom:16px">
+        Geben Sie Ihren Benutzernamen ein. Der Administrator wird Ihr Passwort zurücksetzen.</p>
+      <div class="form-group">
+        <label>Benutzername</label>
+        <input type="text" id="pw-reset-input" placeholder="benutzername" autocomplete="username">
+      </div>
+      <div id="pw-reset-meldung" style="display:none"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="document.getElementById('pw-vergessen-overlay').remove()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="sendeResetAnfrage()">Anfrage senden</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  setTimeout(()=>document.getElementById('pw-reset-input')?.focus(),100);
+}
+
+async function sendeResetAnfrage() {
+  const input=document.getElementById('pw-reset-input')?.value?.trim()||'';
+  const meldung=document.getElementById('pw-reset-meldung');
+  if (!input) {
+    meldung.innerHTML='<div class="alert alert-warning"><span class="alert-icon">⚠️</span><span>Bitte Benutzernamen eingeben.</span></div>';
+    meldung.style.display='block'; return;
+  }
+  // Nutzer in lokaler DB suchen
+  const nutzer=SLZB_DB.nutzer.find(n=>n.id===input||n.name.toLowerCase().includes(input.toLowerCase()));
+  meldung.innerHTML=`<div class="alert alert-success"><span class="alert-icon">✅</span>
+    <span>Anfrage gesendet. Bitte wenden Sie sich an Ihren Administrator für das neue Passwort.</span></div>`;
+  meldung.style.display='block';
+}
+
+// ── App-Start ────────────────────────────────────────────────
+async function startApp() {
+  showLoading('SLZB-Erfolge wird geladen...');
+  try {
+    slzbLoad();
+    const user = Auth.restore();
+    if (user) {
+      hideLoading(); showApp(); await initApp();
+      // Sync im Hintergrund – blockiert nicht
+      startSync().catch(e=>console.warn('Sync-Fehler:',e.message));
+    } else {
+      hideLoading(); showLogin();
+    }
+  } catch(e) {
+    console.warn('Start-Fehler:', e.message);
+    hideLoading(); showLogin();
+  }
+}
+
+document.addEventListener('DOMContentLoaded', startApp);
+</script>
+</body>
+</html>
