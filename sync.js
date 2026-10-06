@@ -363,26 +363,46 @@ async function startSync() {
     return;
   }
 
-  // Verbindung testen
-  const verbunden = await Sync.teste();
+  // Verbindung testen (max. 3 Sekunden)
+  let verbunden = false;
+  try {
+    const testPromise = Sync.teste();
+    const timeout = new Promise(resolve => setTimeout(()=>resolve(false), 3000));
+    verbunden = await Promise.race([testPromise, timeout]);
+  } catch(e) { verbunden = false; }
+
   if (!verbunden) {
     console.log('Supabase nicht erreichbar – Offline-Modus');
     Sync._zeigeSyncStatus('📴 Offline-Modus – lokale Daten');
     return;
   }
 
-  // Ersten Download durchführen
+  // Ersten Download durchführen (max. 8 Sekunden)
   Sync._zeigeSyncStatus('🔄 Synchronisiere...');
-  const ok = await Sync.download();
+  let ok = false;
+  try {
+    const dlPromise = Sync.download();
+    const dlTimeout = new Promise(resolve => setTimeout(()=>resolve(false), 8000));
+    ok = await Promise.race([dlPromise, dlTimeout]);
+  } catch(e) { ok = false; }
   if (ok) {
-    // UI aktualisieren falls App bereits geladen
-    if (APP.currentPage) navigateTo(APP.currentPage);
+    // UI nur aktualisieren wenn kein Spinner läuft
+    // (d.h. Seite ist bereits fertig gerendert)
+    const main = document.getElementById('main-page');
+    const hatSpinner = main?.querySelector('.spinner');
+    if (!hatSpinner && APP.currentPage) {
+      try { navigateTo(APP.currentPage); } catch(e) {}
+    }
     // Alle 60 Sekunden neu synchronisieren
     setInterval(async () => {
       if (!Sync.syncLaeuft) {
         Sync.syncLaeuft = true;
         await Sync.download();
-        if (APP.currentPage) navigateTo(APP.currentPage);
+        // Nur aktualisieren wenn kein Spinner aktiv
+        const m = document.getElementById('main-page');
+        if (!m?.querySelector('.spinner') && APP.currentPage) {
+          try { navigateTo(APP.currentPage); } catch(e) {}
+        }
         Sync.syncLaeuft = false;
       }
     }, 60000);
