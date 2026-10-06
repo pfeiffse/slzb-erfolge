@@ -321,6 +321,21 @@ function kerndatenFelder(extra='') {
   ${extra}`;
 }
 
+// ── Bilder-Block (für alle Meldearten) ───────────────────────
+function bilderBlock() {
+  return `<div class="card mb-3">
+    <div class="card-header"><h2>📷 Bilder <span class="text-muted text-sm">(optional, 0–n)</span></h2></div>
+    <div class="card-body">
+      <div class="alert alert-info"><span class="alert-icon">ℹ️</span>
+        <span>Bilder nur hochladen wenn Nutzungsrechte vorhanden. <strong>Urheber und Quelle sind Pflichtfelder.</strong></span></div>
+      <div class="alert alert-warning mt-2"><span class="alert-icon">⚠️</span>
+        <span><strong>Teamfoto-Regel:</strong> Fehlt für eine abgebildete Person die Einwilligung, darf das Bild nicht verwendet werden. Keine automatische Unkenntlichmachung.</span></div>
+      <div id="bilder-liste"></div>
+      <button class="btn btn-ghost btn-sm mt-2" onclick="addBildRow()">+ Bild hinzufügen</button>
+    </div>
+  </div>`;
+}
+
 function bindKerndatenAC() {
   setTimeout(()=>{
     bindSportartAC('f-sportart-text','f-disziplin');
@@ -340,15 +355,7 @@ function renderEinzelerfolgForm() {
           <input type="url" id="f-quelle" placeholder="https://..."></div>`)}
       </div>
     </div>
-    <div class="card mb-3">
-      <div class="card-header"><h2>📷 Bilder (optional)</h2></div>
-      <div class="card-body">
-        <div class="alert alert-info"><span class="alert-icon">ℹ️</span>
-          <span>Bilder nur hochladen wenn Nutzungsrechte vorhanden. Urheber und Quelle sind Pflichtfelder.</span></div>
-        <div id="bilder-liste"></div>
-        <button class="btn btn-ghost btn-sm mt-2" onclick="addBildRow()">+ Bild hinzufügen</button>
-      </div>
-    </div>
+    ${bilderBlock()}
     <div class="card"><div class="card-footer">
       <button class="btn btn-ghost" onclick="APP.selectedMeldungsart=null;navigateTo('neue-meldung')">Abbrechen</button>
       <button class="btn btn-outline" onclick="speichereErfolg('Entwurf','Einzelerfolg')">💾 Entwurf</button>
@@ -390,6 +397,7 @@ function renderTeamerfolgForm() {
         <div id="team-beteiligte-liste"><p class="text-muted text-sm">Noch keine Beteiligten.</p></div>
       </div>
     </div>
+    ${bilderBlock()}
     <div class="card"><div class="card-footer">
       <button class="btn btn-ghost" onclick="APP.selectedMeldungsart=null;navigateTo('neue-meldung')">Abbrechen</button>
       <button class="btn btn-outline" onclick="speichereTeamerfolg('Entwurf')">💾 Entwurf</button>
@@ -427,11 +435,12 @@ function renderMinimalmeldungForm() {
         <div class="form-group"><label>Kurzinfo <span class="required">*</span></label>
           <textarea id="f-kurzinfo" rows="3" placeholder="Was ist passiert?"></textarea></div>
       </div>
-      <div class="card-footer">
-        <button class="btn btn-ghost" onclick="APP.selectedMeldungsart=null;navigateTo('neue-meldung')">Abbrechen</button>
-        <button class="btn btn-warning" onclick="speichereErfolg('Unvollständig','Minimalmeldung')">⚡ Einreichen</button>
-      </div>
     </div>
+    ${bilderBlock()}
+    <div class="card"><div class="card-footer">
+      <button class="btn btn-ghost" onclick="APP.selectedMeldungsart=null;navigateTo('neue-meldung')">Abbrechen</button>
+      <button class="btn btn-warning" onclick="speichereErfolg('Unvollständig','Minimalmeldung')">⚡ Einreichen</button>
+    </div></div>
   </div>`;
 }
 
@@ -458,6 +467,7 @@ function renderArtikelForm() {
         <button class="btn btn-primary" onclick="speichereArtikel()">📤 Einreichen</button>
       </div>
     </div>
+    ${bilderBlock()}
   </div>`;
 }
 
