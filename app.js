@@ -852,6 +852,197 @@ async function importDateiGewaehlt(input) {
   }
 }
 
+// ── Schüler-Import aus Excel/CSV ─────────────────────────────
+async function schuelerImportDateiGewaehlt(input) {
+  const preview = document.getElementById('schueler-import-preview');
+  if (!preview || !input.files?.length) return;
+  const datei = input.files[0];
+  preview.innerHTML = '<div class="alert alert-info mt-3"><span class="alert-icon">⏳</span><span>Datei wird eingelesen...</span></div>';
+  try {
+    const zeilen = await PDF.leseCSV(datei);
+    if (!zeilen.length) { preview.innerHTML = '<div class="alert alert-warning mt-3"><span class="alert-icon">⚠️</span><span>Keine Daten gefunden.</span></div>'; return; }
+    const spalten = Object.keys(zeilen[0]);
+    const findSpalte = (...k) => spalten.find(s=>k.some(x=>s.toLowerCase().includes(x.toLowerCase())))||spalten[0];
+    const colId       = findSpalte('id','nr','nummer','schüler');
+    const colNachname = findSpalte('name','nachname');
+    const colVorname  = findSpalte('vorname');
+    const colSportart = findSpalte('sportart','sport');
+    const colKlasse   = findSpalte('klasse');
+    const fehlendeKuerzel = new Set();
+    zeilen.forEach(z=>{
+      const k=(z[colSportart]||'').trim().toUpperCase();
+      if(k&&!SLZB_DB.sportarten.find(s=>s.kuerzel===k)) fehlendeKuerzel.add(k);
+    });
+    const vorschau = zeilen.slice(0,8);
+    preview.innerHTML = `
+      <div class="alert alert-success mt-3"><span class="alert-icon">✅</span>
+        <span><strong>${zeilen.length} Schüler</strong> erkannt.</span></div>
+      ${fehlendeKuerzel.size>0?`<div class="alert alert-warning mt-2"><span class="alert-icon">⚠️</span>
+        <span>Unbekannte Kürzel: <strong>${[...fehlendeKuerzel].join(', ')}</strong> – ohne Sportart importiert.</span></div>`:''}
+      <div class="card mt-3">
+        <div class="card-header"><h2>Spalten-Zuordnung prüfen</h2></div>
+        <div class="card-body">
+          <div class="form-row cols-3">
+            <div class="form-group"><label>Schüler-ID</label>
+              <select id="col-id">${spalten.map(s=>`<option${s===colId?' selected':''}>${esc(s)}</option>`).join('')}</select></div>
+            <div class="form-group"><label>Nachname</label>
+              <select id="col-nachname">${spalten.map(s=>`<option${s===colNachname?' selected':''}>${esc(s)}</option>`).join('')}</select></div>
+            <div class="form-group"><label>Vorname</label>
+              <select id="col-vorname">${spalten.map(s=>`<option${s===colVorname?' selected':''}>${esc(s)}</option>`).join('')}</select></div>
+            <div class="form-group"><label>Sportart</label>
+              <select id="col-sportart">${spalten.map(s=>`<option${s===colSportart?' selected':''}>${esc(s)}</option>`).join('')}</select></div>
+            <div class="form-group"><label>Klasse</label>
+              <select id="col-klasse">${spalten.map(s=>`<option${s===colKlasse?' selected':''}>${esc(s)}</option>`).join('')}</select></div>
+          </div>
+        </div>
+      </div>
+      <div class="import-table-wrap mt-3"><table>
+        <thead><tr><th>ID</th><th>Nachname</th><th>Vorname</th><th>Sportart</th><th>Klasse</th><th>Anzeigename</th><th>Status</th></tr></thead>
+        <tbody>${vorschau.map(z=>{
+          const k=(z[colSportart]||'').trim().toUpperCase();
+          const sp=SLZB_DB.sportarten.find(s=>s.kuerzel===k);
+          return`<tr class="${sp||!k?'import-row-ok':'import-row-err'}">
+            <td class="text-xs">${esc(z[colId]||'–')}</td>
+            <td>${esc(z[colNachname]||'–')}</td>
+            <td>${esc(z[colVorname]||'–')}</td>
+            <td>${esc(k)}${sp?` <span class="text-xs text-muted">(${esc(sp.name)})</span>`:'<span class="badge badge-warning text-xs">?</span>'}</td>
+            <td>${esc(z[colKlasse]||'–')}</td>
+            <td>${esc(z[colVorname]||'')} ${esc((z[colNachname]||'').slice(0,1))}.</td>
+            <td>${sp||!k?'<span class="badge badge-success">OK</span>':'<span class="badge badge-warning">Kürzel?</span>'}</td>
+          </tr>`;}).join('')}
+        </tbody>
+      </table></div>
+      <div class="alert alert-info mt-3"><span class="alert-icon">ℹ️</span>
+        <span>Alle Einwilligungen werden auf <strong>aktiv</strong> gesetzt (Opt-Out-Prinzip). Widersprüche danach über die Negativ-Liste eintragen.</span></div>
+      <button class="btn btn-primary mt-2" onclick="starteSchuelerImport(${JSON.stringify(zeilen).replace(/</g,'&lt;')})">
+        📥 ${zeilen.length} Schüler importieren
+      </button>`;
+  } catch(e) {
+    preview.innerHTML = `<div class="alert alert-danger mt-3"><span class="alert-icon">❌</span><span>Fehler: ${esc(e.message)}</span></div>`;
+  }
+}
+
+async function starteSchuelerImport(zeilen) {
+  const colId       = document.getElementById('col-id')?.value||'';
+  const colNachname = document.getElementById('col-nachname')?.value||'';
+  const colVorname  = document.getElementById('col-vorname')?.value||'';
+  const colSportart = document.getElementById('col-sportart')?.value||'';
+  const colKlasse   = document.getElementById('col-klasse')?.value||'';
+  let ok=0,fehler=0,uebersprungen=0,protokoll=[];
+  for (const z of zeilen) {
+    const rawId    = String(z[colId]||'').trim();
+    const nachname = String(z[colNachname]||'').trim();
+    const vorname  = String(z[colVorname]||'').trim();
+    const kuerzel  = String(z[colSportart]||'').trim().toUpperCase();
+    const klasse   = String(z[colKlasse]||'').trim();
+    if (!rawId||!nachname||!vorname) { fehler++; protokoll.push(`ID ${rawId||'?'}: Pflichtfelder fehlen`); continue; }
+    const schuelerNr = 'SLZB-' + rawId.padStart(6,'0');
+    if (SLZB_DB.schueler.find(s=>s.schuelerNr===rawId||s.id===schuelerNr)) {
+      uebersprungen++; protokoll.push(`${vorname} ${nachname}: bereits vorhanden`); continue;
+    }
+    const sp = SLZB_DB.sportarten.find(s=>s.kuerzel===kuerzel);
+    const neuerSchueler = {
+      id:schuelerNr, schuelerNr:rawId,
+      vorname, nachname,
+      anzeigename: vorname+' '+nachname.slice(0,1)+'.',
+      klasse, sportartId:sp?.id||null, gruppe:'Schüler', aktiv:true,
+      ew:{foto:true,print:true,homepage:true,digitalSignage:true,
+          socialMedia:false,einzeldarstellung:true,klasse:true},
+      ewGueltigBis:null, ewWiderruf:false,
+    };
+    SLZB_DB.schueler.push(neuerSchueler);
+    if (typeof Sync!=='undefined'&&Sync.verfuegbar) await Sync.uploadSchueler(neuerSchueler);
+    ok++;
+  }
+  slzbSave();
+  const preview=document.getElementById('schueler-import-preview');
+  if(preview) preview.innerHTML=`
+    <div class="alert alert-${fehler>0?'warning':'success'} mt-3">
+      <span class="alert-icon">${fehler>0?'⚠️':'✅'}</span>
+      <span><strong>Import abgeschlossen:</strong> ${ok} importiert · ${uebersprungen} übersprungen · ${fehler} Fehler.</span></div>
+    ${protokoll.length?`<pre style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:12px;font-size:.78rem;margin-top:8px;white-space:pre-wrap">${protokoll.join('\n')}</pre>`:''}
+    <button class="btn btn-outline mt-3" onclick="navigateTo('stammdaten')">→ Zu den Schülern</button>`;
+  if(ok>0) toast(`${ok} Schüler importiert!`,'success');
+}
+
+// ── Negativ-Liste importieren ─────────────────────────────────
+async function negativImportDateiGewaehlt(input) {
+  const preview=document.getElementById('negativ-import-preview');
+  if(!preview||!input.files?.length) return;
+  const datei=input.files[0];
+  preview.innerHTML='<div class="alert alert-info mt-3"><span class="alert-icon">⏳</span><span>Negativ-Liste wird eingelesen...</span></div>';
+  try {
+    const zeilen=await PDF.leseCSV(datei);
+    if(!zeilen.length){preview.innerHTML='<div class="alert alert-warning mt-3"><span class="alert-icon">⚠️</span><span>Keine Daten.</span></div>';return;}
+    const spalten=Object.keys(zeilen[0]);
+    const findSpalte=(...k)=>spalten.find(s=>k.some(x=>s.toLowerCase().includes(x.toLowerCase())))||'';
+    const colNachname=findSpalte('name','nachname');
+    const colVorname=findSpalte('vorname');
+    const colKlasse=findSpalte('klasse');
+    preview.innerHTML=`
+      <div class="alert alert-success mt-3"><span class="alert-icon">✅</span>
+        <span><strong>${zeilen.length} Einträge</strong> in der Negativ-Liste erkannt.</span></div>
+      <div class="import-table-wrap mt-2"><table>
+        <thead><tr><th>Nachname</th><th>Vorname</th><th>Klasse</th><th>Schüler gefunden</th></tr></thead>
+        <tbody>${zeilen.slice(0,8).map(z=>{
+          const nn=(z[colNachname]||'').trim();
+          const vn=(z[colVorname]||'').trim();
+          const kl=(z[colKlasse]||'').trim();
+          const s=SLZB_DB.schueler.find(s=>s.nachname?.toLowerCase()===nn.toLowerCase()&&s.vorname?.toLowerCase()===vn.toLowerCase());
+          return`<tr class="${s?'import-row-ok':'import-row-warn'}">
+            <td>${esc(nn)}</td><td>${esc(vn)}</td><td>${esc(kl)}</td>
+            <td>${s?`<span class="badge badge-success">${esc(s.anzeigename)}</span>`:'<span class="badge badge-warning">Nicht gefunden</span>'}</td>
+          </tr>`;}).join('')}
+        </tbody>
+      </table></div>
+      <button class="btn btn-danger mt-3" onclick="starteNegativImport(${JSON.stringify(zeilen).replace(/</g,'&lt;')})">
+        🚫 Widersprüche anwenden
+      </button>`;
+  } catch(e) {
+    preview.innerHTML=`<div class="alert alert-danger mt-3"><span class="alert-icon">❌</span><span>Fehler: ${esc(e.message)}</span></div>`;
+  }
+}
+
+async function starteNegativImport(zeilen) {
+  const spalten=Object.keys(zeilen[0]||{});
+  const findSpalte=(...k)=>spalten.find(s=>k.some(x=>s.toLowerCase().includes(x.toLowerCase())))||'';
+  const colNachname=findSpalte('name','nachname');
+  const colVorname=findSpalte('vorname');
+  const istX=(val)=>{
+    if(!val) return false;
+    const v=String(val).trim().toLowerCase();
+    return v==='x'||v==='ja'||v==='yes'||v==='1'||v==='true'||v==='✓'||v==='j';
+  };
+  let ok=0,nichtGefunden=0;
+  for (const z of zeilen) {
+    const nn=String(z[colNachname]||'').trim();
+    const vn=String(z[colVorname]||'').trim();
+    if(!nn||!vn) continue;
+    const s=SLZB_DB.schueler.find(s=>s.nachname?.toLowerCase()===nn.toLowerCase()&&s.vorname?.toLowerCase()===vn.toLowerCase());
+    if(!s){nichtGefunden++;continue;}
+    // Spaltenwerte als Array (Position 3-12)
+    const w=Object.values(z);
+    // Widerspruch Namensveröffentlichung: Print(3) Presse(4) Homepage(5) Events(6) Social(7)
+    // Widerspruch Fotoveröffentlichung:   Print(8) Presse(9) Homepage(10) Events(11) Social(12)
+    if(istX(w[3])||istX(w[8]))  s.ew.print=false;
+    if(istX(w[5])||istX(w[10])) s.ew.homepage=false;
+    if(istX(w[6])||istX(w[11])) s.ew.digitalSignage=false;
+    if(istX(w[7])||istX(w[12])) s.ew.socialMedia=false;
+    if(istX(w[8])||istX(w[9])||istX(w[10])||istX(w[11])||istX(w[12])) s.ew.foto=false;
+    if(typeof Sync!=='undefined'&&Sync.verfuegbar) await Sync.uploadSchueler(s);
+    ok++;
+  }
+  slzbSave();
+  const preview=document.getElementById('negativ-import-preview');
+  if(preview) preview.innerHTML=`
+    <div class="alert alert-success mt-3"><span class="alert-icon">✅</span>
+      <span><strong>Negativ-Liste angewendet:</strong> ${ok} Widersprüche gesetzt · ${nichtGefunden} nicht gefunden.</span></div>
+    ${nichtGefunden>0?`<div class="alert alert-warning mt-2"><span class="alert-icon">⚠️</span>
+      <span>${nichtGefunden} Einträge konnten keinem Schüler zugeordnet werden. Bitte Namen prüfen.</span></div>`:''}
+    <button class="btn btn-outline mt-3" onclick="navigateTo('stammdaten')">→ Zu den Schülern</button>`;
+  toast(`${ok} Widersprüche angewendet`,'success');
+}
+
 function starteImport(zeilen) {
   let ok=0,fehler=0,protokoll=[];
   zeilen.forEach((z,i)=>{

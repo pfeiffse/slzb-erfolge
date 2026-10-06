@@ -437,25 +437,7 @@ function renderAusgaben() {
         </tbody>
       </table></div>
     </div>
-  </div>`;
-}
-
-// ── Stammdaten ───────────────────────────────────────────────
-function renderStammdaten() {
-  return`<div class="page">
-    <div class="page-header"><h1>⚙️ Stammdaten</h1></div>
-    <div class="tabs">
-      <button class="tab-btn active" onclick="switchTab('sd-sportarten')">Sportarten (${SLZB_DB.sportarten.length})</button>
-      <button class="tab-btn" onclick="switchTab('sd-wettbewerbe')">Wettbewerbe (${SLZB_DB.wettbewerbe.length})</button>
-      <button class="tab-btn" onclick="switchTab('sd-schueler')">Schüler (${SLZB_DB.schueler.length})</button>
-      <button class="tab-btn" onclick="switchTab('sd-teams')">Teams (${SLZB_DB.teams.length})</button>
-    </div>
-    <div id="tab-sd-sportarten" class="tab-panel active">
-      <div class="card"><div class="table-wrap"><table>
-        <thead><tr><th>Kürzel</th><th>Name</th><th>Kategorie</th><th>Aktiv</th></tr></thead>
-        <tbody>${SLZB_DB.sportarten.map(s=>`<tr><td><strong>${esc(s.kuerzel)}</strong></td><td>${esc(s.name)}</td><td>${esc(s.kategorie)}</td><td>${s.aktiv?'✅':'❌'}</td></tr>`).join('')}</tbody>
-      </table></div></div>
-    </div>
+  
     <div id="tab-sd-wettbewerbe" class="tab-panel">
       <div class="card-header" style="padding:16px 20px;display:flex;align-items:center;gap:10px;background:#fff;border-radius:var(--radius-lg) var(--radius-lg) 0 0;border:1px solid var(--slzb-border);border-bottom:none">
         <h2 style="font-size:1rem;font-weight:700;color:var(--slzb-primary);flex:1">Wettbewerbe</h2>
@@ -482,6 +464,61 @@ function renderStammdaten() {
         </tbody>
       </table></div></div>
     </div>
+    <div id="tab-sd-schueler-import" class="tab-panel">
+      <div class="card mb-3">
+        <div class="card-header"><h2>📥 Schüler aus Excel importieren</h2></div>
+        <div class="card-body">
+          <div class="alert alert-info mb-3"><span class="alert-icon">ℹ️</span>
+            <span>Erwartete Spalten: <strong>Schüler-ID | Name (Nachname) | Vorname | Status | Sportart | Klasse | Jahrgang</strong><br>
+            Alle Einwilligungen werden auf <strong>true</strong> gesetzt (Opt-Out-Prinzip). Widersprüche separat über die Negativ-Liste eintragen.</span></div>
+          <div class="alert alert-warning mb-3"><span class="alert-icon">⚠️</span>
+            <span>Nur Excel-Dateien (.xlsx) oder CSV. Keine echten Daten in der Demo-Umgebung testen.</span></div>
+          <div class="form-group">
+            <label>Excel- oder CSV-Datei hochladen</label>
+            <input type="file" id="schueler-import-file" accept=".xlsx,.xls,.csv"
+              onchange="schuelerImportDateiGewaehlt(this)">
+          </div>
+          <div id="schueler-import-preview"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-sd-negativ" class="tab-panel">
+      <div class="card mb-3">
+        <div class="card-header"><h2>🚫 Negativ-Liste (Widersprüche)</h2></div>
+        <div class="card-body">
+          <div class="alert alert-info mb-3"><span class="alert-icon">ℹ️</span>
+            <span>Wer auf der Negativ-Liste steht hat <strong>widersprochen</strong>. Alle anderen Schüler haben alle Freigaben aktiv.<br>
+            Spalten: <strong>Name | Vorname | Klasse | Widerspruch Namensveröffentlichung (Print/Presse/Homepage/Events/Social) | Widerspruch Fotoveröffentlichung (Print/Presse/Homepage/Events/Social)</strong></span></div>
+          <div class="form-group">
+            <label>Negativ-Liste hochladen (Excel oder CSV)</label>
+            <input type="file" id="negativ-import-file" accept=".xlsx,.xls,.csv"
+              onchange="negativImportDateiGewaehlt(this)">
+          </div>
+          <div id="negativ-import-preview"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h2>Aktuelle Widersprüche</h2></div>
+        <div class="card-body">
+          ${SLZB_DB.schueler.filter(s=>s.ewWiderruf||Object.values(s.ew||{}).some(v=>!v)).length===0
+            ? '<p class="text-muted">Keine Widersprüche erfasst.</p>'
+            : `<div class="table-wrap"><table>
+              <thead><tr><th>Schüler/in</th><th>Klasse</th><th>Foto</th><th>Print</th><th>Homepage</th><th>Social</th><th>Widerruf</th></tr></thead>
+              <tbody>${SLZB_DB.schueler.filter(s=>s.ewWiderruf||!s.ew?.foto||!s.ew?.print||!s.ew?.homepage||!s.ew?.socialMedia).map(s=>`<tr>
+                <td>${esc(s.anzeigename)}</td>
+                <td>${esc(s.klasse||'–')}</td>
+                <td>${einwilligungIcon(s.ew?.foto)}</td>
+                <td>${einwilligungIcon(s.ew?.print)}</td>
+                <td>${einwilligungIcon(s.ew?.homepage)}</td>
+                <td>${einwilligungIcon(s.ew?.socialMedia)}</td>
+                <td>${s.ewWiderruf?'<span class="badge badge-danger">Widerrufen</span>':'–'}</td>
+              </tr>`).join('')}</tbody>
+            </table></div>`}
+        </div>
+      </div>
+    </div>
+
     <div id="tab-sd-teams" class="tab-panel">
       <div class="card"><div class="table-wrap"><table>
         <thead><tr><th>Name</th><th>Sportart</th><th>Kategorie</th><th>Schuljahr</th></tr></thead>

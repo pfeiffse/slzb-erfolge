@@ -7,26 +7,23 @@ const SLZB_DB = {
 
   // ── Sportarten ──────────────────────────────────────────
   sportarten: [
-    {id:'SP01',name:'Leichtathletik',kuerzel:'LA',kategorie:'Leichtathletik',aktiv:true,
-     disziplinen:['100m Sprint','200m Sprint','400m','800m','1500m','5000m','110m Hürden','400m Hürden','Hochsprung','Weitsprung','Dreisprung','Stabhochsprung','Kugelstoßen','Diskuswurf','Speerwurf','Hammerwurf','4×100m Staffel','4×400m Staffel','Zehnkampf','Siebenkampf']},
-    {id:'SP02',name:'Schwimmen',kuerzel:'SW',kategorie:'Wassersport',aktiv:true,
-     disziplinen:['50m Freistil','100m Freistil','200m Freistil','400m Freistil','800m Freistil','100m Rücken','200m Rücken','100m Brust','200m Brust','100m Schmetterling','200m Schmetterling','200m Lagen','400m Lagen']},
-    {id:'SP03',name:'Judo',kuerzel:'JU',kategorie:'Kampfsport',aktiv:true,
-     disziplinen:['Einzel','Mannschaft','Kata']},
-    {id:'SP04',name:'Fußball',kuerzel:'FB',kategorie:'Mannschaftssport',aktiv:true,
-     disziplinen:['Mannschaft','Futsal']},
-    {id:'SP05',name:'Turnen',kuerzel:'TU',kategorie:'Turnen',aktiv:true,
-     disziplinen:['Boden','Reck','Barren','Ringe','Pferd','Sprung','Mehrkampf','Rhythmische Sportgymnastik']},
-    {id:'SP06',name:'Radsport',kuerzel:'RS',kategorie:'Radsport',aktiv:true,
-     disziplinen:['Straße','Bahn','MTB','BMX']},
-    {id:'SP07',name:'Boxen',kuerzel:'BX',kategorie:'Kampfsport',aktiv:true,
-     disziplinen:['Einzel']},
-    {id:'SP08',name:'Rudern',kuerzel:'RU',kategorie:'Wassersport',aktiv:true,
-     disziplinen:['Einer','Zweier','Vierer','Achter']},
-    {id:'SP09',name:'Volleyball',kuerzel:'VB',kategorie:'Mannschaftssport',aktiv:true,
-     disziplinen:['Mannschaft','Beach-Volleyball']},
-    {id:'SP10',name:'Ringen',kuerzel:'RI',kategorie:'Kampfsport',aktiv:true,
-     disziplinen:['Freistil','Griechisch-Römisch']},
+    {id:'SP01',name:'Basketball',       kuerzel:'BA',kategorie:'Mannschaftssport',aktiv:true,disziplinen:['Mannschaft']},
+    {id:'SP02',name:'Beachvolleyball',  kuerzel:'BV',kategorie:'Mannschaftssport',aktiv:true,disziplinen:['Mannschaft','Mixed']},
+    {id:'SP03',name:'Bogenschießen',    kuerzel:'BO',kategorie:'Leichtathletik',  aktiv:true,disziplinen:['Recurve','Compound','Blankbogen']},
+    {id:'SP04',name:'Boxen',            kuerzel:'BX',kategorie:'Kampfsport',      aktiv:true,disziplinen:['Einzel']},
+    {id:'SP05',name:'Eishockey',        kuerzel:'EH',kategorie:'Mannschaftssport',aktiv:true,disziplinen:['Mannschaft']},
+    {id:'SP06',name:'Eiskunstlauf',     kuerzel:'EK',kategorie:'Turnen',          aktiv:true,disziplinen:['Einzel','Paarlauf','Eistanz']},
+    {id:'SP07',name:'Eisschnelllauf',   kuerzel:'ES',kategorie:'Leichtathletik',  aktiv:true,disziplinen:['500m','1000m','1500m','3000m','5000m','10000m','Massenstart']},
+    {id:'SP08',name:'Gewichtheben',     kuerzel:'GH',kategorie:'Kampfsport',      aktiv:true,disziplinen:['Reißen','Stoßen','Zweikampf']},
+    {id:'SP09',name:'Handball',         kuerzel:'HB',kategorie:'Mannschaftssport',aktiv:true,disziplinen:['Mannschaft']},
+    {id:'SP10',name:'Judo',             kuerzel:'JU',kategorie:'Kampfsport',      aktiv:true,disziplinen:['Einzel','Mannschaft','Kata']},
+    {id:'SP11',name:'Leichtathletik',   kuerzel:'LA',kategorie:'Leichtathletik',  aktiv:true,disziplinen:['100m Sprint','200m Sprint','400m','800m','1500m','5000m','10000m','110m Hürden','400m Hürden','Hochsprung','Weitsprung','Dreisprung','Stabhochsprung','Kugelstoßen','Diskuswurf','Speerwurf','Hammerwurf','4×100m Staffel','4×400m Staffel','Zehnkampf','Siebenkampf']},
+    {id:'SP12',name:'Para-Schwimmen',   kuerzel:'PS',kategorie:'Wassersport',     aktiv:true,disziplinen:['50m Freistil','100m Freistil','200m Freistil','400m Freistil','100m Rücken','100m Brust','100m Schmetterling','200m Lagen']},
+    {id:'SP13',name:'Radsport',         kuerzel:'RS',kategorie:'Radsport',        aktiv:true,disziplinen:['Straße','Bahn','MTB','BMX','Zeitfahren']},
+    {id:'SP14',name:'Schwimmen',        kuerzel:'SW',kategorie:'Wassersport',     aktiv:true,disziplinen:['50m Freistil','100m Freistil','200m Freistil','400m Freistil','800m Freistil','1500m Freistil','100m Rücken','200m Rücken','100m Brust','200m Brust','100m Schmetterling','200m Schmetterling','200m Lagen','400m Lagen']},
+    {id:'SP15',name:'Turnen (männlich)',kuerzel:'TM',kategorie:'Turnen',          aktiv:true,disziplinen:['Boden','Reck','Barren','Ringe','Pferd','Sprung','Mehrkampf']},
+    {id:'SP16',name:'Volleyball',       kuerzel:'VB',kategorie:'Mannschaftssport',aktiv:true,disziplinen:['Mannschaft']},
+    {id:'SP17',name:'Wasserspringen',   kuerzel:'WS',kategorie:'Wassersport',     aktiv:true,disziplinen:['1m Brett','3m Brett','10m Turm','Synchron 3m','Synchron 10m']},
   ],
 
   // ── Wettbewerbe ─────────────────────────────────────────
@@ -68,14 +65,34 @@ const SLZB_DB = {
   ],
 
   // ── Nutzer ───────────────────────────────────────────────
-  // Passwort für alle: Admin1234!
-  // SHA-256: 5ce41ada64f1e8ffb0acfaafa622b141438f3a5777785e7f0b830fb73e40d3d6
+  // Demo-Nutzer deaktiviert. Echte Nutzer via Supabase.
+  // Fallback für Offline-Modus:
   nutzer: [
-    {id:'admin1',username:'admin',passwordHash:'5ce41ada64f1e8ffb0acfaafa622b141438f3a5777785e7f0b830fb73e40d3d6',anzeigename:'Administrator',rolle:'admin',aktiv:true},
-    {id:'trainer1',username:'trainer1',passwordHash:'5ce41ada64f1e8ffb0acfaafa622b141438f3a5777785e7f0b830fb73e40d3d6',anzeigename:'K. Trainer',rolle:'trainer',aktiv:true},
-    {id:'redaktion1',username:'redaktion1',passwordHash:'5ce41ada64f1e8ffb0acfaafa622b141438f3a5777785e7f0b830fb73e40d3d6',anzeigename:'R. Redakteur',rolle:'redaktion',aktiv:true},
-    {id:'oea1',username:'oea1',passwordHash:'5ce41ada64f1e8ffb0acfaafa622b141438f3a5777785e7f0b830fb73e40d3d6',anzeigename:'Ö. Öffentlichkeit',rolle:'oea',aktiv:true},
-    {id:'datenschutz1',username:'datenschutz1',passwordHash:'5ce41ada64f1e8ffb0acfaafa622b141438f3a5777785e7f0b830fb73e40d3d6',anzeigename:'D. Datenschutz',rolle:'datenschutz',aktiv:true},
+    // Admins
+    {id:'bueh1',username:'bueh',passwordHash:'3795d7ae4e6e172d381f7aaab441787aba8da52e25e715fd66a3b41c1fcb92dc',anzeigename:'Bueh',rolle:'admin',aktiv:true},
+    {id:'pfe1', username:'pfe', passwordHash:'7f12c71d6f935f73b3dd1bda5bcd7cd34282b05ee13f997d8465682919cfa0b5',anzeigename:'Pfe', rolle:'admin',aktiv:true},
+    // Öffentlichkeitsarbeit
+    {id:'str1', username:'str', passwordHash:'93f4f4262a091cb4a8d8b317488f611a740854cdc4220dee02df21523f2563e8',anzeigename:'Str', rolle:'oea',aktiv:true},
+    // Redaktion
+    {id:'unt1', username:'unt', passwordHash:'a4886e3310aa045745970ff1b858853ecd1470c0041e3653311bb1f236e609a8',anzeigename:'Unt', rolle:'redaktion',aktiv:true},
+    // Trainer je Sportart (Passwort: 1234)
+    {id:'t_ba',username:'basketball',      passwordHash:'03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4',anzeigename:'Basketball',       rolle:'trainer',aktiv:true},
+    {id:'t_bv',username:'beachvolleyball', passwordHash:'03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4',anzeigename:'Beachvolleyball',  rolle:'trainer',aktiv:true},
+    {id:'t_bo',username:'bogenschiessen',  passwordHash:'03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4',anzeigename:'Bogenschießen',    rolle:'trainer',aktiv:true},
+    {id:'t_bx',username:'boxen',           passwordHash:'03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4',anzeigename:'Boxen',            rolle:'trainer',aktiv:true},
+    {id:'t_eh',username:'eishockey',       passwordHash:'03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4',anzeigename:'Eishockey',        rolle:'trainer',aktiv:true},
+    {id:'t_ek',username:'eiskunstlauf',    passwordHash:'03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4',anzeigename:'Eiskunstlauf',     rolle:'trainer',aktiv:true},
+    {id:'t_es',username:'eisschnelllauf',  passwordHash:'03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4',anzeigename:'Eisschnelllauf',   rolle:'trainer',aktiv:true},
+    {id:'t_gh',username:'gewichtheben',    passwordHash:'03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4',anzeigename:'Gewichtheben',     rolle:'trainer',aktiv:true},
+    {id:'t_hb',username:'handball',        passwordHash:'03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4',anzeigename:'Handball',         rolle:'trainer',aktiv:true},
+    {id:'t_ju',username:'judo',            passwordHash:'03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4',anzeigename:'Judo',             rolle:'trainer',aktiv:true},
+    {id:'t_la',username:'leichtathletik',  passwordHash:'03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4',anzeigename:'Leichtathletik',   rolle:'trainer',aktiv:true},
+    {id:'t_ps',username:'para_schwimmen',  passwordHash:'03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4',anzeigename:'Para-Schwimmen',   rolle:'trainer',aktiv:true},
+    {id:'t_rs',username:'radsport',        passwordHash:'03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4',anzeigename:'Radsport',         rolle:'trainer',aktiv:true},
+    {id:'t_sw',username:'schwimmen',       passwordHash:'03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4',anzeigename:'Schwimmen',        rolle:'trainer',aktiv:true},
+    {id:'t_tm',username:'turnen_maennlich',passwordHash:'03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4',anzeigename:'Turnen (männlich)','rolle':'trainer',aktiv:true},
+    {id:'t_vb',username:'volleyball',      passwordHash:'03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4',anzeigename:'Volleyball',       rolle:'trainer',aktiv:true},
+    {id:'t_ws',username:'wasserspringen',  passwordHash:'03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4',anzeigename:'Wasserspringen',   rolle:'trainer',aktiv:true},
   ],
 
   // ── Erfolge ──────────────────────────────────────────────
