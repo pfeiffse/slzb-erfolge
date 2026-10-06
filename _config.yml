@@ -1,0 +1,11 @@
+# GitHub Pages Konfiguration
+# Stellt sicher dass JS/CSS korrekt ausgeliefert werden
+
+plugins: []
+
+# MIME-Types explizit setzen
+include:
+  - "*.js"
+  - "*.css"
+  - "*.html"
+  - "*.sql"
