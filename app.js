@@ -114,9 +114,23 @@ function navigateTo(page, params={}) {
     jahreschronik:    renderJahreschronik,
   };
   const fn=pages[page];
-  try { main.innerHTML=fn?fn():`<div class="page"><p>Seite nicht gefunden.</p></div>`; }
-  catch(e) { main.innerHTML=`<div class="page"><div class="alert alert-danger"><span class="alert-icon">❌</span><span>Fehler: ${esc(e.message)}</span></div></div>`; }
-  updateBadges();
+  try {
+    const result = fn ? fn() : null;
+    // Falls fn() ein Promise zurückgibt (async), behandeln
+    if (result && typeof result.then === 'function') {
+      result.then(html=>{
+        main.innerHTML = html || `<div class="page"><p>Seite nicht gefunden.</p></div>`;
+        updateBadges();
+      }).catch(e=>{
+        main.innerHTML=`<div class="page"><div class="alert alert-danger"><span class="alert-icon">❌</span><span>Fehler: ${esc(e.message)}</span></div></div>`;
+      });
+    } else {
+      main.innerHTML = result || `<div class="page"><p>Seite nicht gefunden.</p></div>`;
+      updateBadges();
+    }
+  } catch(e) {
+    main.innerHTML=`<div class="page"><div class="alert alert-danger"><span class="alert-icon">❌</span><span>Fehler: ${esc(e.message)}</span></div></div>`;
+  }
 }
 
 function updateBadges() {

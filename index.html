@@ -236,8 +236,9 @@ async function startApp() {
     const user = Auth.restore();
     if (user) {
       hideLoading(); showApp(); await initApp();
-      // Sync im Hintergrund – blockiert nicht
-      startSync().catch(e=>console.warn('Sync-Fehler:',e.message));
+      setTimeout(()=>{
+        startSync().catch(e=>console.warn('Sync:',e.message));
+      }, 2000);
     } else {
       hideLoading(); showLogin();
     }
