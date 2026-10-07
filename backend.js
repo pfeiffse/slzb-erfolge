@@ -164,16 +164,19 @@ const Auth = {
 // ── Erfolge (Supabase) ───────────────────────────────────────
 const DB = {
 
-  // Nächste Erfolg-Nummer generieren
+  // Nächste Erfolg-Nummer generieren (robust gegen Duplikate)
   async naechsteErfolgNr() {
+    // Alle vorhandenen Nummern laden und höchste finden
     const { data } = await Backend.client
       .from('achievements')
       .select('achievement_no')
-      .order('submitted_at', { ascending: false })
-      .limit(1);
-    if (!data?.length || !data[0].achievement_no) return 'ERF-00000001';
-    const letzteNr = parseInt((data[0].achievement_no || '').replace('ERF-', '')) || 0;
-    return 'ERF-' + String(letzteNr + 1).padStart(8, '0');
+      .not('achievement_no', 'is', null);
+    if (!data?.length) return 'ERF-00000001';
+    const maxNr = data.reduce((max, row) => {
+      const nr = parseInt((row.achievement_no || '').replace('ERF-', '')) || 0;
+      return Math.max(max, nr);
+    }, 0);
+    return 'ERF-' + String(maxNr + 1).padStart(8, '0');
   },
 
   // Alle Erfolge laden
