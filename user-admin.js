@@ -205,49 +205,53 @@ async function speichereNutzerRolle(userId) {
   if (!roleEl) { toast('Rollen-Dropdown nicht gefunden','warning'); return; }
   const neueRolle = roleEl.value;
   debug(`Rolle speichern: ${userId} → ${neueRolle}`);
-  try {
-    // Erst Edge Function versuchen
+
+  // Direkt in profiles-Tabelle (zuverlässiger als Edge Function)
+  const { error } = await Backend.client
+    .from('profiles')
+    .update({ role: neueRolle })
+    .eq('user_id', userId);
+
+  if (error) {
+    debug('Rolle speichern Fehler: '+error.message);
+    // Fallback: Edge Function
     try {
       await UserAdmin.call('update', { userId, role: neueRolle });
-    } catch(e) {
-      debug('Edge Function fehlgeschlagen, Fallback auf direkte DB: '+e.message);
-      // Fallback: direkt in profiles-Tabelle
-      const { error } = await Backend.client
-        .from('profiles')
-        .update({ role: neueRolle })
-        .eq('user_id', userId);
-      if (error) throw new Error(error.message);
+      toast('Rolle gespeichert ✅', 'success');
+    } catch(e2) {
+      toast('Fehler: '+error.message, 'danger');
+      return;
     }
+  } else {
     toast('Rolle gespeichert ✅', 'success');
-    await ladeNutzerverwaltung();
-  } catch(e) {
-    debug('Rolle speichern Fehler: '+e.message);
-    toast('Fehler: '+e.message, 'danger');
   }
+  await ladeNutzerverwaltung();
 }
 
 async function setzeNutzerAktiv(userId, active) {
   if (!confirm(`Konto wirklich ${active?'aktivieren':'deaktivieren'}?`)) return;
   debug(`Aktivierung: ${userId} → ${active}`);
-  try {
-    // Erst Edge Function versuchen
+
+  // Direkt in profiles-Tabelle
+  const { error } = await Backend.client
+    .from('profiles')
+    .update({ active: active })
+    .eq('user_id', userId);
+
+  if (error) {
+    debug('Aktivierung Fehler: '+error.message);
+    // Fallback: Edge Function
     try {
       await UserAdmin.call('update', { userId, active });
-    } catch(e) {
-      debug('Edge Function fehlgeschlagen, Fallback auf direkte DB: '+e.message);
-      // Fallback: direkt in profiles-Tabelle
-      const { error } = await Backend.client
-        .from('profiles')
-        .update({ active: active })
-        .eq('user_id', userId);
-      if (error) throw new Error(error.message);
+      toast(`Konto ${active?'aktiviert ✅':'deaktiviert'}`, 'success');
+    } catch(e2) {
+      toast('Fehler: '+error.message, 'danger');
+      return;
     }
+  } else {
     toast(`Konto ${active?'aktiviert ✅':'deaktiviert'}`, 'success');
-    await ladeNutzerverwaltung();
-  } catch(e) {
-    debug('Aktivierung Fehler: '+e.message);
-    toast('Fehler: '+e.message, 'danger');
   }
+  await ladeNutzerverwaltung();
 }
 
 function zeigePasswortAendernV3(userId, name) {

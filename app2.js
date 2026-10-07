@@ -1,5 +1,5 @@
 // ============================================================
-// SLZB-Erfolge v3 – App-Logik Teil 2 
+// SLZB-Erfolge v3 – App-Logik Teil 2
 // ============================================================
 
 // ── Erfolg-Detail ────────────────────────────────────────────
@@ -383,8 +383,20 @@ async function druckeJTFO(erfolgId) {
 
 // ── JTFO-HTML-Generator ──────────────────────────────────────
 function erzeugeJTFOHtml(e, typ) {
-  const sportart   = e.sportartText || SLZB_DB.getSportart(e.sportartId)?.name || '';
-  const wettbewerb = e.wettbewerbText || '';
+  // Sportart: mehrere Quellen versuchen
+  const sportart = e.sportartText ||
+    SLZB_DB.getSportart(e.sportartId)?.name ||
+    SLZB_DB.sportarten.find(s=>s.id===e.sportartId)?.name ||
+    e.sportartId || e.sport || '';
+
+  // Wettbewerb: mehrere Quellen versuchen
+  const wettbewerb = e.wettbewerbText ||
+    SLZB_DB.getWettbewerb(e.wettbewerbId)?.name ||
+    e.wettbewerbId || '';
+
+  // Titel als Fallback wenn Sportart leer
+  const titelSauber = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
+
   const platz      = e.platzierung || '';
   const medaille   = e.medaille && e.medaille !== 'keine' ? e.medaille.toUpperCase() : '';
   const disziplin  = e.disziplin || '';
@@ -528,8 +540,9 @@ function erzeugeJTFOHtml(e, typ) {
   </div>
 
   <div class="body">
-    <div class="sport-label">${esc(sportart)}</div>
+    <div class="sport-label">${esc(sportart || titelSauber)}</div>
     ${disziplin?`<div class="disziplin-label">${esc(disziplin)}</div>`:''}
+    ${sportart&&titelSauber&&titelSauber!==sportart?`<div class="disziplin-label" style="font-size:${typ==='a3'?'8pt':'13px'};opacity:.7">${esc(titelSauber)}</div>`:''}
     ${platz?`<div class="platz-number">${platz}</div>`:''}
     ${platzText?`<div class="platz-text">${platzText}</div>`:''}
     ${platzLabel?`<div class="platz-label">${esc(platzLabel)}</div>`:''}
