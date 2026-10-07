@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+
+<html lang="de">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0" name="viewport"/>
+<title>SLZB-Erfolge v3</title>
+<link href="../slzb-final/style.css" rel="stylesheet"/>
+<style>
+    .login-screen {
+      min-height:100vh; display:flex; align-items:center; justify-content:center;
+      background:linear-gradient(135deg,#003366 0%,#001F4D 100%); padding:20px;
+    }
+    .login-card {
+      background:#fff; border-radius:20px; padding:40px;
+      width:100%; max-width:420px; box-shadow:0 20px 60px rgba(0,0,0,.3);
+    }
+    .login-logo { text-align:center; margin-bottom:28px; }
+    .login-logo .logo-big {
+      width:64px; height:64px; background:#003366; border-radius:16px;
+      display:inline-flex; align-items:center; justify-content:center;
+      font-size:2rem; font-weight:900; color:#fff; margin-bottom:12px;
+    }
+    .login-logo h1 { font-size:1.4rem; color:#003366; margin-bottom:4px; }
+    .login-logo p  { font-size:.82rem; color:#6B7A99; }
+    .login-error {
+      background:#FEF2F2; border:1px solid #FECACA; color:#991B1B;
+      border-radius:8px; padding:10px 14px; font-size:.84rem;
+      margin-bottom:14px; display:none;
+    }
+    .login-hint {
+      background:#EFF6FF; border:1px solid #BFDBFE; color:#1E40AF;
+      border-radius:8px; padding:10px 14px; font-size:.78rem; margin-top:16px;
+    }
+    .loading-overlay {
+      position:fixed; inset:0; background:rgba(255,255,255,.92);
+      z-index:9999; display:flex; align-items:center;
+      justify-content:center; flex-direction:column; gap:14px;
+    }
+    .spinner {
+      width:40px; height:40px; border:4px solid #D0D7E3;
+      border-top-color:#003366; border-radius:50%;
+      animation:spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .loading-text { font-size:.9rem; color:#6B7A99; }
+    .mobile-menu-btn {
+      display:none; background:none; border:none;
+      font-size:1.4rem; cursor:pointer; padding:4px 8px;
+    }
+    @media (max-width:900px) { .mobile-menu-btn { display:block; } }
+    .nav-section-label {
+      font-size:.68rem; text-transform:uppercase; letter-spacing:.08em;
+      opacity:.45; padding:10px 20px 4px; color:#fff;
+    }
+    .purple { background:#F3E5F5; color:#7B1FA2; }
+    #pw-staerke-bar { margin-top:6px; height:4px; border-radius:2px; background:#D0D7E3; overflow:hidden; }
+    #pw-staerke-fill { height:100%; width:0%; transition:width .3s,background .3s; }
+    @media print {
+      .sidebar,.topbar,.card-footer,.btn,select,input,.tabs { display:none !important; }
+      .main-content { margin-left:0 !important; }
+      .chronik-druckkopf { display:block !important; }
+      .card { box-shadow:none !important; border:1px solid #ccc !important; }
+      body { background:white !important; }
+    }
+    /* Debug-Panel */
+    #debug-panel {
+      position:fixed; bottom:0; left:0; right:0;
+      background:#1a1a2e; color:#00ff88; font-family:monospace;
+      font-size:.72rem; padding:8px 16px; z-index:8000;
+      max-height:120px; overflow-y:auto; display:none;
+    }
+  </style>
+</head>
+<body>
+<!-- Loading -->
+<div class="loading-overlay" id="loading-overlay">
+<div class="spinner"></div>
+<div class="loading-text" id="loading-text">SLZB-Erfolge v3 wird geladen...</div>
+</div>
+<!-- Login -->
+<div id="login-screen" style="display:none">
+<div class="login-screen">
+<div class="login-card">
+<div class="login-logo">
+<div class="logo-big">S</div>
+<h1>SLZB-Erfolge</h1>
+<p>Schul- und Leistungssportzentrum Berlin · v3</p>
+</div>
+<div class="login-error" id="login-error"></div>
+<div class="form-group">
+<label>E-Mail</label>
+<input autocomplete="email" id="login-email" onkeydown="if(event.key==='Enter')doLogin()" placeholder="name@slzb.de" type="email"/>
+</div>
+<div class="form-group">
+<label>Passwort</label>
+<input autocomplete="current-password" id="login-passwort" onkeydown="if(event.key==='Enter')doLogin()" placeholder="••••••••" type="password"/>
+</div>
+<button class="btn btn-primary w-full" id="login-btn" onclick="doLogin()" style="margin-top:8px">Anmelden</button>
+<div class="login-hint">
+        Bei Problemen wenden Sie sich an Ihren Administrator.
+      </div>
+</div>
+</div>
+</div>
+<!-- Haupt-App -->
+<div id="app" style="display:none">
+<aside class="sidebar" id="sidebar"></aside>
+<div class="main-content">
+<header class="topbar">
+<button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+<div style="flex:1">
+<div class="topbar-title">SLZB-Erfolge</div>
+<div class="topbar-subtitle" id="topbar-subtitle">Schul- und Leistungssportzentrum Berlin</div>
+</div>
+<div class="topbar-actions">
+<button class="btn btn-ghost btn-sm" onclick="navigateTo('neue-meldung')" title="Neue Meldung">➕</button>
+<button class="btn btn-ghost btn-sm" onclick="doLogout()" title="Abmelden">⏻</button>
+</div>
+</header>
+<main id="main-page"></main>
+</div>
+</div>
+<!-- Debug Panel (Strg+D) -->
+<div id="debug-panel"></div>
+<!-- Supabase CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<!-- App-Dateien -->
+<script src="config.js"></script>
+<script src="backend.js"></script>
+<script src="../slzb-final/data.js"></script>
+<script src="../slzb-final/pdf.js"></script>
+<script src="app.js"></script>
+<script src="app2.js"></script>
+<script src="user-admin.js"></script>
+<script>
+// ── Debug-Panel ──────────────────────────────────────────────
+const dbg = [];
+function debug(msg) {
+  dbg.push(new Date().toLocaleTimeString('de-DE') + ' ' + msg);
+  const el = document.getElementById('debug-panel');
+  if (el && el.style.display !== 'none') {
+    el.innerHTML = dbg.slice(-20).join('<br>');
+    el.scrollTop = el.scrollHeight;
+  }
+  console.log('[SLZB]', msg);
+}
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 'd') {
+    const el = document.getElementById('debug-panel');
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    el.innerHTML = dbg.slice(-20).join('<br>');
+  }
+});
+
+// ── UI-Hilfsfunktionen ───────────────────────────────────────
+function showLoading(text) {
+  document.getElementById('loading-overlay').style.display = 'flex';
+  if (text) document.getElementById('loading-text').textContent = text;
+}
+function hideLoading() {
+  document.getElementById('loading-overlay').style.display = 'none';
+}
+function showLogin() {
+  document.getElementById('login-screen').style.display = 'block';
+  document.getElementById('app').style.display = 'none';
+  setTimeout(() => document.getElementById('login-email')?.focus(), 100);
+}
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+}
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+// ── Login ────────────────────────────────────────────────────
+async function doLogin() {
+  const email   = document.getElementById('login-email').value.trim();
+  const passwort = document.getElementById('login-passwort').value;
+  const errEl   = document.getElementById('login-error');
+  const btn     = document.getElementById('login-btn');
+  if (!email || !passwort) {
+    errEl.textContent = 'Bitte E-Mail und Passwort eingeben.';
+    errEl.style.display = 'block'; return;
+  }
+  btn.disabled = true; btn.textContent = 'Anmelden...';
+  debug(`Login-Versuch: ${email}`);
+  const result = await Auth.login(email, passwort);
+  btn.disabled = false; btn.textContent = 'Anmelden';
+  if (!result.ok) {
+    debug(`Login fehlgeschlagen: ${result.fehler}`);
+    errEl.textContent = 'E-Mail oder Passwort falsch.';
+    errEl.style.display = 'block';
+    document.getElementById('login-passwort').value = '';
+    return;
+  }
+  debug(`Login OK: ${Auth.name()} (${Auth.rolle()})`);
+  errEl.style.display = 'none';
+  showApp();
+  initApp();
+}
+
+async function doLogout() {
+  if (!confirm('Wirklich abmelden?')) return;
+  await Auth.logout();
+  showLogin();
+}
+
+// ── App-Start ────────────────────────────────────────────────
+async function startApp() {
+  showLoading('Verbindung wird hergestellt...');
+  debug('App startet...');
+  try {
+    // Supabase-Bibliothek prüfen
+    if (!window.supabase) {
+      throw new Error('Supabase-Bibliothek nicht geladen. Bitte Internetverbindung prüfen.');
+    }
+    // Backend initialisieren
+    await Backend.init();
+    debug('Backend initialisiert');
+
+    // Lokale Stammdaten laden (Sportarten etc.)
+    slzbLoad();
+
+    // Bestehende Session prüfen
+    const eingeloggt = await Auth.init();
+    debug(`Session: ${eingeloggt ? Auth.name() : 'keine'}`);
+
+    hideLoading();
+    if (eingeloggt) {
+      showApp();
+      initApp();
+    } else {
+      showLogin();
+    }
+  } catch(e) {
+    debug(`Start-Fehler: ${e.message}`);
+    hideLoading();
+    // Zeige Fehler auf Login-Seite
+    showLogin();
+    const errEl = document.getElementById('login-error');
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', startApp);
+</script>
+</body>
+</html>
