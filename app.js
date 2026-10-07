@@ -438,42 +438,7 @@ function bilderBlock() {
   </div>`;
 }
 
-function kerndatenFelder(extra='') {
-  return `<div class="alert alert-info mb-3"><span class="alert-icon">💡</span>
-    <span>Tippen Sie in die Felder – Vorschläge erscheinen automatisch.</span></div>
-  <div id="form-errors"></div>
-  <div class="form-group"><label>Titel <span class="required">*</span></label>
-    <input type="text" id="f-titel" placeholder="z.B. Landesmeister 100m Sprint 2026" maxlength="300"></div>
-  <div class="form-row cols-2">
-    <div class="form-group"><label>Sportart <span class="required">*</span></label>
-      <input type="text" id="f-sportart-text" placeholder="z.B. Leichtathletik" autocomplete="off"></div>
-    <div class="form-group"><label>Disziplin</label>
-      <input type="text" id="f-disziplin" placeholder="z.B. 100m Sprint" autocomplete="off"></div>
-  </div>
-  <div class="form-group"><label>Wettbewerb / Veranstaltung</label>
-    <input type="text" id="f-wettbewerb-text" placeholder="z.B. Berliner Landesmeisterschaften 2026" autocomplete="off"></div>
-  <div class="form-row cols-4">
-    <div class="form-group"><label>Datum <span class="required">*</span></label><input type="date" id="f-datum"></div>
-    <div class="form-group"><label>Ort</label><input type="text" id="f-ort" placeholder="z.B. Berlin"></div>
-    <div class="form-group"><label>Ebene</label>
-      <select id="f-ebene"><option value="">–</option>${ebeneOptions()}</select></div>
-    <div class="form-group"><label>Medaille</label>
-      <select id="f-medaille">${['keine','Bronze','Silber','Gold'].map(m=>`<option>${m}</option>`).join('')}</select></div>
-  </div>
-  <div class="form-row cols-3">
-    <div class="form-group"><label>Platzierung</label>
-      <input type="number" id="f-platzierung" min="1" placeholder="1"></div>
-    <div class="form-group"><label>Ergebnis (Wert)</label>
-      <input type="number" id="f-ergebnis-wert" step="0.001" placeholder="10.85"></div>
-    <div class="form-group"><label>Einheit</label>
-      <input type="text" id="f-ergebnis-einheit" placeholder="Sekunden / Meter / Punkte"></div>
-  </div>
-  <div class="form-group"><label>Ergebnis (Text)</label>
-    <input type="text" id="f-ergebnis-text" placeholder="z.B. Neuer Schulrekord"></div>
-  <div class="form-group"><label>Kurzinfo</label>
-    <textarea id="f-kurzinfo" rows="3" placeholder="Kurze Beschreibung..."></textarea></div>
-  ${extra}`;
-}
+
 
 function bindKerndatenAC() {
   setTimeout(()=>{
@@ -482,74 +447,9 @@ function bindKerndatenAC() {
   },100);
 }
 
-function renderEinzelerfolgForm() {
-  const html = `<div class="page">
-    ${formularKopf('Einzelerfolg melden','🏅')}
-    <div class="card mb-3">
-      <div class="card-header"><h2>Kerndaten</h2></div>
-      <div class="card-body">
-        ${kerndatenFelder(`<div class="form-group"><label>Schüler/in <span class="required">*</span></label>
-          <input type="text" id="f-schueler-text" placeholder="Name der Schülerin / des Schülers" autocomplete="off"></div>
-        <div class="form-group"><label>Quell-URL</label>
-          <input type="url" id="f-quelle" placeholder="https://..."></div>`)}
-      </div>
-    </div>
-    ${bilderBlock()}
-    <div class="card"><div class="card-footer">
-      <button class="btn btn-ghost" onclick="APP.selectedMeldungsart=null;navigateTo('neue-meldung')">Abbrechen</button>
-      <button class="btn btn-outline" onclick="speichereErfolg('Entwurf','Einzelerfolg')">💾 Entwurf</button>
-      <button class="btn btn-primary" onclick="speichereErfolg('Eingereicht','Einzelerfolg')">📤 Einreichen</button>
-    </div></div>
-  </div>`;
-  setTimeout(()=>{
-    bindKerndatenAC();
-    bindAutocomplete('f-schueler-text', SLZB_DB.schueler.map(s=>s.anzeigename));
-  },100);
-  return html;
-}
 
-function renderTeamerfolgForm() {
-  APP._teamBeteiligte = [];
-  const html = `<div class="page">
-    ${formularKopf('Teamerfolg melden','🏆')}
-    <div class="card mb-3">
-      <div class="card-header"><h2>Team & Kerndaten</h2></div>
-      <div class="card-body">
-        ${kerndatenFelder(`<div class="form-group"><label>Team/Mannschaft</label>
-          <input type="text" id="f-team-text" placeholder="z.B. Staffel 4×100m Männer" autocomplete="off"></div>`)}
-      </div>
-    </div>
-    <div class="card mb-3">
-      <div class="card-header"><h2>👥 Beteiligte Schüler/innen</h2></div>
-      <div class="card-body">
-        <div class="alert alert-warning"><span class="alert-icon">⚠️</span>
-          <span><strong>Teamfoto-Regel:</strong> Fehlt für eine identifizierbare Person die Einwilligung, darf das Teamfoto nicht verwendet werden.</span></div>
-        <div class="form-row cols-2 mt-3">
-          <div class="form-group"><label>Schüler/in hinzufügen</label>
-            <input type="text" id="schueler-add-text" placeholder="Name" autocomplete="off"></div>
-          <div class="form-group"><label>Rolle</label>
-            <select id="schueler-add-rolle">
-              ${['Athlet','Kapitän','Ersatz','Trainer','Betreuer','Sonstiges'].map(r=>`<option>${r}</option>`).join('')}
-            </select></div>
-        </div>
-        <button class="btn btn-outline btn-sm mb-3" onclick="addSchuelerZuTeam()">+ Hinzufügen</button>
-        <div id="team-beteiligte-liste"><p class="text-muted text-sm">Noch keine Beteiligten.</p></div>
-      </div>
-    </div>
-    ${bilderBlock()}
-    <div class="card"><div class="card-footer">
-      <button class="btn btn-ghost" onclick="APP.selectedMeldungsart=null;navigateTo('neue-meldung')">Abbrechen</button>
-      <button class="btn btn-outline" onclick="speichereTeamerfolg('Entwurf')">💾 Entwurf</button>
-      <button class="btn btn-primary" onclick="speichereTeamerfolg('Eingereicht')">📤 Einreichen</button>
-    </div></div>
-  </div>`;
-  setTimeout(()=>{
-    bindKerndatenAC();
-    bindAutocomplete('f-team-text', SLZB_DB.teams.map(t=>t.name));
-    bindAutocomplete('schueler-add-text', SLZB_DB.schueler.map(s=>s.anzeigename));
-  },100);
-  return html;
-}
+
+
 
 function renderMinimalmeldungForm() {
   return `<div class="page">
@@ -769,17 +669,7 @@ function switchTab(id) {
   });
 }
 
-function addSchuelerZuTeam() {
-  const text=document.getElementById('schueler-add-text')?.value?.trim()||'';
-  const rolle=document.getElementById('schueler-add-rolle')?.value||'Athlet';
-  if (!text){toast('Bitte Name eingeben','warning');return;}
-  const s=SLZB_DB.schueler.find(s=>s.anzeigename.toLowerCase()===text.toLowerCase());
-  if (!s){toast(`Schüler/in "${text}" nicht gefunden.`,'warning');return;}
-  if (APP._teamBeteiligte.find(b=>b.schuelerId===s.id)){toast('Bereits hinzugefügt','warning');return;}
-  APP._teamBeteiligte.push({schuelerId:s.id,rolle,einwilligungsstatus:'Nicht geprüft'});
-  renderTeamBeteiligteUI();
-  document.getElementById('schueler-add-text').value='';
-}
+
 function removeSchuelerVonTeam(id) {
   APP._teamBeteiligte=APP._teamBeteiligte.filter(b=>b.schuelerId!==id);
   renderTeamBeteiligteUI();
@@ -863,69 +753,9 @@ function validiereFormular(daten, meldungsart) {
   return fehler;
 }
 
-async function speichereErfolg(status, meldungsart) {
-  const daten=leseDatenAusFormular(meldungsart);
-  const schuelerText=document.getElementById('f-schueler-text')?.value?.trim()||'';
-  const schueler=schuelerText?SLZB_DB.schueler.find(s=>s.anzeigename.toLowerCase()===schuelerText.toLowerCase()):null;
-  const fehler=validiereFormular(daten,meldungsart);
-  if(!schuelerText&&status==='Eingereicht'&&meldungsart==='Einzelerfolg') fehler.push('Schüler/in ist Pflichtfeld.');
-  if(schuelerText&&!schueler&&meldungsart==='Einzelerfolg') fehler.push(`Schüler/in "${schuelerText}" nicht gefunden.`);
-  if(fehler.length){
-    const el=document.getElementById('form-errors');
-    if(el) el.innerHTML=`<div class="alert alert-danger"><span class="alert-icon">❌</span><ul>${fehler.map(f=>`<li>${esc(f)}</li>`).join('')}</ul></div>`;
-    return;
-  }
-  // Button sperren
-  const btn=document.querySelector('.card-footer .btn-primary');
-  if(btn){btn.disabled=true;btn.textContent='Wird gespeichert...';}
-  try {
-    const beteiligte=schueler?[{
-      schuelerId:schueler.id,
-      anzeigename:schueler.anzeigename,
-      rolle:'Athlet',
-      einwilligungsstatus:'Nicht geprüft'
-    }]:[];
-    const result=await DB.erstelleErfolg({...daten,status}, beteiligte);
-    if(!result.ok) throw new Error(result.fehler||'Unbekannter Fehler');
-    APP.selectedMeldungsart=null;
-    debug(`Erfolg gespeichert: ${result.nr} (${status})`);
-    toast(`Erfolg ${result.nr} ${status==='Entwurf'?'als Entwurf gespeichert':'eingereicht'}!`,'success');
-    navigateTo('erfolg-detail',{currentErfolgId:result.id});
-  } catch(e) {
-    debug('Fehler beim Speichern: '+e.message);
-    toast('Fehler: '+e.message,'danger');
-    if(btn){btn.disabled=false;btn.textContent='📤 Einreichen';}
-  }
-}
 
-async function speichereTeamerfolg(status) {
-  const daten=leseDatenAusFormular('Teamerfolg');
-  const fehler=validiereFormular(daten,'Teamerfolg');
-  if(!APP._teamBeteiligte.length&&status==='Eingereicht') fehler.push('Mindestens ein Beteiligter erforderlich.');
-  if(fehler.length){
-    const el=document.getElementById('form-errors');
-    if(el) el.innerHTML=`<div class="alert alert-danger"><span class="alert-icon">❌</span><ul>${fehler.map(f=>`<li>${esc(f)}</li>`).join('')}</ul></div>`;
-    return;
-  }
-  const btn=document.querySelector('.card-footer .btn-primary');
-  if(btn){btn.disabled=true;btn.textContent='Wird gespeichert...';}
-  try {
-    const beteiligte=APP._teamBeteiligte.map(b=>({
-      schuelerId:b.schuelerId,
-      anzeigename:SLZB_DB.getSchueler(b.schuelerId)?.anzeigename||b.schuelerId,
-      rolle:b.rolle,
-      einwilligungsstatus:'Nicht geprüft'
-    }));
-    const result=await DB.erstelleErfolg({...daten,status}, beteiligte);
-    if(!result.ok) throw new Error(result.fehler||'Unbekannter Fehler');
-    APP._teamBeteiligte=[]; APP.selectedMeldungsart=null;
-    toast(`Teamerfolg ${result.nr} ${status==='Entwurf'?'gespeichert':'eingereicht'}!`,'success');
-    navigateTo('meine-meldungen');
-  } catch(e) {
-    toast('Fehler: '+e.message,'danger');
-    if(btn){btn.disabled=false;btn.textContent='📤 Einreichen';}
-  }
-}
+
+
 
 async function speichereArtikel() {
   const text=document.getElementById('f-artikel-text')?.value?.trim()||'';

@@ -240,11 +240,11 @@ const DB = {
       .single();
     if (error) throw new Error(error.message);
 
-    // Beteiligungen speichern
+    // Beteiligungen speichern (student_id kann NULL sein bei Freitext-Namen)
     if (beteiligte.length > 0) {
       const betRows = beteiligte.map(b => ({
         achievement_id:   data.id,
-        student_id:       b.schuelerId,
+        student_id:       b.schuelerId || null,
         participant_role: b.rolle || 'Athlet',
         consent_status:   b.einwilligungsstatus || 'Nicht geprüft',
       }));
