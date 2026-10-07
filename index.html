@@ -4,25 +4,21 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0" name="viewport"/>
-<title>SLZB-Erfolge</title>
-<link href="style.css" rel="stylesheet"/>
+<title>SLZB-Erfolge v3</title>
+<link href="../slzb-final/style.css" rel="stylesheet"/>
 <style>
     .login-screen {
-      min-height:100vh; display:flex; align-items:center;
-      justify-content:center;
-      background:linear-gradient(135deg,#003366 0%,#001F4D 100%);
-      padding:20px;
+      min-height:100vh; display:flex; align-items:center; justify-content:center;
+      background:linear-gradient(135deg,#003366 0%,#001F4D 100%); padding:20px;
     }
     .login-card {
       background:#fff; border-radius:20px; padding:40px;
-      width:100%; max-width:420px;
-      box-shadow:0 20px 60px rgba(0,0,0,.3);
+      width:100%; max-width:420px; box-shadow:0 20px 60px rgba(0,0,0,.3);
     }
     .login-logo { text-align:center; margin-bottom:28px; }
     .login-logo .logo-big {
-      width:64px; height:64px; background:#003366;
-      border-radius:16px; display:inline-flex;
-      align-items:center; justify-content:center;
+      width:64px; height:64px; background:#003366; border-radius:16px;
+      display:inline-flex; align-items:center; justify-content:center;
       font-size:2rem; font-weight:900; color:#fff; margin-bottom:12px;
     }
     .login-logo h1 { font-size:1.4rem; color:#003366; margin-bottom:4px; }
@@ -37,7 +33,7 @@
       border-radius:8px; padding:10px 14px; font-size:.78rem; margin-top:16px;
     }
     .loading-overlay {
-      position:fixed; inset:0; background:rgba(255,255,255,.9);
+      position:fixed; inset:0; background:rgba(255,255,255,.92);
       z-index:9999; display:flex; align-items:center;
       justify-content:center; flex-direction:column; gap:14px;
     }
@@ -67,13 +63,20 @@
       .card { box-shadow:none !important; border:1px solid #ccc !important; }
       body { background:white !important; }
     }
+    /* Debug-Panel */
+    #debug-panel {
+      position:fixed; bottom:0; left:0; right:0;
+      background:#1a1a2e; color:#00ff88; font-family:monospace;
+      font-size:.72rem; padding:8px 16px; z-index:8000;
+      max-height:120px; overflow-y:auto; display:none;
+    }
   </style>
 </head>
 <body>
 <!-- Loading -->
 <div class="loading-overlay" id="loading-overlay">
 <div class="spinner"></div>
-<div class="loading-text" id="loading-text">SLZB-Erfolge wird geladen...</div>
+<div class="loading-text" id="loading-text">SLZB-Erfolge v3 wird geladen...</div>
 </div>
 <!-- Login -->
 <div id="login-screen" style="display:none">
@@ -82,23 +85,18 @@
 <div class="login-logo">
 <div class="logo-big">S</div>
 <h1>SLZB-Erfolge</h1>
-<p>Schul- und Leistungssportzentrum Berlin</p>
+<p>Schul- und Leistungssportzentrum Berlin · v3</p>
 </div>
 <div class="login-error" id="login-error"></div>
 <div class="form-group">
-<label>Benutzername</label>
-<input autocomplete="username" id="login-username" onkeydown="if(event.key==='Enter')doLogin()" placeholder="benutzername" type="text"/>
+<label>E-Mail</label>
+<input autocomplete="email" id="login-email" onkeydown="if(event.key==='Enter')doLogin()" placeholder="name@slzb.de" type="email"/>
 </div>
 <div class="form-group">
 <label>Passwort</label>
 <input autocomplete="current-password" id="login-passwort" onkeydown="if(event.key==='Enter')doLogin()" placeholder="••••••••" type="password"/>
 </div>
 <button class="btn btn-primary w-full" id="login-btn" onclick="doLogin()" style="margin-top:8px">Anmelden</button>
-<div style="text-align:center;margin-top:14px">
-<a href="#" onclick="zeigePwVergessen();return false" style="font-size:.8rem;color:#003366;text-decoration:none">
-          Passwort vergessen?
-        </a>
-</div>
 <div class="login-hint">
         Bei Problemen wenden Sie sich an Ihren Administrator.
       </div>
@@ -123,29 +121,54 @@
 <main id="main-page"></main>
 </div>
 </div>
-<!-- Scripts in korrekter Reihenfolge -->
-<script src="data.js"></script>
-<script src="auth.js"></script>
+<!-- Debug Panel (Strg+D) -->
+<div id="debug-panel"></div>
+<!-- Supabase CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<!-- App-Dateien -->
+<script src="config.js"></script>
+<script src="backend.js"></script>
+<script src="../slzb-final/data.js"></script>
+<script src="../slzb-final/pdf.js"></script>
 <script src="app.js"></script>
 <script src="app2.js"></script>
-<script src="pdf.js"></script>
+<script src="user-admin.js"></script>
 <script>
-// ── Hilfsfunktionen ──────────────────────────────────────────
+// ── Debug-Panel ──────────────────────────────────────────────
+const dbg = [];
+function debug(msg) {
+  dbg.push(new Date().toLocaleTimeString('de-DE') + ' ' + msg);
+  const el = document.getElementById('debug-panel');
+  if (el && el.style.display !== 'none') {
+    el.innerHTML = dbg.slice(-20).join('<br>');
+    el.scrollTop = el.scrollHeight;
+  }
+  console.log('[SLZB]', msg);
+}
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 'd') {
+    const el = document.getElementById('debug-panel');
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    el.innerHTML = dbg.slice(-20).join('<br>');
+  }
+});
+
+// ── UI-Hilfsfunktionen ───────────────────────────────────────
 function showLoading(text) {
-  document.getElementById('loading-overlay').style.display='flex';
-  if(text) document.getElementById('loading-text').textContent=text;
+  document.getElementById('loading-overlay').style.display = 'flex';
+  if (text) document.getElementById('loading-text').textContent = text;
 }
 function hideLoading() {
-  document.getElementById('loading-overlay').style.display='none';
+  document.getElementById('loading-overlay').style.display = 'none';
 }
 function showLogin() {
-  document.getElementById('login-screen').style.display='block';
-  document.getElementById('app').style.display='none';
-  setTimeout(()=>document.getElementById('login-username')?.focus(),100);
+  document.getElementById('login-screen').style.display = 'block';
+  document.getElementById('app').style.display = 'none';
+  setTimeout(() => document.getElementById('login-email')?.focus(), 100);
 }
 function showApp() {
-  document.getElementById('login-screen').style.display='none';
-  document.getElementById('app').style.display='flex';
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
 }
 function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('open');
@@ -153,76 +176,72 @@ function toggleSidebar() {
 
 // ── Login ────────────────────────────────────────────────────
 async function doLogin() {
-  const username = document.getElementById('login-username').value.trim();
+  const email   = document.getElementById('login-email').value.trim();
   const passwort = document.getElementById('login-passwort').value;
-  const errEl = document.getElementById('login-error');
-  const btn   = document.getElementById('login-btn');
-  if (!username||!passwort) {
-    errEl.textContent='Bitte Benutzername und Passwort eingeben.';
-    errEl.style.display='block'; return;
+  const errEl   = document.getElementById('login-error');
+  const btn     = document.getElementById('login-btn');
+  if (!email || !passwort) {
+    errEl.textContent = 'Bitte E-Mail und Passwort eingeben.';
+    errEl.style.display = 'block'; return;
   }
-  btn.disabled=true; btn.textContent='Anmelden...';
-  const result = await Auth.login(username, passwort);
-  btn.disabled=false; btn.textContent='Anmelden';
+  btn.disabled = true; btn.textContent = 'Anmelden...';
+  debug(`Login-Versuch: ${email}`);
+  const result = await Auth.login(email, passwort);
+  btn.disabled = false; btn.textContent = 'Anmelden';
   if (!result.ok) {
-    errEl.textContent='Benutzername oder Passwort falsch.';
-    errEl.style.display='block';
-    document.getElementById('login-passwort').value='';
-    await new Promise(r=>setTimeout(r,800));
+    debug(`Login fehlgeschlagen: ${result.fehler}`);
+    errEl.textContent = 'E-Mail oder Passwort falsch.';
+    errEl.style.display = 'block';
+    document.getElementById('login-passwort').value = '';
     return;
   }
-  errEl.style.display='none';
+  debug(`Login OK: ${Auth.name()} (${Auth.rolle()})`);
+  errEl.style.display = 'none';
   showApp();
   initApp();
 }
 
-function doLogout() {
+async function doLogout() {
   if (!confirm('Wirklich abmelden?')) return;
-  Auth.logout();
+  await Auth.logout();
   showLogin();
-  document.getElementById('login-username').value='';
-  document.getElementById('login-passwort').value='';
-}
-
-// ── Passwort vergessen ───────────────────────────────────────
-function zeigePwVergessen() {
-  const overlay=document.createElement('div');
-  overlay.className='modal-overlay'; overlay.id='pw-vergessen-overlay';
-  overlay.innerHTML=`<div class="modal" style="max-width:420px">
-    <div class="modal-header"><h3>🔑 Passwort vergessen</h3>
-      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('pw-vergessen-overlay').remove()">✕</button></div>
-    <div class="modal-body">
-      <p style="font-size:.88rem;color:#374151;margin-bottom:16px">
-        Bitte wenden Sie sich an Ihren Administrator für ein neues Passwort.</p>
-      <div id="pw-reset-meldung" class="alert alert-info">
-        <span class="alert-icon">ℹ️</span>
-        <span>Administrator kontaktieren: <strong>bueh</strong> oder <strong>pfe</strong></span>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-primary" onclick="document.getElementById('pw-vergessen-overlay').remove()">OK</button>
-    </div>
-  </div>`;
-  document.body.appendChild(overlay);
 }
 
 // ── App-Start ────────────────────────────────────────────────
-function startApp() {
-  showLoading('SLZB-Erfolge wird geladen...');
+async function startApp() {
+  showLoading('Verbindung wird hergestellt...');
+  debug('App startet...');
   try {
+    // Supabase-Bibliothek prüfen
+    if (!window.supabase) {
+      throw new Error('Supabase-Bibliothek nicht geladen. Bitte Internetverbindung prüfen.');
+    }
+    // Backend initialisieren
+    await Backend.init();
+    debug('Backend initialisiert');
+
+    // Lokale Stammdaten laden (Sportarten etc.)
     slzbLoad();
-    const user = Auth.restore();
+
+    // Bestehende Session prüfen
+    const eingeloggt = await Auth.init();
+    debug(`Session: ${eingeloggt ? Auth.name() : 'keine'}`);
+
     hideLoading();
-    if (user) {
+    if (eingeloggt) {
       showApp();
       initApp();
     } else {
       showLogin();
     }
   } catch(e) {
-    console.warn('Start-Fehler:', e.message);
+    debug(`Start-Fehler: ${e.message}`);
     hideLoading();
+    // Zeige Fehler auf Login-Seite
     showLogin();
+    const errEl = document.getElementById('login-error');
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
   }
 }
 
