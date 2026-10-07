@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+
+<html lang="de">
+<head>
+<meta charset="utf-8"/>
+<title>SLZB – Nutzer anlegen</title>
+<style>
+    body { font-family: 'Segoe UI', sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; background: #f4f6fa; }
+    .card { background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,.1); margin-bottom: 20px; }
+    h1 { color: #003366; }
+    h2 { color: #003366; font-size: 1.1rem; margin-bottom: 12px; }
+    label { display: block; font-size: .85rem; font-weight: 600; margin-bottom: 4px; color: #374151; }
+    input { width: 100%; padding: 8px 12px; border: 1.5px solid #D0D7E3; border-radius: 6px; font-size: .9rem; box-sizing: border-box; margin-bottom: 12px; }
+    button { background: #003366; color: #fff; border: none; border-radius: 8px; padding: 10px 24px; font-size: .9rem; font-weight: 600; cursor: pointer; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    button.danger { background: #C0001A; }
+    .alert { padding: 10px 14px; border-radius: 8px; margin-bottom: 10px; font-size: .85rem; }
+    .alert-warning { background: #FEF3C7; border: 1px solid #FDE68A; color: #92400E; }
+    .alert-info    { background: #EFF6FF; border: 1px solid #BFDBFE; color: #1E40AF; }
+    .alert-danger  { background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B; }
+    .log { background: #1a1a2e; color: #00ff88; font-family: monospace; font-size: .78rem; padding: 16px; border-radius: 8px; max-height: 400px; overflow-y: auto; white-space: pre-wrap; }
+    .log .err { color: #ff6b6b; }
+    .log .warn { color: #ffd93d; }
+    table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+    th { background: #f4f6fa; padding: 8px 10px; text-align: left; font-size: .75rem; text-transform: uppercase; color: #6B7A99; }
+    td { padding: 8px 10px; border-bottom: 1px solid #E5E7EB; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: .72rem; font-weight: 700; }
+    .badge-trainer { background: #EFF6FF; color: #1E40AF; }
+    .badge-redaktion { background: #E0F2FE; color: #075985; }
+    .badge-oea { background: #F0FDF4; color: #166534; }
+    .badge-admin { background: #FEF3C7; color: #92400E; }
+  </style>
+</head>
+<body>
+<h1>🏆 SLZB-Erfolge – Nutzer anlegen</h1>
+<div class="card">
+<h2>🔑 Supabase Service Role Key</h2>
+<div class="alert alert-warning">
+    ⚠️ Der Service Role Key hat vollen Datenbankzugriff. Diese Seite niemals auf GitHub hochladen!
+    Nur lokal auf Ihrem Computer öffnen.
+  </div>
+<label>Service Role Key (Supabase → Settings → API → service_role)</label>
+<input id="service-key" placeholder="eyJhbGci..." type="password"/>
+<div class="alert alert-info">
+    ℹ️ Der Key wird nur lokal in Ihrem Browser verwendet und nirgendwo gespeichert.
+  </div>
+</div>
+<div class="card">
+<h2>👥 Nutzer die angelegt werden</h2>
+<table>
+<thead><tr><th>Benutzername</th><th>E-Mail</th><th>Anzeigename</th><th>Rolle</th><th>Passwort</th></tr></thead>
+<tbody id="nutzer-tabelle"></tbody>
+</table>
+</div>
+<div class="card">
+<h2>🚀 Ausführen</h2>
+<button id="start-btn" onclick="starteAnlage()">Alle Nutzer anlegen</button>
+<span id="status-text" style="margin-left:12px;font-size:.82rem;color:#6B7A99"></span>
+</div>
+<div class="card" id="log-card" style="display:none">
+<h2>📋 Protokoll</h2>
+<div class="log" id="log"></div>
+</div>
+<script>
+const SUPABASE_URL = 'https://yjzvmvgnpxbxmcjopqws.supabase.co';
+
+const NUTZER = [
+  { username:'str',             email:'str@slzb.de',             displayName:'Str',              role:'oea',       password:'Str_Passwort_2026!' },
+  { username:'unt',             email:'unt@slzb.de',             displayName:'Unt',              role:'redaktion', password:'Unt_Passwort_2026!' },
+  { username:'basketball',      email:'basketball@slzb.de',      displayName:'Basketball',       role:'trainer',   password:'Basketball_2026!' },
+  { username:'beachvolleyball', email:'beachvolleyball@slzb.de', displayName:'Beachvolleyball',  role:'trainer',   password:'Beachvb_2026!' },
+  { username:'bogenschiessen',  email:'bogenschiessen@slzb.de',  displayName:'Bogenschießen',    role:'trainer',   password:'Bogen_2026!' },
+  { username:'boxen',           email:'boxen@slzb.de',           displayName:'Boxen',            role:'trainer',   password:'Boxen_2026!' },
+  { username:'eishockey',       email:'eishockey@slzb.de',       displayName:'Eishockey',        role:'trainer',   password:'Eishockey_2026!' },
+  { username:'eiskunstlauf',    email:'eiskunstlauf@slzb.de',    displayName:'Eiskunstlauf',     role:'trainer',   password:'Eiskunst_2026!' },
+  { username:'eisschnelllauf',  email:'eisschnelllauf@slzb.de',  displayName:'Eisschnelllauf',   role:'trainer',   password:'Eisschnell_2026!' },
+  { username:'gewichtheben',    email:'gewichtheben@slzb.de',    displayName:'Gewichtheben',     role:'trainer',   password:'Gewicht_2026!' },
+  { username:'handball',        email:'handball@slzb.de',        displayName:'Handball',         role:'trainer',   password:'Handball_2026!' },
+  { username:'judo',            email:'judo@slzb.de',            displayName:'Judo',             role:'trainer',   password:'Judo_2026!' },
+  { username:'leichtathletik',  email:'leichtathletik@slzb.de',  displayName:'Leichtathletik',   role:'trainer',   password:'Leicht_2026!' },
+  { username:'para_schwimmen',  email:'paraschwimmen@slzb.de',   displayName:'Para-Schwimmen',   role:'trainer',   password:'ParaSchwimm_2026!' },
+  { username:'radsport',        email:'radsport@slzb.de',        displayName:'Radsport',         role:'trainer',   password:'Radsport_2026!' },
+  { username:'schwimmen',       email:'schwimmen@slzb.de',       displayName:'Schwimmen',        role:'trainer',   password:'Schwimmen_2026!' },
+  { username:'turnen_maennlich',email:'turnen@slzb.de',          displayName:'Turnen (männlich)',role:'trainer',   password:'Turnen_2026!' },
+  { username:'volleyball',      email:'volleyball@slzb.de',      displayName:'Volleyball',       role:'trainer',   password:'Volleyball_2026!' },
+  { username:'wasserspringen',  email:'wasserspringen@slzb.de',  displayName:'Wasserspringen',   role:'trainer',   password:'Wasserspring_2026!' },
+  { username:'fussball',        email:'fussball@slzb.de',        displayName:'Fußball',          role:'trainer',   password:'Fussball_2026!' },
+];
+
+// Tabelle befüllen
+const tbody = document.getElementById('nutzer-tabelle');
+const rollenFarbe = { trainer:'trainer', redaktion:'redaktion', oea:'oea', admin:'admin' };
+NUTZER.forEach(n => {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><strong>${n.username}</strong></td>
+    <td>${n.email}</td>
+    <td>${n.displayName}</td>
+    <td><span class="badge badge-${rollenFarbe[n.role]||'trainer'}">${n.role}</span></td>
+    <td><code>${n.password}</code></td>`;
+  tbody.appendChild(tr);
+});
+
+// Log-Funktion
+function log(msg, typ='ok') {
+  const el = document.getElementById('log');
+  const cls = typ==='err'?'err':typ==='warn'?'warn':'';
+  el.innerHTML += `<span class="${cls}">${msg}</span>\n`;
+  el.scrollTop = el.scrollHeight;
+}
+
+
+
+async function starteAnlage() {
+  const key = document.getElementById('service-key').value.trim();
+  if (!key || !key.startsWith('eyJ')) {
+    alert('Bitte Service Role Key eingeben (beginnt mit eyJ...)');
+    return;
+  }
+
+  const btn = document.getElementById('start-btn');
+  const statusText = document.getElementById('status-text');
+  const logCard = document.getElementById('log-card');
+  btn.disabled = true;
+  logCard.style.display = 'block';
+  document.getElementById('log').innerHTML = '';
+
+  log('🚀 Starte Batch-Anlage...\n');
+  let ok = 0, fehler = 0, uebersprungen = 0;
+
+  for (let i = 0; i < NUTZER.length; i++) {
+    const n = NUTZER[i];
+    statusText.textContent = `${i+1}/${NUTZER.length}: ${n.username}...`;
+    log(`Anlegen: ${n.username} (${n.role})... `, 'ok');
+
+    try {
+      // Auth-Nutzer anlegen
+      const authUser = await apiCall('/auth/v1/admin/users', 'POST', {
+        email:         n.email,
+        password:      n.password,
+        email_confirm: true,
+        user_metadata: { display_name: n.displayName, username: n.username },
+      }, key);
+
+      const userId = authUser.id;
+
+      // Profil anlegen
+      await apiCall('/rest/v1/profiles', 'POST', {
+        user_id:      userId,
+        username:     n.username,
+        display_name: n.displayName,
+        role:         n.role,
+        active:       true,
+      }, key);
+
+      log(`✅ OK (${userId.slice(0,8)}...)`);
+      ok++;
+    } catch(e) {
+      const msg = e.message;
+      if (msg.toLowerCase().includes('already') ||
+          msg.toLowerCase().includes('duplicate') ||
+          msg.toLowerCase().includes('exists') ||
+          msg.toLowerCase().includes('unique')) {
+        log(`⏭️  Bereits vorhanden`, 'warn');
+        uebersprungen++;
+      } else {
+        log(`❌ FEHLER: ${msg}`, 'err');
+        fehler++;
+      }
+    }
+
+    // Pause zwischen Anfragen
+    await new Promise(r => setTimeout(r, 400));
+  }
+
+  log(`\n${'='.repeat(50)}`);
+  log(`✅ Erfolgreich:    ${ok}`);
+  log(`⏭️  Übersprungen:  ${uebersprungen}`, uebersprungen>0?'warn':'ok');
+  log(`❌ Fehler:         ${fehler}`, fehler>0?'err':'ok');
+  log(`\n📋 Zugangsdaten:`);
+  log(`${'='.repeat(50)}`);
+  NUTZER.forEach(n => log(`${n.username.padEnd(22)} ${n.email.padEnd(32)} ${n.password}`));
+  log(`\n⚠️  Passwörter sicher aufbewahren und Trainern mitteilen!`);
+  log(`   Trainer können ihr Passwort selbst ändern: Mein Profil → Passwort ändern`);
+
+  statusText.textContent = `Fertig: ${ok} angelegt, ${uebersprungen} übersprungen, ${fehler} Fehler`;
+  btn.disabled = false;
+  btn.textContent = 'Erneut ausführen';
+}
+</script>
+</body>
+</html>

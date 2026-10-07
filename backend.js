@@ -161,6 +161,256 @@ const Auth = {
   },
 };
 
+// ── Erfolge (Supabase) ───────────────────────────────────────
+const DB = {
+
+  // Nächste Erfolg-Nummer generieren
+  async naechsteErfolgNr() {
+    const { data } = await Backend.client
+      .from('achievements')
+      .select('achievement_no')
+      .order('submitted_at', { ascending: false })
+      .limit(1);
+    if (!data?.length || !data[0].achievement_no) return 'ERF-00000001';
+    const letzteNr = parseInt((data[0].achievement_no || '').replace('ERF-', '')) || 0;
+    return 'ERF-' + String(letzteNr + 1).padStart(8, '0');
+  },
+
+  // Alle Erfolge laden
+  async getErfolge(filter = {}) {
+    let q = Backend.client
+      .from('achievements')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (filter.melderId)  q = q.eq('melder_id', filter.melderId);
+    if (filter.status)    q = q.eq('status', filter.status);
+    if (filter.statusIn)  q = q.in('status', filter.statusIn);
+    const { data, error } = await q;
+    if (error) throw new Error(error.message);
+    return (data || []).map(e => this._mapErfolg(e));
+  },
+
+  // Einzelnen Erfolg laden
+  async getErfolgById(id) {
+    const { data, error } = await Backend.client
+      .from('achievements')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error) return null;
+    const erfolg = this._mapErfolg(data);
+
+    // Beteiligungen laden
+    const { data: bet } = await Backend.client
+      .from('achievement_participants')
+      .select('*')
+      .eq('achievement_id', id);
+    erfolg.beteiligte = (bet || []).map(b => ({
+      schuelerId:          b.student_id,
+      anzeigename:         b.student_id, // kein student_name in der Tabelle
+      rolle:               b.participant_role || 'Athlet',
+      einwilligungsstatus: b.consent_status || 'Nicht geprüft',
+    }));
+
+    // Protokoll laden
+    const { data: prot } = await Backend.client
+      .from('achievement_status_history')
+      .select('*')
+      .eq('achievement_id', id)
+      .order('changed_at', { ascending: true });
+
+    erfolg.protokoll = (prot || []).map(p => ({
+      statusAlt: p.old_status      || '',
+      statusNeu: p.new_status      || '',
+      zeitpunkt: p.changed_at      || new Date().toISOString(),
+      person:    p.changed_by_name || '',
+      kommentar: p.comment         || '',
+    }));
+
+    return erfolg;
+  },
+
+  // Erfolg erstellen
+  async erstelleErfolg(daten, beteiligte = []) {
+    const nr = await this.naechsteErfolgNr();
+    const row = this._unmapErfolg({ ...daten, erfolgNr: nr });
+    const { data, error } = await Backend.client
+      .from('achievements')
+      .insert([row])
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+
+    // Beteiligungen speichern
+    if (beteiligte.length > 0) {
+      const betRows = beteiligte.map(b => ({
+        achievement_id:   data.id,
+        student_id:       b.schuelerId,
+        participant_role: b.rolle || 'Athlet',
+        consent_status:   b.einwilligungsstatus || 'Nicht geprüft',
+      }));
+      const { error: betError } = await Backend.client
+        .from('achievement_participants')
+        .insert(betRows);
+      if (betError) console.warn('Beteiligungen speichern:', betError.message);
+    }
+
+    // Protokolleintrag
+    await this.protokolliere(data.id, '', daten.status || 'Entwurf', 'Meldung erstellt');
+
+    return { ok: true, id: data.id, nr };
+  },
+
+  // Status wechseln
+  async statusWechsel(erfolgId, statusNeu, kommentar = '') {
+    const alt = await this.getErfolgById(erfolgId);
+    if (!alt) return { ok: false };
+    const { error } = await Backend.client
+      .from('achievements')
+      .update({ status: statusNeu })
+      .eq('id', erfolgId);
+    if (error) return { ok: false, fehler: error.message };
+    await this.protokolliere(erfolgId, alt.status, statusNeu, kommentar);
+    return { ok: true };
+  },
+
+  // Protokolleintrag
+  async protokolliere(erfolgId, statusAlt, statusNeu, kommentar = '') {
+    const { error } = await Backend.client
+      .from('achievement_status_history')
+      .insert([{
+        achievement_id:  erfolgId,
+        old_status:      statusAlt || '',
+        new_status:      statusNeu,
+        changed_at:      new Date().toISOString(),
+        changed_by:      Auth.id(),
+        changed_by_name: Auth.name(),
+        comment:         kommentar || '',
+      }]);
+    if (error) console.warn('Protokoll speichern:', error.message);
+  },
+
+  // Artikeltext speichern
+  async speichereArtikeltext(erfolgId, text) {
+    const { error } = await Backend.client
+      .from('achievements')
+      .update({ article_text: text })
+      .eq('id', erfolgId);
+    return !error;
+  },
+
+  // KI-Entwurf speichern
+  async speichereKIEntwurf(erfolgId, text) {
+    const { error } = await Backend.client
+      .from('achievements')
+      .update({ ai_draft: text })
+      .eq('id', erfolgId);
+    return !error;
+  },
+
+  // Dashboard-Statistiken
+  async getDashboardStats() {
+    const { data } = await Backend.client
+      .from('achievements')
+      .select('status');
+    if (!data) return {};
+    const count = (stati) => data.filter(e => stati.includes(String(e.status))).length;
+    return {
+      gesamt:         data.length,
+      freigegeben:    count(['Freigegeben', 'Veröffentlicht']),
+      offen:          count(['Eingereicht', 'Datenprüfung', 'Redaktion', 'Einwilligungsprüfung', 'Dublettenverdacht']),
+      unvollstaendig: count(['Unvollständig']),
+      gesperrt:       count(['Wegen Einwilligung gesperrt']),
+      rueckfragen:    count(['Rückfrage an Melder']),
+      freigabeOea:    count(['Freigabe Öffentlichkeitsarbeit']),
+    };
+  },
+
+  // Dubletten prüfen
+  async pruefeDubletten(daten) {
+    if (!daten.datum) return [];
+    const sportName = daten.sportartText || SLZB_DB.getSportart(daten.sportartId)?.name || '';
+    const { data } = await Backend.client
+      .from('achievements')
+      .select('id, achievement_no, title')
+      .eq('event_date', daten.datum)
+      .eq('sport_id', sportName)
+      .eq('placement', daten.platzierung)
+      .not('status', 'eq', 'Gelöscht/Anonymisiert');
+    return data || [];
+  },
+
+  // Mapping: Supabase → App (englische Spaltennamen → deutsche App-Namen)
+  _mapErfolg(e) {
+    return {
+      id:                   e.id,
+      erfolgNr:             e.achievement_no,
+      meldungsart:          e.report_type,
+      titel:                e.title,
+      sportartId:           e.sport_id,
+      sportartText:         e.sport_id,          // wird als Freitext genutzt
+      disziplin:            e.discipline,
+      wettbewerbId:         e.competition_id,
+      wettbewerbText:       e.competition_id,    // wird als Freitext genutzt
+      datum:                e.event_date,
+      ort:                  e.location,
+      ebene:                e.level,
+      platzierung:          e.placement,
+      medaille:             e.medal,
+      ergebnisWert:         e.result_value,
+      ergebnisEinheit:      e.result_unit,
+      ergebnisText:         e.result_text,
+      kurzinfo:             e.short_info,
+      textArtikel:          e.article_text,
+      textKIEntwurf:        e.ai_draft,
+      quelleUrl:            e.source_url,
+      status:               String(e.status || 'Entwurf'),
+      melderId:             e.reporter_id,
+      melderName:           e.reporter_name,
+      eingangsdatum:        e.submitted_at || e.updated_at,
+      einwilligungGeprueft: e.consent_checked,
+      dublettenhinweis:     e.duplicate_flag,
+      dublettenhinweisText: e.duplicate_note,
+      beteiligte:           [],
+      protokoll:            [],
+      medien:               [],
+    };
+  },
+
+  // Mapping: App → Supabase (deutsche App-Namen → englische Spaltennamen)
+  _unmapErfolg(e) {
+    const sportName = e.sportartText || SLZB_DB.getSportart(e.sportartId)?.name || '';
+    const wbName    = e.wettbewerbText || SLZB_DB.getWettbewerb(e.wettbewerbId)?.name || '';
+    return {
+      achievement_no:  e.erfolgNr,
+      report_type:     e.meldungsart,
+      title:           e.titel,
+      sport_id:        sportName,        // Sportart als Freitext in sport_id
+      discipline:      e.disziplin || '',
+      competition_id:  wbName,           // Wettbewerb als Freitext in competition_id
+      event_date:      e.datum || null,
+      location:        e.ort || '',
+      level:           e.ebene || '',
+      placement:       e.platzierung || null,
+      medal:           e.medaille || 'keine',
+      result_value:    e.ergebnisWert || null,
+      result_unit:     e.ergebnisEinheit || '',
+      result_text:     e.ergebnisText || '',
+      short_info:      e.kurzinfo || '',
+      article_text:    e.textArtikel || '',
+      ai_draft:        e.textKIEntwurf || '',
+      source_url:      e.quelleUrl || '',
+      status:          e.status || 'Entwurf',
+      reporter_id:     Auth.id(),
+      reporter_name:   Auth.name(),
+      submitted_at:    new Date().toISOString(),
+      consent_checked: false,
+      duplicate_flag:  false,
+      duplicate_note:  '',
+    };
+  },
+};
+
 // ── UserAdmin ────────────────────────────────────────────────
 const UserAdmin = {
   users: [],

@@ -116,12 +116,23 @@ function navigateTo(page, params={}) {
   };
   const fn = pages[page];
   try {
-    main.innerHTML = fn ? fn() : `<div class="page"><p>Seite nicht gefunden: ${esc(page)}</p></div>`;
+    const result = fn ? fn() : null;
+    if (result && typeof result.then === 'function') {
+      result.then(html => {
+        main.innerHTML = html || `<div class="page"><p>Seite nicht gefunden.</p></div>`;
+        updateBadges();
+      }).catch(e => {
+        main.innerHTML = `<div class="page"><div class="alert alert-danger"><span class="alert-icon">❌</span><span>Fehler: ${esc(e.message)}</span></div></div>`;
+        debug(`Render-Fehler auf ${page}: ${e.message}`);
+      });
+    } else {
+      main.innerHTML = result || `<div class="page"><p>Seite nicht gefunden.</p></div>`;
+      updateBadges();
+    }
   } catch(e) {
     main.innerHTML = `<div class="page"><div class="alert alert-danger"><span class="alert-icon">❌</span><span>Fehler: ${esc(e.message)}</span></div></div>`;
     debug(`Render-Fehler auf ${page}: ${e.message}`);
   }
-  updateBadges();
   // Nutzerverwaltung: Daten asynchron nachladen
   if (page === 'nutzerverwaltung') {
     setTimeout(ladeNutzerverwaltung, 50);
@@ -200,8 +211,29 @@ function initApp() {
 }
 
 // ── Dashboard ────────────────────────────────────────────────
-function renderDashboard() {
-  const alle = SLZB_DB.erfolge;
+// Cache für geladene Erfolge
+APP._erfolgeCache = null;
+APP._lastLoad = 0;
+
+async function ladeErfolge(force=false) {
+  const jetzt = Date.now();
+  if (!force && APP._erfolgeCache && (jetzt - APP._lastLoad) < 30000) {
+    return APP._erfolgeCache;
+  }
+  try {
+    const erfolge = await DB.getErfolge();
+    APP._erfolgeCache = erfolge;
+    APP._lastLoad = jetzt;
+    return erfolge;
+  } catch(e) {
+    debug('Erfolge laden fehlgeschlagen: '+e.message);
+    return APP._erfolgeCache || [];
+  }
+}
+
+async function renderDashboard() {
+  // Sofort Spinner zeigen, dann Daten laden
+  const alle = await ladeErfolge();
   const freigegeben = alle.filter(e=>['Freigegeben','Veröffentlicht'].includes(e.status)).length;
   const offen = alle.filter(e=>['Eingereicht','Datenprüfung','Redaktion','Einwilligungsprüfung','Dublettenverdacht'].includes(e.status)).length;
   const unvollst = alle.filter(e=>e.status==='Unvollständig').length;
@@ -593,35 +625,36 @@ function renderSammelmeldungForm() {
 }
 
 // ── Meine Meldungen ──────────────────────────────────────────
-function renderMeineMeldungen() {
-  const uid = Auth.id(); const r = Auth.rolle();
-  const meldungen = r==='admin' ? SLZB_DB.erfolge :
-    SLZB_DB.erfolge.filter(e=>e.melderId===uid);
+async function renderMeineMeldungen() {
+  const r = Auth.rolle();
+  const filter = r==='admin' ? {} : { melderId: Auth.id() };
+  const meldungen = await ladeErfolge();
+  const gefiltert = r==='admin' ? meldungen : meldungen.filter(e=>e.melderId===Auth.id());
   return `<div class="page">
-    <div class="page-header"><h1>📋 Meine Meldungen</h1><p>${meldungen.length} Meldung(en).</p></div>
+    <div class="page-header"><h1>📋 Meine Meldungen</h1><p>${gefiltert.length} Meldung(en).</p></div>
     <div class="card"><div class="table-wrap"><table>
       <thead><tr><th>Nr.</th><th>Titel</th><th>Art</th><th>Sportart</th><th>Datum</th><th>Status</th><th>Eingereicht</th><th></th></tr></thead>
-      <tbody>${meldungen.length===0?'<tr><td colspan="8" class="text-center text-muted" style="padding:30px">Keine Meldungen.</td></tr>':
-        meldungen.map(e=>{const sp=SLZB_DB.getSportart(e.sportartId);
-          return`<tr class="clickable" onclick="navigateTo('erfolg-detail',{currentErfolgId:'${e.id}'})">
-            <td class="text-xs text-muted">${esc(e.erfolgNr||'–')}</td>
-            <td><strong>${esc(e.titel)}</strong></td>
-            <td class="text-sm">${esc(e.meldungsart)}</td>
-            <td class="text-sm">${esc(sp?.name||'–')}</td>
-            <td class="text-sm">${fmt(e.datum)}</td>
-            <td>${statusBadge(e.status)}</td>
-            <td class="text-sm text-muted">${fmtDT(e.eingangsdatum)}</td>
-            <td><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();navigateTo('erfolg-detail',{currentErfolgId:'${e.id}'})">→</button></td>
-          </tr>`;}).join('')}
+      <tbody>${gefiltert.length===0?'<tr><td colspan="8" class="text-center text-muted" style="padding:30px">Keine Meldungen.</td></tr>':
+        gefiltert.map(e=>`<tr class="clickable" onclick="navigateTo('erfolg-detail',{currentErfolgId:'${e.id}'})">
+          <td class="text-xs text-muted">${esc(e.erfolgNr||'–')}</td>
+          <td><strong>${esc(e.titel)}</strong></td>
+          <td class="text-sm">${esc(e.meldungsart)}</td>
+          <td class="text-sm">${esc(e.sportartText||'–')}</td>
+          <td class="text-sm">${fmt(e.datum)}</td>
+          <td>${statusBadge(e.status)}</td>
+          <td class="text-sm text-muted">${fmtDT(e.eingangsdatum)}</td>
+          <td><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();navigateTo('erfolg-detail',{currentErfolgId:'${e.id}'})">→</button></td>
+        </tr>`).join('')}
       </tbody>
     </table></div></div>
   </div>`;
 }
 
 // ── Rückfragen ───────────────────────────────────────────────
-function renderRueckfragen() {
+async function renderRueckfragen() {
   const uid = Auth.id(); const r = Auth.rolle();
-  const rueck = SLZB_DB.erfolge.filter(e=>
+  const alle = await ladeErfolge();
+  const rueck = alle.filter(e=>
     e.status==='Rückfrage an Melder'&&(e.melderId===uid||r==='admin'));
   return `<div class="page">
     <div class="page-header"><h1>💬 Rückfragen</h1><p>${rueck.length} offene Rückfrage(n).</p></div>
@@ -648,7 +681,8 @@ function renderRueckfragen() {
 }
 
 // ── Redaktionsübersicht ──────────────────────────────────────
-function renderRedaktion() {
+async function renderRedaktion() {
+  const alle = await ladeErfolge();
   const gruppen=[
     {label:'Neu eingegangen',status:['Eingereicht'],icon:'📥'},
     {label:'Unvollständig',status:['Unvollständig'],icon:'⚠️'},
@@ -660,7 +694,7 @@ function renderRedaktion() {
   return `<div class="page">
     <div class="page-header"><h1>✏️ Redaktionsübersicht</h1></div>
     ${gruppen.map(g=>{
-      const items=SLZB_DB.erfolge.filter(e=>g.status.includes(e.status));
+      const items=alle.filter(e=>g.status.includes(e.status));
       if(!items.length) return '';
       return`<div class="card mb-3">
         <div class="card-header"><h2>${g.icon} ${esc(g.label)}</h2><span class="badge badge-info">${items.length}</span></div>
@@ -683,9 +717,10 @@ function renderRedaktion() {
 }
 
 // ── Archiv ───────────────────────────────────────────────────
-function renderArchiv() {
+async function renderArchiv() {
+  const alle = await ladeErfolge();
   return `<div class="page">
-    <div class="page-header"><h1>🗄️ Archiv</h1><p>${SLZB_DB.erfolge.length} Meldungen gesamt.</p></div>
+    <div class="page-header"><h1>🗄️ Archiv</h1><p>${alle.length} Meldungen gesamt.</p></div>
     <div class="card mb-3"><div class="card-body">
       <div class="form-row cols-4">
         <div class="form-group"><label>Suche</label>
@@ -828,7 +863,7 @@ function validiereFormular(daten, meldungsart) {
   return fehler;
 }
 
-function speichereErfolg(status, meldungsart) {
+async function speichereErfolg(status, meldungsart) {
   const daten=leseDatenAusFormular(meldungsart);
   const schuelerText=document.getElementById('f-schueler-text')?.value?.trim()||'';
   const schueler=schuelerText?SLZB_DB.schueler.find(s=>s.anzeigename.toLowerCase()===schuelerText.toLowerCase()):null;
@@ -840,31 +875,30 @@ function speichereErfolg(status, meldungsart) {
     if(el) el.innerHTML=`<div class="alert alert-danger"><span class="alert-icon">❌</span><ul>${fehler.map(f=>`<li>${esc(f)}</li>`).join('')}</ul></div>`;
     return;
   }
-  const id=SLZB_DB.neueErfolgNr();
-  const neuerErfolg={
-    id,erfolgNr:id,...daten,status,
-    melderId:Auth.id(), melderName:Auth.name(),
-    eingangsdatum:new Date().toISOString(),
-    einwilligungGeprueft:false,
-    beteiligte:schueler?[{schuelerId:schueler.id,rolle:'Athlet',einwilligungsstatus:'Nicht geprüft'}]:[],
-    medien:[],
-    protokoll:[{statusAlt:'',statusNeu:status,zeitpunkt:new Date().toISOString(),person:Auth.name(),kommentar:''}],
-  };
-  const dubletten=SLZB_DB.pruefeDubletten(neuerErfolg);
-  if(dubletten.length){
-    neuerErfolg.dublettenhinweis=true;
-    neuerErfolg.dublettenhinweisText=`Mögliche Dublette zu: ${dubletten.map(d=>d.erfolgNr||d.id).join(', ')}`;
-    neuerErfolg.status='Dublettenverdacht';
-    neuerErfolg.protokoll.push({statusAlt:status,statusNeu:'Dublettenverdacht',zeitpunkt:new Date().toISOString(),person:'System',kommentar:'Automatische Dublettenprüfung'});
+  // Button sperren
+  const btn=document.querySelector('.card-footer .btn-primary');
+  if(btn){btn.disabled=true;btn.textContent='Wird gespeichert...';}
+  try {
+    const beteiligte=schueler?[{
+      schuelerId:schueler.id,
+      anzeigename:schueler.anzeigename,
+      rolle:'Athlet',
+      einwilligungsstatus:'Nicht geprüft'
+    }]:[];
+    const result=await DB.erstelleErfolg({...daten,status}, beteiligte);
+    if(!result.ok) throw new Error(result.fehler||'Unbekannter Fehler');
+    APP.selectedMeldungsart=null;
+    debug(`Erfolg gespeichert: ${result.nr} (${status})`);
+    toast(`Erfolg ${result.nr} ${status==='Entwurf'?'als Entwurf gespeichert':'eingereicht'}!`,'success');
+    navigateTo('erfolg-detail',{currentErfolgId:result.id});
+  } catch(e) {
+    debug('Fehler beim Speichern: '+e.message);
+    toast('Fehler: '+e.message,'danger');
+    if(btn){btn.disabled=false;btn.textContent='📤 Einreichen';}
   }
-  SLZB_DB.erfolge.push(neuerErfolg);
-  slzbSave(); APP.selectedMeldungsart=null;
-  debug(`Erfolg gespeichert: ${id} (${status})`);
-  toast(`Erfolg ${id} ${status==='Entwurf'?'als Entwurf gespeichert':'eingereicht'}!`,'success');
-  navigateTo('erfolg-detail',{currentErfolgId:id});
 }
 
-function speichereTeamerfolg(status) {
+async function speichereTeamerfolg(status) {
   const daten=leseDatenAusFormular('Teamerfolg');
   const fehler=validiereFormular(daten,'Teamerfolg');
   if(!APP._teamBeteiligte.length&&status==='Eingereicht') fehler.push('Mindestens ein Beteiligter erforderlich.');
@@ -873,21 +907,27 @@ function speichereTeamerfolg(status) {
     if(el) el.innerHTML=`<div class="alert alert-danger"><span class="alert-icon">❌</span><ul>${fehler.map(f=>`<li>${esc(f)}</li>`).join('')}</ul></div>`;
     return;
   }
-  const id=SLZB_DB.neueErfolgNr();
-  SLZB_DB.erfolge.push({
-    id,erfolgNr:id,...daten,status,
-    melderId:Auth.id(),melderName:Auth.name(),
-    eingangsdatum:new Date().toISOString(),
-    einwilligungGeprueft:false,
-    beteiligte:[...APP._teamBeteiligte],medien:[],
-    protokoll:[{statusAlt:'',statusNeu:status,zeitpunkt:new Date().toISOString(),person:Auth.name(),kommentar:''}],
-  });
-  slzbSave(); APP._teamBeteiligte=[]; APP.selectedMeldungsart=null;
-  toast(`Teamerfolg ${id} ${status==='Entwurf'?'gespeichert':'eingereicht'}!`,'success');
-  navigateTo('meine-meldungen');
+  const btn=document.querySelector('.card-footer .btn-primary');
+  if(btn){btn.disabled=true;btn.textContent='Wird gespeichert...';}
+  try {
+    const beteiligte=APP._teamBeteiligte.map(b=>({
+      schuelerId:b.schuelerId,
+      anzeigename:SLZB_DB.getSchueler(b.schuelerId)?.anzeigename||b.schuelerId,
+      rolle:b.rolle,
+      einwilligungsstatus:'Nicht geprüft'
+    }));
+    const result=await DB.erstelleErfolg({...daten,status}, beteiligte);
+    if(!result.ok) throw new Error(result.fehler||'Unbekannter Fehler');
+    APP._teamBeteiligte=[]; APP.selectedMeldungsart=null;
+    toast(`Teamerfolg ${result.nr} ${status==='Entwurf'?'gespeichert':'eingereicht'}!`,'success');
+    navigateTo('meine-meldungen');
+  } catch(e) {
+    toast('Fehler: '+e.message,'danger');
+    if(btn){btn.disabled=false;btn.textContent='📤 Einreichen';}
+  }
 }
 
-function speichereArtikel() {
+async function speichereArtikel() {
   const text=document.getElementById('f-artikel-text')?.value?.trim()||'';
   const sportartText=document.getElementById('f-sportart-text')?.value?.trim()||'';
   const datum=document.getElementById('f-datum')?.value||null;
@@ -901,20 +941,21 @@ function speichereArtikel() {
     return;
   }
   const sp=SLZB_DB.sportarten.find(s=>s.name.toLowerCase()===sportartText.toLowerCase());
-  const id=SLZB_DB.neueErfolgNr();
-  SLZB_DB.erfolge.push({
-    id,erfolgNr:id,meldungsart:'Fertiger Artikel',
-    titel:'[Aus Artikel] '+text.slice(0,60)+'…',
-    sportartId:sp?.id||null,datum,status:'Eingereicht',
-    quelleOriginal:text,
-    melderId:Auth.id(),melderName:Auth.name(),
-    eingangsdatum:new Date().toISOString(),
-    einwilligungGeprueft:false,beteiligte:[],medien:[],
-    protokoll:[{statusAlt:'',statusNeu:'Eingereicht',zeitpunkt:new Date().toISOString(),person:Auth.name(),kommentar:'Fertiger Artikel'}],
-  });
-  slzbSave(); APP.selectedMeldungsart=null;
-  toast(`Artikel ${id} eingereicht!`,'success');
-  navigateTo('meine-meldungen');
+  try {
+    const result=await DB.erstelleErfolg({
+      meldungsart:'Fertiger Artikel',
+      titel:'[Aus Artikel] '+text.slice(0,60)+'…',
+      sportartId:sp?.id||null, sportartText,
+      datum, status:'Eingereicht',
+      quelleOriginal:text,
+    },[]);
+    if(!result.ok) throw new Error(result.fehler);
+    APP.selectedMeldungsart=null;
+    toast(`Artikel ${result.nr} eingereicht!`,'success');
+    navigateTo('meine-meldungen');
+  } catch(e) {
+    toast('Fehler: '+e.message,'danger');
+  }
 }
 
 function antworteSenden(erfolgId) {
@@ -925,14 +966,16 @@ function antworteSenden(erfolgId) {
   navigateTo('rueckfragen');
 }
 
-function filterArchiv() {
+async function filterArchiv() {
   const suche=(document.getElementById('archiv-suche')?.value||'').toLowerCase();
   const sportart=document.getElementById('archiv-sportart')?.value||'';
   const status=document.getElementById('archiv-status')?.value||'';
   const ebene=document.getElementById('archiv-ebene')?.value||'';
-  const gefiltert=SLZB_DB.erfolge.filter(e=>{
+  const alle=await ladeErfolge();
+  const spName=SLZB_DB.getSportart(sportart)?.name?.toLowerCase()||'';
+  const gefiltert=alle.filter(e=>{
     if(suche&&!e.titel.toLowerCase().includes(suche)&&!(e.erfolgNr||'').toLowerCase().includes(suche)) return false;
-    if(sportart&&e.sportartId!==sportart) return false;
+    if(sportart&&e.sportartId!==sportart&&(e.sportartText||'').toLowerCase()!==spName) return false;
     if(status&&e.status!==status) return false;
     if(ebene&&e.ebene!==ebene) return false;
     return true;

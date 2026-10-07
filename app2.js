@@ -3,8 +3,8 @@
 // ============================================================
 
 // ── Erfolg-Detail ────────────────────────────────────────────
-function renderErfolgDetail() {
-  const e=SLZB_DB.getErfolg(APP.currentErfolgId);
+async function renderErfolgDetail() {
+  const e=await DB.getErfolgById(APP.currentErfolgId);
   if (!e) return `<div class="page"><div class="alert alert-danger"><span class="alert-icon">❌</span><span>Meldung nicht gefunden.</span></div></div>`;
   const sp=SLZB_DB.getSportart(e.sportartId);
   const wb=SLZB_DB.getWettbewerb(e.wettbewerbId);
@@ -284,26 +284,29 @@ function getStatusAktionen(status,rolle) {
   return (map[rolle]||{})[status]||[];
 }
 
-function statusWechselUI(erfolgId,statusNeu) {
+async function statusWechselUI(erfolgId,statusNeu) {
   const kommentar=document.getElementById('status-kommentar')?.value||'';
-  SLZB_DB.statusWechsel(erfolgId,statusNeu,Auth.name(),kommentar);
+  const result=await DB.statusWechsel(erfolgId,statusNeu,kommentar);
+  if(!result.ok){toast('Fehler beim Statuswechsel','danger');return;}
+  APP._erfolgeCache=null; // Cache leeren
   toast(`Status → ${statusNeu}`,'success');
   navigateTo('erfolg-detail',{currentErfolgId:erfolgId});
 }
 
-function speichereArtikeltext(erfolgId) {
-  const e=SLZB_DB.getErfolg(erfolgId); if(!e) return;
-  e.textArtikel=document.getElementById('edit-artikel')?.value||'';
-  slzbSave(); toast('Artikeltext gespeichert','success');
+async function speichereArtikeltext(erfolgId) {
+  const text=document.getElementById('edit-artikel')?.value||'';
+  await DB.speichereArtikeltext(erfolgId, text);
+  APP._erfolgeCache=null;
+  toast('Artikeltext gespeichert','success');
 }
 
-function generiereKIText(erfolgId) {
-  const e=SLZB_DB.getErfolg(erfolgId); if(!e) return;
-  const wb=SLZB_DB.getWettbewerb(e.wettbewerbId);
+async function generiereKIText(erfolgId) {
+  const e=await DB.getErfolgById(erfolgId); if(!e) return;
   toast('KI-Entwurf wird generiert...','info');
-  setTimeout(()=>{
-    e.textKIEntwurf=`[KI-ENTWURF – NICHT VERÖFFENTLICHEN]\n\nÜberschrift: ${e.titel}\n\nKurzmeldung: Das SLZB Berlin freut sich über einen hervorragenden Erfolg bei ${wb?.name||'dem Wettbewerb'}. ${e.platzierung?`Platzierung: ${e.platzierung}. Platz.`:''} ${e.ergebnisWert?`Ergebnis: ${e.ergebnisWert} ${e.ergebnisEinheit||''}.`:''}\n\nHinweis: Keine erfundenen Fakten. Keine erfundenen Zitate. Menschliche Freigabe verpflichtend.`;
-    slzbSave();
+  setTimeout(async()=>{
+    const entwurf=`[KI-ENTWURF – NICHT VERÖFFENTLICHEN]\n\nÜberschrift: ${e.titel}\n\nKurzmeldung: Das SLZB Berlin freut sich über einen hervorragenden Erfolg bei ${e.wettbewerbText||'dem Wettbewerb'}. ${e.platzierung?`Platzierung: ${e.platzierung}. Platz.`:''} ${e.ergebnisWert?`Ergebnis: ${e.ergebnisWert} ${e.ergebnisEinheit||''}.`:''}\n\nHinweis: Keine erfundenen Fakten. Keine erfundenen Zitate. Menschliche Freigabe verpflichtend.`;
+    await DB.speichereKIEntwurf(erfolgId, entwurf);
+    APP._erfolgeCache=null;
     toast('KI-Entwurf generiert – bitte prüfen','success');
     navigateTo('erfolg-detail',{currentErfolgId:erfolgId});
   },1500);
@@ -404,8 +407,9 @@ function widerrufEinwilligung(schuelerId,name) {
 }
 
 // ── Ausgaben ─────────────────────────────────────────────────
-function renderAusgaben() {
-  const freigegebene=SLZB_DB.erfolge.filter(e=>['Freigegeben','Veröffentlicht'].includes(e.status));
+async function renderAusgaben() {
+  const alle=await ladeErfolge();
+  const freigegebene=alle.filter(e=>['Freigegeben','Veröffentlicht'].includes(e.status));
   return`<div class="page">
     <div class="page-header"><h1>📤 Ausgaben & Freigaben</h1></div>
     <div class="alert alert-warning mb-3"><span class="alert-icon">⚠️</span>
@@ -588,8 +592,8 @@ async function speichereEigenesPasswort() {
 }
 
 // ── Jahreschronik ─────────────────────────────────────────────
-function renderJahreschronik() {
-  const alle=SLZB_DB.erfolge;
+async function renderJahreschronik() {
+  const alle=await ladeErfolge();
   const schuljahre=[...new Set(alle.map(e=>SLZB_DB.getSchuljahr(e.datum)).filter(Boolean))].sort().reverse();
   const aktuellesSchuljahr=schuljahre[0]||'';
   return`<div class="page">
@@ -676,13 +680,14 @@ function renderChronikInhalt(alle,schuljahr,sportartId,ebene,typ) {
     </div>`;
 }
 
-function aktualisiereChronik() {
+async function aktualisiereChronik() {
   const schuljahr=document.getElementById('chr-schuljahr')?.value||'';
   const sportartId=document.getElementById('chr-sportart')?.value||'';
   const ebene=document.getElementById('chr-ebene')?.value||'';
   const typ=document.getElementById('chr-typ')?.value||'';
+  const alle=await ladeErfolge();
   const inhalt=document.getElementById('chronik-inhalt');
-  if(inhalt) inhalt.innerHTML=renderChronikInhalt(SLZB_DB.erfolge,schuljahr,sportartId,ebene,typ);
+  if(inhalt) inhalt.innerHTML=renderChronikInhalt(alle,schuljahr,sportartId,ebene,typ);
 }
 
 function druckeChronik() {
@@ -691,14 +696,15 @@ function druckeChronik() {
   setTimeout(()=>document.querySelectorAll('.chronik-druckkopf').forEach(el=>el.style.display='none'),1000);
 }
 
-function exportiereChronikCSV() {
+async function exportiereChronikCSV() {
   const schuljahr=document.getElementById('chr-schuljahr')?.value||'';
   const sportartId=document.getElementById('chr-sportart')?.value||'';
   const ebene=document.getElementById('chr-ebene')?.value||'';
   const typ=document.getElementById('chr-typ')?.value||'';
-  let gefiltert=SLZB_DB.erfolge.filter(e=>['Freigegeben','Veröffentlicht','Archiviert'].includes(e.status));
+  const alle=await ladeErfolge();
+  let gefiltert=alle.filter(e=>['Freigegeben','Veröffentlicht','Archiviert'].includes(e.status));
   if(schuljahr) gefiltert=gefiltert.filter(e=>SLZB_DB.getSchuljahr(e.datum)===schuljahr);
-  if(sportartId) gefiltert=gefiltert.filter(e=>e.sportartId===sportartId);
+  if(sportartId) gefiltert=gefiltert.filter(e=>e.sportartId===sportartId||e.sportartText===SLZB_DB.getSportart(sportartId)?.name);
   if(ebene) gefiltert=gefiltert.filter(e=>e.ebene===ebene);
   if(typ) gefiltert=gefiltert.filter(e=>e.meldungsart===typ);
   gefiltert.sort((a,b)=>new Date(b.datum)-new Date(a.datum));
