@@ -25,11 +25,9 @@ const Backend = {
     return data;
   },
 
-  // Edge Function aufrufen mit detailliertem Fehler-Logging
   async invoke(name, body) {
     const { data, error } = await this.client.functions.invoke(name, { body });
     if (error) {
-      // Versuche den Response-Body zu lesen
       let detail = error.message;
       try {
         if (error.context) {
@@ -44,13 +42,16 @@ const Backend = {
     return data;
   },
 
-  // Direkte DB-Abfragen
   async getProfile(userId) {
-    const { data } = await this.client
+    const { data, error } = await this.client
       .from('profiles')
       .select('*')
-      .eq('id', userId)
+      .eq('user_id', userId)
       .single();
+    if (error) {
+      console.warn('getProfile Fehler:', error.message);
+      return null;
+    }
     return data;
   },
 
@@ -58,12 +59,12 @@ const Backend = {
     const { error } = await this.client
       .from('profiles')
       .update(updates)
-      .eq('id', userId);
+      .eq('user_id', userId);
     if (error) throw new Error(error.message);
   },
 };
 
-// ── Auth-Wrapper ─────────────────────────────────────────────
+// ── Auth ─────────────────────────────────────────────────────
 const Auth = {
   _session: null,
   _profile: null,
@@ -73,12 +74,30 @@ const Auth = {
     if (session) {
       this._session = session;
       this._profile = await Backend.getProfile(session.user.id);
+      if (typeof debug === 'function') debug(`Session OK: ${session.user.email}, Profil: ${JSON.stringify(this._profile)}`);
+      // Fallback wenn kein Profil gefunden
+      if (!this._profile) {
+        if (typeof debug === 'function') debug('Kein Profil gefunden – Fallback auf E-Mail');
+        this._profile = {
+          user_id: session.user.id,
+          role: 'trainer',
+          display_name: session.user.email,
+          username: session.user.email,
+        };
+      }
     }
-    // Session-Änderungen überwachen
     Backend.client.auth.onAuthStateChange(async (event, session) => {
       this._session = session;
       if (session) {
         this._profile = await Backend.getProfile(session.user.id);
+        if (!this._profile) {
+          this._profile = {
+            user_id: session.user.id,
+            role: 'trainer',
+            display_name: session.user.email,
+            username: session.user.email,
+          };
+        }
       } else {
         this._profile = null;
       }
@@ -87,12 +106,26 @@ const Auth = {
   },
 
   async login(email, password) {
-    const { data, error } = await Backend.client.auth.signInWithPassword({
-      email, password
-    });
-    if (error) return { ok: false, fehler: error.message };
+    if (typeof debug === 'function') debug(`Login-Versuch: ${email}`);
+    const { data, error } = await Backend.client.auth.signInWithPassword({ email, password });
+    if (error) {
+      if (typeof debug === 'function') debug(`Login Fehler: ${error.message}`);
+      return { ok: false, fehler: error.message };
+    }
+    if (typeof debug === 'function') debug(`Login OK: ${data.user.id}`);
     this._session = data.session;
     this._profile = await Backend.getProfile(data.user.id);
+    if (typeof debug === 'function') debug(`Profil: ${JSON.stringify(this._profile)}`);
+    // Fallback wenn kein Profil
+    if (!this._profile) {
+      if (typeof debug === 'function') debug('Kein Profil – Fallback');
+      this._profile = {
+        user_id: data.user.id,
+        role: 'trainer',
+        display_name: data.user.email,
+        username: data.user.email,
+      };
+    }
     return { ok: true };
   },
 
@@ -122,14 +155,13 @@ const Auth = {
     return (perms[action]||[]).includes(r);
   },
 
-  // Eigenes Passwort ändern
   async aenderePasswort(neuesPasswort) {
     const { error } = await Backend.client.auth.updateUser({ password: neuesPasswort });
     if (error) throw new Error(error.message);
   },
 };
 
-// ── UserAdmin (Edge Function) ────────────────────────────────
+// ── UserAdmin ────────────────────────────────────────────────
 const UserAdmin = {
   users: [],
 
@@ -143,14 +175,13 @@ const UserAdmin = {
     return this.users;
   },
 
-  // Fallback: Nutzer direkt aus profiles-Tabelle laden
   async loadFallback() {
     const { data, error } = await Backend.client
       .from('profiles')
-      .select('*')
+      .select('user_id, username, display_name, role, active, created_at')
       .order('created_at');
     if (error) throw new Error(error.message);
-    this.users = data || [];
+    this.users = (data||[]).map(u=>({...u, id: u.user_id}));
     return this.users;
   },
 
