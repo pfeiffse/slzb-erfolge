@@ -179,8 +179,8 @@ const DB = {
   async getErfolge(filter = {}) {
     let q = Backend.client
       .from('achievements')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .select('*, competitions(name)')
+      .order('submitted_at', { ascending: false });
     if (filter.melderId)  q = q.eq('melder_id', filter.melderId);
     if (filter.status)    q = q.eq('status', filter.status);
     if (filter.statusIn)  q = q.in('status', filter.statusIn);
@@ -193,7 +193,7 @@ const DB = {
   async getErfolgById(id) {
     const { data, error } = await Backend.client
       .from('achievements')
-      .select('*')
+      .select('*, competitions(name)')
       .eq('id', id)
       .single();
     if (error) return null;
@@ -232,7 +232,7 @@ const DB = {
   // Erfolg erstellen
   async erstelleErfolg(daten, beteiligte = []) {
     const nr = await this.naechsteErfolgNr();
-    const row = this._unmapErfolg({ ...daten, erfolgNr: nr });
+    const row = await this.unmapErfolg({ ...daten, erfolgNr: nr });
     const { data, error } = await Backend.client
       .from('achievements')
       .insert([row])
@@ -341,16 +341,21 @@ const DB = {
 
   // Mapping: Supabase → App (englische Spaltennamen → deutsche App-Namen)
   _mapErfolg(e) {
+    // Sportartname aus lokaler DB (IDs sind identisch)
+    const sportartText = SLZB_DB.getSportart(e.sport_id)?.name || e.sport_id || '';
+    // Wettbewerbname: aus competitions-Join oder direkt
+    const wettbewerbText = e.competitions?.name || e.competition_id || '';
+
     return {
       id:                   e.id,
       erfolgNr:             e.achievement_no,
       meldungsart:          e.report_type,
       titel:                e.title,
       sportartId:           e.sport_id,
-      sportartText:         e.sport_id,          // wird als Freitext genutzt
-      disziplin:            e.discipline,
+      sportartText:         sportartText,
+      disziplin:            e.discipline || '',
       wettbewerbId:         e.competition_id,
-      wettbewerbText:       e.competition_id,    // wird als Freitext genutzt
+      wettbewerbText:       wettbewerbText,
       datum:                e.event_date,
       ort:                  e.location,
       ebene:                e.level,
@@ -359,7 +364,7 @@ const DB = {
       ergebnisWert:         e.result_value,
       ergebnisEinheit:      e.result_unit,
       ergebnisText:         e.result_text,
-      kurzinfo:             e.short_info,
+      kurzinfo:             e.short_info || '',
       textArtikel:          e.article_text,
       textKIEntwurf:        e.ai_draft,
       quelleUrl:            e.source_url,
@@ -376,17 +381,80 @@ const DB = {
     };
   },
 
+  // Wettbewerb-ID aus Supabase holen oder neu anlegen
+  async getOderErstelleWettbewerb(name, datum) {
+    if (!name) return null;
+    // Suche nach vorhandenem Wettbewerb
+    const { data: existing } = await Backend.client
+      .from('competitions')
+      .select('id')
+      .ilike('name', name.trim())
+      .limit(1);
+    if (existing?.length) return existing[0].id;
+    // Neu anlegen – ID wird automatisch generiert (WB-xxxxxxxx)
+    const { data: created, error } = await Backend.client
+      .from('competitions')
+      .insert([{
+        name:      name.trim(),
+        starts_on: datum || null,
+      }])
+      .select('id')
+      .single();
+    if (error) {
+      console.warn('Wettbewerb anlegen fehlgeschlagen:', error.message);
+      return null;
+    }
+    return created?.id || null;
+  },
+
   // Mapping: App → Supabase (deutsche App-Namen → englische Spaltennamen)
-  _unmapErfolg(e) {
-    const sportName = e.sportartText || SLZB_DB.getSportart(e.sportartId)?.name || '';
-    const wbName    = e.wettbewerbText || SLZB_DB.getWettbewerb(e.wettbewerbId)?.name || '';
+  async unmapErfolg(e) {
+    // sport_id: direkt aus lokaler DB (IDs sind identisch: SP01, SP14 etc.)
+    const sportId = e.sportartId || null;
+
+    // competition_id: aus Supabase laden oder anlegen
+    const wbName = e.wettbewerbText || SLZB_DB.getWettbewerb(e.wettbewerbId)?.name || '';
+    const competitionId = await this.getOderErstelleWettbewerb(wbName, e.datum);
+
     return {
       achievement_no:  e.erfolgNr,
       report_type:     e.meldungsart,
       title:           e.titel,
-      sport_id:        sportName,        // Sportart als Freitext in sport_id
+      sport_id:        sportId,
       discipline:      e.disziplin || '',
-      competition_id:  wbName,           // Wettbewerb als Freitext in competition_id
+      competition_id:  competitionId,
+      event_date:      e.datum || null,
+      location:        e.ort || '',
+      level:           e.ebene || '',
+      placement:       e.platzierung || null,
+      medal:           e.medaille || 'keine',
+      result_value:    e.ergebnisWert || null,
+      result_unit:     e.ergebnisEinheit || '',
+      result_text:     e.ergebnisText || '',
+      short_info:      e.kurzinfo || '',
+      article_text:    e.textArtikel || '',
+      ai_draft:        e.textKIEntwurf || '',
+      source_url:      e.quelleUrl || '',
+      status:          e.status || 'Entwurf',
+      reporter_id:     Auth.id(),
+      reporter_name:   Auth.name(),
+      submitted_at:    new Date().toISOString(),
+      consent_checked: false,
+      duplicate_flag:  false,
+      duplicate_note:  '',
+    };
+  },
+
+  // Alias für Rückwärtskompatibilität (sync)
+  _unmapErfolg(e) {
+    // Wird nur noch intern genutzt – async Version bevorzugen
+    return {
+      achievement_no:  e.erfolgNr,
+      report_type:     e.meldungsart,
+      title:           e.titel,
+      sport_id:        e.sportartId || null,
+      discipline:      e.disziplin || '',
+      competition_id:  null,
       event_date:      e.datum || null,
       location:        e.ort || '',
       level:           e.ebene || '',
