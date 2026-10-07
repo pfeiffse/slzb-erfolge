@@ -339,7 +339,7 @@ async function testDbVerbindung() {
   const el = document.getElementById('diagnose-ergebnis');
   el.innerHTML = '<div class="alert alert-info"><span class="alert-icon">⏳</span><span>Teste DB...</span></div>';
   try {
-    const { data, error } = await Backend.client.from('profiles').select('user_id').limit(1);
+    const { data, error } = await Backend.client.from('profiles').select('id').limit(1);
     if (error) throw new Error(error.message);
     el.innerHTML = `<div class="alert alert-success"><span class="alert-icon">✅</span><span>DB erreichbar. ${data?.length||0} Profile gefunden.</span></div>`;
     debug('DB-Test OK');
@@ -812,7 +812,7 @@ function addBildRow() {
     <button class="btn btn-ghost btn-sm" onclick="document.getElementById('bild-row-${id}').remove()">✕</button>
   </div>
   <div class="form-row cols-3">
-    <div class="form-group"><label>Datei</label><input type="file" accept="image/*"></div>
+    <div class="form-group"><label>Datei</label><input type="file" id="bild-datei-${id}" accept="image/jpeg,image/png,image/webp"></div>
     <div class="form-group"><label>Urheber <span class="required">*</span></label><input type="text" id="bild-urheber-${id}" placeholder="Name des Fotografen"></div>
     <div class="form-group"><label>Quelle <span class="required">*</span></label><input type="text" id="bild-quelle-${id}" placeholder="z.B. SLZB-Archiv"></div>
   </div>
@@ -822,6 +822,109 @@ function addBildRow() {
   </div>`;
   c.appendChild(div);
 }
+
+// ── Medien-Upload ────────────────────────────────────────────
+const MediaUpload = {
+  bucket: 'achievement-media',
+  maxDateigroesse: 6 * 1024 * 1024,
+  erlaubteTypen: ['image/jpeg', 'image/png', 'image/webp'],
+
+  sammleAusFormular() {
+    return [...document.querySelectorAll('[id^="bild-row-"]')]
+      .map(row => {
+        const id = row.id.replace('bild-row-', '');
+        return {
+          file: document.getElementById(`bild-datei-${id}`)?.files?.[0] || null,
+          urheber: document.getElementById(`bild-urheber-${id}`)?.value?.trim() || '',
+          quelle: document.getElementById(`bild-quelle-${id}`)?.value?.trim() || '',
+          bildunterschrift: document.getElementById(`bild-caption-${id}`)?.value?.trim() || '',
+          alternativtext: document.getElementById(`bild-alt-${id}`)?.value?.trim() || '',
+        };
+      })
+      .filter(bild => bild.file);
+  },
+
+  validiere(bilder) {
+    const fehler = [];
+    bilder.forEach((bild, index) => {
+      const nr = index + 1;
+      if (!this.erlaubteTypen.includes(bild.file.type)) {
+        fehler.push(`Bild ${nr}: Nur JPEG, PNG und WebP sind erlaubt.`);
+      }
+      if (bild.file.size > this.maxDateigroesse) {
+        fehler.push(`Bild ${nr}: Die Datei darf höchstens 6 MB groß sein.`);
+      }
+      if (!bild.urheber) fehler.push(`Bild ${nr}: Urheber ist ein Pflichtfeld.`);
+      if (!bild.quelle) fehler.push(`Bild ${nr}: Quelle ist ein Pflichtfeld.`);
+    });
+    return fehler;
+  },
+
+  sichereDateiendung(file) {
+    const nachTyp = {
+      'image/jpeg': 'jpg',
+      'image/png': 'png',
+      'image/webp': 'webp',
+    };
+    return nachTyp[file.type] || 'bin';
+  },
+
+  async uploadAlle(erfolgId, bilder) {
+    if (!bilder.length) return [];
+    if (!Backend.client) throw new Error('Supabase ist nicht initialisiert.');
+    if (!Auth.id()) throw new Error('Für den Bildupload ist eine Anmeldung erforderlich.');
+
+    const fehler = this.validiere(bilder);
+    if (fehler.length) throw new Error(fehler.join(' '));
+
+    const gespeichert = [];
+    for (let i = 0; i < bilder.length; i++) {
+      const bild = bilder[i];
+      const dateiId = crypto.randomUUID();
+      const endung = this.sichereDateiendung(bild.file);
+      const pfad = `${Auth.id()}/${erfolgId}/${dateiId}.${endung}`;
+
+      const { data: upload, error: uploadFehler } = await Backend.client.storage
+        .from(this.bucket)
+        .upload(pfad, bild.file, {
+          cacheControl: '3600',
+          contentType: bild.file.type,
+          upsert: false,
+        });
+
+      if (uploadFehler) {
+        throw new Error(`Bild ${i + 1} konnte nicht hochgeladen werden: ${uploadFehler.message}`);
+      }
+
+      const metadaten = {
+        achievement_id: erfolgId,
+        storage_path: upload.path,
+        original_name: bild.file.name,
+        mime_type: bild.file.type,
+        file_size: bild.file.size,
+        copyright_holder: bild.urheber,
+        source: bild.quelle,
+        caption: bild.bildunterschrift || null,
+        alt_text: bild.alternativtext || null,
+        uploaded_by: Auth.id(),
+      };
+
+      const { data: medium, error: dbFehler } = await Backend.client
+        .from('achievement_media')
+        .insert([metadaten])
+        .select()
+        .single();
+
+      if (dbFehler) {
+        await Backend.client.storage.from(this.bucket).remove([upload.path]);
+        throw new Error(`Metadaten für Bild ${i + 1} konnten nicht gespeichert werden: ${dbFehler.message}`);
+      }
+
+      gespeichert.push(medium);
+    }
+    return gespeichert;
+  },
+};
 
 function leseDatenAusFormular(meldungsart) {
   const sportartText=document.getElementById('f-sportart-text')?.value?.trim()||'';
@@ -868,6 +971,8 @@ async function speichereErfolg(status, meldungsart) {
   const schuelerText=document.getElementById('f-schueler-text')?.value?.trim()||'';
   const schueler=schuelerText?SLZB_DB.schueler.find(s=>s.anzeigename.toLowerCase()===schuelerText.toLowerCase()):null;
   const fehler=validiereFormular(daten,meldungsart);
+  const bilder=MediaUpload.sammleAusFormular();
+  fehler.push(...MediaUpload.validiere(bilder));
   if(!schuelerText&&status==='Eingereicht'&&meldungsart==='Einzelerfolg') fehler.push('Schüler/in ist Pflichtfeld.');
   if(schuelerText&&!schueler&&meldungsart==='Einzelerfolg') fehler.push(`Schüler/in "${schuelerText}" nicht gefunden.`);
   if(fehler.length){
@@ -887,8 +992,13 @@ async function speichereErfolg(status, meldungsart) {
     }]:[];
     const result=await DB.erstelleErfolg({...daten,status}, beteiligte);
     if(!result.ok) throw new Error(result.fehler||'Unbekannter Fehler');
+    if(bilder.length) {
+      btn.textContent=`Bilder werden hochgeladen (0/${bilder.length})...`;
+      await MediaUpload.uploadAlle(result.id, bilder);
+    }
     APP.selectedMeldungsart=null;
-    debug(`Erfolg gespeichert: ${result.nr} (${status})`);
+    APP._erfolgeCache=null;
+    debug(`Erfolg gespeichert: ${result.nr} (${status}), Bilder: ${bilder.length}`);
     toast(`Erfolg ${result.nr} ${status==='Entwurf'?'als Entwurf gespeichert':'eingereicht'}!`,'success');
     navigateTo('erfolg-detail',{currentErfolgId:result.id});
   } catch(e) {
@@ -901,6 +1011,8 @@ async function speichereErfolg(status, meldungsart) {
 async function speichereTeamerfolg(status) {
   const daten=leseDatenAusFormular('Teamerfolg');
   const fehler=validiereFormular(daten,'Teamerfolg');
+  const bilder=MediaUpload.sammleAusFormular();
+  fehler.push(...MediaUpload.validiere(bilder));
   if(!APP._teamBeteiligte.length&&status==='Eingereicht') fehler.push('Mindestens ein Beteiligter erforderlich.');
   if(fehler.length){
     const el=document.getElementById('form-errors');
@@ -918,7 +1030,12 @@ async function speichereTeamerfolg(status) {
     }));
     const result=await DB.erstelleErfolg({...daten,status}, beteiligte);
     if(!result.ok) throw new Error(result.fehler||'Unbekannter Fehler');
+    if(bilder.length) {
+      btn.textContent=`Bilder werden hochgeladen (0/${bilder.length})...`;
+      await MediaUpload.uploadAlle(result.id, bilder);
+    }
     APP._teamBeteiligte=[]; APP.selectedMeldungsart=null;
+    APP._erfolgeCache=null;
     toast(`Teamerfolg ${result.nr} ${status==='Entwurf'?'gespeichert':'eingereicht'}!`,'success');
     navigateTo('meine-meldungen');
   } catch(e) {
@@ -932,6 +1049,8 @@ async function speichereArtikel() {
   const sportartText=document.getElementById('f-sportart-text')?.value?.trim()||'';
   const datum=document.getElementById('f-datum')?.value||null;
   const fehler=[];
+  const bilder=MediaUpload.sammleAusFormular();
+  fehler.push(...MediaUpload.validiere(bilder));
   if(!text) fehler.push('Artikeltext ist Pflichtfeld');
   if(!sportartText) fehler.push('Sportart ist Pflichtfeld');
   if(!datum) fehler.push('Datum ist Pflichtfeld');
@@ -950,8 +1069,10 @@ async function speichereArtikel() {
       quelleOriginal:text,
     },[]);
     if(!result.ok) throw new Error(result.fehler);
+    if(bilder.length) await MediaUpload.uploadAlle(result.id, bilder);
     APP.selectedMeldungsart=null;
-    toast(`Artikel ${result.nr} eingereicht!`,'success');
+    APP._erfolgeCache=null;
+    toast(`Artikel ${result.nr} eingereicht${bilder.length ? `, ${bilder.length} Bild(er) gespeichert` : ''}!`,'success');
     navigateTo('meine-meldungen');
   } catch(e) {
     toast('Fehler: '+e.message,'danger');
