@@ -902,6 +902,7 @@ const MediaUpload = {
         original_name: bild.file.name,
         mime_type: bild.file.type,
         file_size: bild.file.size,
+        creator: bild.urheber,
         copyright_holder: bild.urheber,
         source: bild.quelle,
         caption: bild.bildunterschrift || null,
