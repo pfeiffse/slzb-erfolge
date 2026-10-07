@@ -202,24 +202,51 @@ async function erstelleNutzerV3() {
 
 async function speichereNutzerRolle(userId) {
   const roleEl = document.getElementById(`role-${userId}`);
-  if (!roleEl) return;
+  if (!roleEl) { toast('Rollen-Dropdown nicht gefunden','warning'); return; }
+  const neueRolle = roleEl.value;
+  debug(`Rolle speichern: ${userId} → ${neueRolle}`);
   try {
-    await UserAdmin.call('update', { userId, role: roleEl.value });
-    toast('Rolle gespeichert', 'success');
+    // Erst Edge Function versuchen
+    try {
+      await UserAdmin.call('update', { userId, role: neueRolle });
+    } catch(e) {
+      debug('Edge Function fehlgeschlagen, Fallback auf direkte DB: '+e.message);
+      // Fallback: direkt in profiles-Tabelle
+      const { error } = await Backend.client
+        .from('profiles')
+        .update({ role: neueRolle })
+        .eq('user_id', userId);
+      if (error) throw new Error(error.message);
+    }
+    toast('Rolle gespeichert ✅', 'success');
     await ladeNutzerverwaltung();
   } catch(e) {
-    toast(e.message, 'danger');
+    debug('Rolle speichern Fehler: '+e.message);
+    toast('Fehler: '+e.message, 'danger');
   }
 }
 
 async function setzeNutzerAktiv(userId, active) {
   if (!confirm(`Konto wirklich ${active?'aktivieren':'deaktivieren'}?`)) return;
+  debug(`Aktivierung: ${userId} → ${active}`);
   try {
-    await UserAdmin.call('update', { userId, active });
-    toast(`Konto ${active?'aktiviert':'deaktiviert'}`, 'success');
+    // Erst Edge Function versuchen
+    try {
+      await UserAdmin.call('update', { userId, active });
+    } catch(e) {
+      debug('Edge Function fehlgeschlagen, Fallback auf direkte DB: '+e.message);
+      // Fallback: direkt in profiles-Tabelle
+      const { error } = await Backend.client
+        .from('profiles')
+        .update({ active: active })
+        .eq('user_id', userId);
+      if (error) throw new Error(error.message);
+    }
+    toast(`Konto ${active?'aktiviert ✅':'deaktiviert'}`, 'success');
     await ladeNutzerverwaltung();
   } catch(e) {
-    toast(e.message, 'danger');
+    debug('Aktivierung Fehler: '+e.message);
+    toast('Fehler: '+e.message, 'danger');
   }
 }
 

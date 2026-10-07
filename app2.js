@@ -313,59 +313,237 @@ async function generiereKIText(erfolgId) {
 }
 
 // ── Ausgabe-Modals ───────────────────────────────────────────
-function zeigeA3Vorschau(erfolgId) {
-  const e=SLZB_DB.getErfolg(erfolgId); if(!e) return;
-  PDF.zeigeA3Vorschau(e, e.beteiligte||[]);
+// ── Ausgaben im JTFO-Stil ────────────────────────────────────
+
+async function zeigeA3Vorschau(erfolgId) {
+  const e = await DB.getErfolgById(erfolgId); if(!e) return;
+  const html = erzeugeJTFOHtml(e, 'a3');
+  const win = window.open('','_blank');
+  if (win) { win.document.write(html); win.document.close(); setTimeout(()=>win.print(),800); }
 }
-function zeigeBildschirmModal(erfolgId) {
-  const e=SLZB_DB.getErfolg(erfolgId); if(!e) return;
-  const sp=SLZB_DB.getSportart(e.sportartId);
-  const mi={Gold:'🥇',Silber:'🥈',Bronze:'🥉'};
-  const namen=(e.beteiligte||[]).filter(b=>SLZB_DB.pruefeEinwilligung(b.schuelerId,'digitalSignage').ok)
-    .map(b=>SLZB_DB.getSchueler(b.schuelerId)?.anzeigename||b.schuelerId);
+
+async function zeigeBildschirmModal(erfolgId) {
+  const e = await DB.getErfolgById(erfolgId); if(!e) return;
+  const html = erzeugeJTFOHtml(e, 'screen');
   const overlay=document.createElement('div'); overlay.className='modal-overlay';
-  overlay.innerHTML=`<div class="modal">
-    <div class="modal-header"><h3>🖥️ Bildschirm-Vorschau</h3>
+  overlay.innerHTML=`<div class="modal modal-xl">
+    <div class="modal-header"><h3>🖥️ Ausgabe-Vorschau (JTFO-Stil)</h3>
       <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-    <div class="modal-body text-center">
-      <div class="screen-preview">
-        <div class="screen-header">🏫 SLZB Berlin</div>
-        <div class="screen-body">
-          <div class="screen-platz">${e.platzierung?e.platzierung+'.':'–'}</div>
-          <div class="screen-medaille">${e.medaille&&e.medaille!=='keine'?mi[e.medaille]||'':''}</div>
-          <div class="screen-sport">${esc(sp?.name||'')}${e.disziplin?' · '+esc(e.disziplin):''}</div>
-          <div class="screen-titel">${esc(e.titel.slice(0,60))}${e.titel.length>60?'…':''}</div>
-          ${namen.length?`<div class="screen-name">👤 ${namen.slice(0,3).join(' · ')}${namen.length>3?' + '+(namen.length-3)+' weitere':''}</div>`:''}
-        </div>
-        <div class="screen-footer">Anzeigedauer: 15 Sek.</div>
-      </div>
+    <div class="modal-body" style="padding:0;background:#000;border-radius:0 0 var(--radius-lg) var(--radius-lg)">
+      <iframe srcdoc="${html.replace(/"/g,'&quot;')}" style="width:100%;height:500px;border:none;border-radius:0 0 var(--radius-lg) var(--radius-lg)"></iframe>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Schließen</button>
-      <button class="btn btn-primary" onclick="PDF.erzeugeScreenHTML(SLZB_DB.getErfolg('${e.id}'),SLZB_DB.getErfolg('${e.id}').beteiligte||[]);this.closest('.modal-overlay').remove();toast('HTML heruntergeladen','success')">🖥️ HTML herunterladen</button>
+      <button class="btn btn-outline" onclick="downloadJTFO('${erfolgId}','screen')">🖥️ HTML herunterladen</button>
+      <button class="btn btn-primary" onclick="druckeJTFO('${erfolgId}')">🖨️ Drucken</button>
     </div>
   </div>`;
   document.body.appendChild(overlay);
 }
-function zeigeSocialModal(erfolgId) {
-  const e=SLZB_DB.getErfolg(erfolgId); if(!e) return;
-  const smNok=(e.beteiligte||[]).filter(b=>!SLZB_DB.pruefeEinwilligung(b.schuelerId,'socialMedia').ok);
+
+async function zeigeSocialModal(erfolgId) {
+  const e = await DB.getErfolgById(erfolgId); if(!e) return;
+  const html = erzeugeJTFOHtml(e, 'social');
   const overlay=document.createElement('div'); overlay.className='modal-overlay';
   overlay.innerHTML=`<div class="modal modal-lg">
-    <div class="modal-header"><h3>📱 Social-Media-Paket</h3>
+    <div class="modal-header"><h3>📱 Social-Media-Ausgabe (JTFO-Stil)</h3>
       <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
     <div class="modal-body">
       <div class="alert alert-danger mb-3"><span class="alert-icon">🔒</span>
         <span><strong>Social Media ist standardmäßig gesperrt.</strong> Kein Auto-Posting. Nur Export-Paket.</span></div>
-      ${smNok.length?`<div class="datenschutz-warning mb-3"><h4>⚠️ Fehlende Social-Media-Freigaben</h4>
-        <ul>${smNok.map(b=>{const s=SLZB_DB.getSchueler(b.schuelerId);return`<li>${esc(s?.anzeigename||b.schuelerId)}</li>`}).join('')}</ul></div>`:''}
+      <div style="background:#000;border-radius:12px;overflow:hidden;max-width:400px;margin:0 auto">
+        <iframe srcdoc="${html.replace(/"/g,'&quot;')}" style="width:100%;height:400px;border:none"></iframe>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Schließen</button>
-      <button class="btn btn-warning" onclick="const r=PDF.erzeugeSocialMediaPaket(SLZB_DB.getErfolg('${e.id}'),SLZB_DB.getErfolg('${e.id}').beteiligte||[]);toast('Paket heruntergeladen','success');this.closest('.modal-overlay').remove()">📦 Paket herunterladen</button>
+      <button class="btn btn-warning" onclick="downloadJTFO('${erfolgId}','social');this.closest('.modal-overlay').remove()">📦 HTML herunterladen</button>
     </div>
   </div>`;
   document.body.appendChild(overlay);
+}
+
+async function downloadJTFO(erfolgId, typ) {
+  const e = await DB.getErfolgById(erfolgId); if(!e) return;
+  const html = erzeugeJTFOHtml(e, typ);
+  const blob = new Blob([html],{type:'text/html;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href=url; a.download=`SLZB_${typ}_${e.erfolgNr||'ERF'}_${new Date().toISOString().slice(0,10)}.html`;
+  a.click(); URL.revokeObjectURL(url);
+  toast('HTML heruntergeladen','success');
+}
+
+async function druckeJTFO(erfolgId) {
+  const e = await DB.getErfolgById(erfolgId); if(!e) return;
+  const html = erzeugeJTFOHtml(e, 'a3');
+  const win = window.open('','_blank');
+  if (win) { win.document.write(html); win.document.close(); setTimeout(()=>win.print(),800); }
+}
+
+// ── JTFO-HTML-Generator ──────────────────────────────────────
+function erzeugeJTFOHtml(e, typ) {
+  const sportart   = e.sportartText || SLZB_DB.getSportart(e.sportartId)?.name || '';
+  const wettbewerb = e.wettbewerbText || '';
+  const platz      = e.platzierung || '';
+  const medaille   = e.medaille && e.medaille !== 'keine' ? e.medaille.toUpperCase() : '';
+  const disziplin  = e.disziplin || '';
+  const ergebnis   = e.ergebnisWert ? `${e.ergebnisWert} ${e.ergebnisEinheit||''}` : e.ergebnisText || '';
+  const datum      = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+
+  // Platzierungstext
+  const platzText = platz === 1 ? '1. PLATZ' : platz === 2 ? '2. PLATZ' : platz === 3 ? '3. PLATZ' : platz ? `${platz}. PLATZ` : '';
+  const platzLabel = platz === 1 ? (e.meldungsart==='Teamerfolg'?'BUNDESSIEGER':'SIEGER') :
+                     platz === 2 ? 'VIZE-BUNDESSIEGER' :
+                     platz === 3 ? 'BRONZE BEIM BUNDESFINALE' : platzText;
+
+  // Medaillen-Farbe
+  const medailleColor = medaille==='GOLD' ? '#FFD700' : medaille==='SILBER' ? '#C0C0C0' : medaille==='BRONZE' ? '#CD7F32' : '#003366';
+
+  // Dimensionen je Typ
+  const w = typ==='social' ? '1080px' : typ==='screen' ? '960px' : '297mm';
+  const h = typ==='social' ? '1080px' : typ==='screen' ? '1080px' : '420mm';
+  const fontSize = typ==='a3' ? '1' : '1';
+
+  return `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>SLZB – ${esc(e.titel)}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    width:${w}; height:${h}; overflow:hidden;
+    background:#0a0a1a;
+    font-family:'Segoe UI',Arial,sans-serif;
+    display:flex; flex-direction:column;
+    color:#fff;
+  }
+  .header {
+    background:rgba(0,0,0,.5);
+    padding:${typ==='a3'?'8mm 12mm':'20px 30px'};
+    display:flex; align-items:center; justify-content:space-between;
+    border-bottom:3px solid #003366;
+  }
+  .header-left { display:flex; align-items:center; gap:12px; }
+  .header-logo {
+    background:#003366; border-radius:8px;
+    padding:6px 12px; font-size:${typ==='a3'?'10pt':'14px'};
+    font-weight:900; color:#fff; letter-spacing:.05em;
+  }
+  .header-title {
+    font-size:${typ==='a3'?'9pt':'12px'};
+    font-weight:700; opacity:.8; text-transform:uppercase;
+    letter-spacing:.1em;
+  }
+  .header-sub {
+    font-size:${typ==='a3'?'7pt':'10px'};
+    opacity:.6; text-transform:uppercase; letter-spacing:.08em;
+  }
+  .header-hashtag {
+    font-size:${typ==='a3'?'9pt':'13px'};
+    font-weight:700; color:#4a9eff; letter-spacing:.05em;
+  }
+  .body {
+    flex:1; display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    padding:${typ==='a3'?'10mm':'30px'};
+    text-align:center; gap:${typ==='a3'?'6mm':'16px'};
+    position:relative;
+  }
+  /* Hintergrund-Akzent */
+  .body::before {
+    content:'';
+    position:absolute; inset:0;
+    background:radial-gradient(ellipse at center, rgba(0,51,102,.4) 0%, transparent 70%);
+    pointer-events:none;
+  }
+  .sport-label {
+    font-size:${typ==='a3'?'14pt':'22px'};
+    font-weight:900; text-transform:uppercase;
+    letter-spacing:.15em; color:#4a9eff;
+    position:relative;
+  }
+  .disziplin-label {
+    font-size:${typ==='a3'?'10pt':'16px'};
+    font-weight:600; opacity:.8; text-transform:uppercase;
+    letter-spacing:.1em; position:relative;
+  }
+  .platz-number {
+    font-size:${typ==='a3'?'120pt':'180px'};
+    font-weight:900; line-height:.9;
+    color:${medailleColor};
+    text-shadow:0 0 60px ${medailleColor}66;
+    position:relative;
+  }
+  .platz-text {
+    font-size:${typ==='a3'?'18pt':'28px'};
+    font-weight:900; text-transform:uppercase;
+    letter-spacing:.2em; color:${medailleColor};
+    position:relative;
+  }
+  .platz-label {
+    font-size:${typ==='a3'?'11pt':'17px'};
+    font-weight:700; text-transform:uppercase;
+    letter-spacing:.15em; opacity:.9;
+    position:relative;
+  }
+  .wettbewerb {
+    font-size:${typ==='a3'?'9pt':'14px'};
+    opacity:.7; text-transform:uppercase;
+    letter-spacing:.08em; position:relative;
+  }
+  .ergebnis {
+    font-size:${typ==='a3'?'11pt':'18px'};
+    font-weight:600; color:#F5A800;
+    position:relative;
+  }
+  .schule {
+    font-size:${typ==='a3'?'9pt':'13px'};
+    opacity:.7; position:relative;
+  }
+  .footer {
+    background:rgba(0,0,0,.6);
+    padding:${typ==='a3'?'5mm 12mm':'12px 30px'};
+    display:flex; align-items:center; justify-content:space-between;
+    border-top:2px solid rgba(255,255,255,.1);
+    font-size:${typ==='a3'?'7pt':'10px'};
+    opacity:.6;
+  }
+  @media print {
+    body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-left">
+      <div class="header-logo">SLZB</div>
+      <div>
+        <div class="header-title">${esc(wettbewerb||'Sportlicher Erfolg')}</div>
+        <div class="header-sub">Schul- und Leistungssportzentrum Berlin</div>
+      </div>
+    </div>
+    <div class="header-hashtag">#SLZBerlin</div>
+  </div>
+
+  <div class="body">
+    <div class="sport-label">${esc(sportart)}</div>
+    ${disziplin?`<div class="disziplin-label">${esc(disziplin)}</div>`:''}
+    ${platz?`<div class="platz-number">${platz}</div>`:''}
+    ${platzText?`<div class="platz-text">${platzText}</div>`:''}
+    ${platzLabel?`<div class="platz-label">${esc(platzLabel)}</div>`:''}
+    ${ergebnis?`<div class="ergebnis">${esc(ergebnis)}</div>`:''}
+    ${datum?`<div class="wettbewerb">${esc(datum)}${e.ort?' · '+esc(e.ort):''}</div>`:''}
+    <div class="schule">Schul- und Leistungssportzentrum Berlin</div>
+  </div>
+
+  <div class="footer">
+    <span>SLZB-Erfolge · ${new Date().toLocaleDateString('de-DE')}</span>
+    <span>${esc(e.erfolgNr||'')}</span>
+  </div>
+</body>
+</html>`;
 }
 
 // ── Einwilligungen ───────────────────────────────────────────
