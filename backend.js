@@ -139,7 +139,7 @@ const Auth = {
   id()          { return this._session?.user?.id || null; },
   email()       { return this._session?.user?.email || ''; },
   name()        { return this._profile?.display_name || this._profile?.username || this.email(); },
-  rolle()       { return this._profile?.role || 'trainer'; },
+  rolle()       { return String(this._profile?.role || 'trainer'); },
   username()    { return this._profile?.username || ''; },
 
   canDo(action) {
