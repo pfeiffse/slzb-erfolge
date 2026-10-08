@@ -447,6 +447,133 @@ function bindKerndatenAC() {
   },100);
 }
 
+function renderEinzelerfolgForm() {
+  const html = `<div class="page">
+    ${formularKopf('Einzelerfolg melden','🏅')}
+    <div class="card mb-3">
+      <div class="card-header"><h2>Kerndaten</h2></div>
+      <div class="card-body">
+        ${kerndatenFelder(`
+        <div class="form-group">
+          <label>Athlet/in <span class="hint">(Freitext – kein Schüler muss vorher angelegt sein)</span></label>
+          <input type="text" id="f-schueler-text"
+            placeholder="z.B. Max M., Klasse 10a – oder leer lassen" autocomplete="off">
+        </div>
+        <div class="form-group"><label>Quell-URL</label>
+          <input type="url" id="f-quelle" placeholder="https://..."></div>`)}
+      </div>
+    </div>
+    ${bilderBlock()}
+    <div class="card"><div class="card-footer">
+      <button class="btn btn-ghost" onclick="APP.selectedMeldungsart=null;navigateTo('neue-meldung')">Abbrechen</button>
+      <button class="btn btn-outline" onclick="speichereErfolg('Entwurf','Einzelerfolg')">💾 Entwurf</button>
+      <button class="btn btn-primary" onclick="speichereErfolg('Eingereicht','Einzelerfolg')">📤 Einreichen</button>
+    </div></div>
+  </div>`;
+  setTimeout(()=>{ bindKerndatenAC(); }, 100);
+  return html;
+}
+
+function renderTeamerfolgForm() {
+  APP._teamBeteiligte = [];
+  const html = `<div class="page">
+    ${formularKopf('Teamerfolg melden','🏆')}
+    <div class="card mb-3">
+      <div class="card-header"><h2>Team & Kerndaten</h2></div>
+      <div class="card-body">
+        ${kerndatenFelder(`
+        <div class="form-group">
+          <label>Team / Mannschaft <span class="hint">(Freitext)</span></label>
+          <input type="text" id="f-team-text"
+            placeholder="z.B. Staffel 4×100m Männer" autocomplete="off">
+        </div>`)}
+      </div>
+    </div>
+    <div class="card mb-3">
+      <div class="card-header"><h2>👥 Beteiligte Personen</h2></div>
+      <div class="card-body">
+        <div class="alert alert-info"><span class="alert-icon">ℹ️</span>
+          <span>Namen als Freitext – keine Vorregistrierung nötig.</span></div>
+        <div class="form-row cols-2 mt-3">
+          <div class="form-group"><label>Name hinzufügen</label>
+            <input type="text" id="schueler-add-text"
+              placeholder="z.B. Max M., Klasse 10a" autocomplete="off"></div>
+          <div class="form-group"><label>Rolle</label>
+            <select id="schueler-add-rolle">
+              ${['Athlet','Kapitän','Ersatz','Trainer','Betreuer','Sonstiges'].map(r=>`<option>${r}</option>`).join('')}
+            </select></div>
+        </div>
+        <button class="btn btn-outline btn-sm mb-3" onclick="addFreitextZuTeam()">+ Hinzufügen</button>
+        <div id="team-beteiligte-liste"><p class="text-muted text-sm">Noch keine Beteiligten.</p></div>
+      </div>
+    </div>
+    ${bilderBlock()}
+    <div class="card"><div class="card-footer">
+      <button class="btn btn-ghost" onclick="APP.selectedMeldungsart=null;navigateTo('neue-meldung')">Abbrechen</button>
+      <button class="btn btn-outline" onclick="speichereTeamerfolg('Entwurf')">💾 Entwurf</button>
+      <button class="btn btn-primary" onclick="speichereTeamerfolg('Eingereicht')">📤 Einreichen</button>
+    </div></div>
+  </div>`;
+  setTimeout(()=>{ bindKerndatenAC(); }, 100);
+  return html;
+}
+
+function addFreitextZuTeam() {
+  const text = document.getElementById('schueler-add-text')?.value?.trim()||'';
+  const rolle = document.getElementById('schueler-add-rolle')?.value||'Athlet';
+  if (!text) { toast('Bitte Name eingeben','warning'); return; }
+  if (APP._teamBeteiligte.find(b=>b.anzeigename===text)) { toast('Name bereits in der Liste','warning'); return; }
+  APP._teamBeteiligte.push({ schuelerId:null, anzeigename:text, rolle, einwilligungsstatus:'Nicht geprüft' });
+  renderTeamBeteiligteFreitext();
+  document.getElementById('schueler-add-text').value='';
+}
+function removeFreitextVonTeam(name) {
+  APP._teamBeteiligte = APP._teamBeteiligte.filter(b=>b.anzeigename!==name);
+  renderTeamBeteiligteFreitext();
+}
+function renderTeamBeteiligteFreitext() {
+  const c = document.getElementById('team-beteiligte-liste'); if(!c) return;
+  if (!APP._teamBeteiligte.length) { c.innerHTML='<p class="text-muted text-sm">Noch keine Beteiligten.</p>'; return; }
+  c.innerHTML=`<div class="schueler-chips">
+    ${APP._teamBeteiligte.map(b=>`<div class="schueler-chip">
+      <span>${esc(b.anzeigename)}</span>
+      <span class="text-xs text-muted">(${esc(b.rolle)})</span>
+      <span class="chip-remove" onclick="removeFreitextVonTeam('${esc(b.anzeigename)}')">✕</span>
+    </div>`).join('')}
+  </div>`;
+}
+
+function renderMinimalmeldungForm() {
+  return `<div class="page">
+    ${formularKopf('Minimalmeldung','⚡')}
+    <div class="alert alert-warning"><span class="alert-icon">⚠️</span>
+      <span>Minimalmeldungen erhalten automatisch den Status <strong>Unvollständig</strong>.</span></div>
+    <div class="card">
+      <div class="card-body">
+        <div id="form-errors"></div>
+        <div class="form-row cols-2">
+          <div class="form-group"><label>Sportart <span class="required">*</span></label>
+            <input type="text" id="f-sportart-text" placeholder="z.B. Leichtathletik" autocomplete="off"></div>
+          <div class="form-group"><label>Wettbewerb</label>
+            <input type="text" id="f-wettbewerb-text" placeholder="z.B. Berliner Landesmeisterschaften" autocomplete="off"></div>
+        </div>
+        <div class="form-row cols-2">
+          <div class="form-group"><label>Datum <span class="required">*</span></label><input type="date" id="f-datum"></div>
+          <div class="form-group"><label>Ort</label><input type="text" id="f-ort"></div>
+        </div>
+        <div class="form-group"><label>Titel</label>
+          <input type="text" id="f-titel" placeholder="Kurzer Titel (optional)"></div>
+        <div class="form-group"><label>Kurzinfo <span class="required">*</span></label>
+          <textarea id="f-kurzinfo" rows="3" placeholder="Was ist passiert?"></textarea></div>
+      </div>
+      <div class="card-footer">
+        <button class="btn btn-ghost" onclick="APP.selectedMeldungsart=null;navigateTo('neue-meldung')">Abbrechen</button>
+        <button class="btn btn-warning" onclick="speichereErfolg('Unvollständig','Minimalmeldung')">⚡ Einreichen</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 function renderArtikelForm() {
   return `<div class="page">
     ${formularKopf('Fertiger Artikel','📰')}
@@ -468,8 +595,62 @@ function renderArtikelForm() {
         <button class="btn btn-primary" onclick="speichereArtikel()">📤 Einreichen</button>
       </div>
     </div>
-    ${bilderBlock()}
   </div>`;
+}
+
+async function speichereErfolg(status, meldungsart) {
+  const daten = leseDatenAusFormular(meldungsart);
+  const athletText = document.getElementById('f-schueler-text')?.value?.trim()||'';
+  const fehler = validiereFormular(daten, meldungsart);
+  if (fehler.length) {
+    const el=document.getElementById('form-errors');
+    if(el) el.innerHTML=`<div class="alert alert-danger"><span class="alert-icon">❌</span><ul>${fehler.map(f=>`<li>${esc(f)}</li>`).join('')}</ul></div>`;
+    return;
+  }
+  const btn=document.querySelector('.card-footer .btn-primary');
+  if(btn){btn.disabled=true;btn.textContent='Wird gespeichert...';}
+  try {
+    const beteiligte = athletText ? [{
+      schuelerId:null, anzeigename:athletText,
+      rolle:'Athlet', einwilligungsstatus:'Nicht geprüft'
+    }] : [];
+    const result = await DB.erstelleErfolg({...daten,status}, beteiligte);
+    if (!result.ok) throw new Error(result.fehler||'Unbekannter Fehler');
+    APP.selectedMeldungsart=null;
+    toast(`Erfolg ${result.nr} ${status==='Entwurf'?'als Entwurf gespeichert':'eingereicht'}!`,'success');
+    navigateTo('erfolg-detail',{currentErfolgId:result.id});
+  } catch(e) {
+    toast('Fehler: '+e.message,'danger');
+    if(btn){btn.disabled=false;btn.textContent='📤 Einreichen';}
+  }
+}
+
+async function speichereTeamerfolg(status) {
+  const daten = leseDatenAusFormular('Teamerfolg');
+  const teamText = document.getElementById('f-team-text')?.value?.trim()||'';
+  const fehler = validiereFormular(daten,'Teamerfolg');
+  if (fehler.length) {
+    const el=document.getElementById('form-errors');
+    if(el) el.innerHTML=`<div class="alert alert-danger"><span class="alert-icon">❌</span><ul>${fehler.map(f=>`<li>${esc(f)}</li>`).join('')}</ul></div>`;
+    return;
+  }
+  const btn=document.querySelector('.card-footer .btn-primary');
+  if(btn){btn.disabled=true;btn.textContent='Wird gespeichert...';}
+  try {
+    const beteiligte = APP._teamBeteiligte.map(b=>({
+      schuelerId:null, anzeigename:b.anzeigename,
+      rolle:b.rolle, einwilligungsstatus:'Nicht geprüft'
+    }));
+    const titelFinal = daten.titel || teamText || 'Teamerfolg';
+    const result = await DB.erstelleErfolg({...daten,titel:titelFinal,status}, beteiligte);
+    if (!result.ok) throw new Error(result.fehler||'Unbekannter Fehler');
+    APP._teamBeteiligte=[]; APP.selectedMeldungsart=null;
+    toast(`Teamerfolg ${result.nr} ${status==='Entwurf'?'gespeichert':'eingereicht'}!`,'success');
+    navigateTo('meine-meldungen');
+  } catch(e) {
+    toast('Fehler: '+e.message,'danger');
+    if(btn){btn.disabled=false;btn.textContent='📤 Einreichen';}
+  }
 }
 
 function renderSammelmeldungForm() {
