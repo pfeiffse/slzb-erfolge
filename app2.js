@@ -465,12 +465,17 @@ function erzeugeJTFOHtml(e, typ) {
 
   // Platzierungstext
   const platzText = platz === 1 ? '1. PLATZ' : platz === 2 ? '2. PLATZ' : platz === 3 ? '3. PLATZ' : platz ? `${platz}. PLATZ` : '';
-  
 
   // Medaillen-Farbe
   const medailleColor = medaille==='GOLD' ? '#FFD700' : medaille==='SILBER' ? '#C0C0C0' : medaille==='BRONZE' ? '#CD7F32' : '#003366';
 
-  
+  const platzLabel = platz === 1 ? (e.meldungsart==='Teamerfolg'?'BUNDESSIEGER':'SIEGER') :
+                     platz === 2 ? 'VIZE-BUNDESSIEGER' :
+                     platz === 3 ? 'BRONZE BEIM BUNDESFINALE' : platzText;
+
+  const hauptbild = (e.bilder||[]).find(b=>b.signedUrl) || null;
+  const w = typ==='social' ? '1080px' : typ==='screen' ? '960px' : '420mm';
+  const h = typ==='social' ? '1080px' : typ==='screen' ? '1080px' : '297mm';
 
   return `<!DOCTYPE html>
 <html lang="de">

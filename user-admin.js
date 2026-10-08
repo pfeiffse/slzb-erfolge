@@ -206,25 +206,28 @@ async function speichereNutzerRolle(userId) {
   const neueRolle = roleEl.value;
   debug(`Rolle speichern: ${userId} → ${neueRolle}`);
 
-  // Direkt in profiles-Tabelle (zuverlässiger als Edge Function)
+  // Strategie 1: Edge Function (Service Role Key – umgeht RLS)
+  try {
+    await UserAdmin.call('update', { userId, role: neueRolle });
+    toast('Rolle gespeichert ✅', 'success');
+    await ladeNutzerverwaltung();
+    return;
+  } catch(e) {
+    debug('Edge Function fehlgeschlagen: '+e.message);
+  }
+
+  // Strategie 2: Direkte DB mit authenticated session
   const { error } = await Backend.client
     .from('profiles')
     .update({ role: neueRolle })
     .eq('user_id', userId);
 
   if (error) {
-    debug('Rolle speichern Fehler: '+error.message);
-    // Fallback: Edge Function
-    try {
-      await UserAdmin.call('update', { userId, role: neueRolle });
-      toast('Rolle gespeichert ✅', 'success');
-    } catch(e2) {
-      toast('Fehler: '+error.message, 'danger');
-      return;
-    }
-  } else {
-    toast('Rolle gespeichert ✅', 'success');
+    debug('DB-Update Fehler: '+error.message);
+    toast(`Fehler: ${error.message}`, 'danger');
+    return;
   }
+  toast('Rolle gespeichert ✅', 'success');
   await ladeNutzerverwaltung();
 }
 
@@ -232,25 +235,28 @@ async function setzeNutzerAktiv(userId, active) {
   if (!confirm(`Konto wirklich ${active?'aktivieren':'deaktivieren'}?`)) return;
   debug(`Aktivierung: ${userId} → ${active}`);
 
-  // Direkt in profiles-Tabelle
+  // Strategie 1: Edge Function
+  try {
+    await UserAdmin.call('update', { userId, active });
+    toast(`Konto ${active?'aktiviert ✅':'deaktiviert'}`, 'success');
+    await ladeNutzerverwaltung();
+    return;
+  } catch(e) {
+    debug('Edge Function fehlgeschlagen: '+e.message);
+  }
+
+  // Strategie 2: Direkte DB
   const { error } = await Backend.client
     .from('profiles')
-    .update({ active: active })
+    .update({ active })
     .eq('user_id', userId);
 
   if (error) {
-    debug('Aktivierung Fehler: '+error.message);
-    // Fallback: Edge Function
-    try {
-      await UserAdmin.call('update', { userId, active });
-      toast(`Konto ${active?'aktiviert ✅':'deaktiviert'}`, 'success');
-    } catch(e2) {
-      toast('Fehler: '+error.message, 'danger');
-      return;
-    }
-  } else {
-    toast(`Konto ${active?'aktiviert ✅':'deaktiviert'}`, 'success');
+    debug('DB-Update Fehler: '+error.message);
+    toast(`Fehler: ${error.message}`, 'danger');
+    return;
   }
+  toast(`Konto ${active?'aktiviert ✅':'deaktiviert'}`, 'success');
   await ladeNutzerverwaltung();
 }
 
