@@ -876,35 +876,22 @@ async function fuehreBildUploadDurch(erfolgId) {
 
     if (uploadError) throw new Error('Upload fehlgeschlagen: ' + uploadError.message);
 
-    // 2. Metadaten in achievement_media speichern
-    const metadaten = {
-      achievement_id:    erfolgId,
-      storage_path:      uploadData.path || pfad,
-      original_name:     datei.name,
-      mime_type:         datei.type,
-      file_size:         datei.size,
-      creator:           urheber,           // Pflichtfeld laut Schema
-      copyright_holder:  urheber,           // Alias
-      source:            quelle,
-      caption:           caption || null,
-      alt_text:          altText || null,
-      uploaded_by:       userId,
-    };
+    
 
     const { error: metaError } = await Backend.client
       .from('achievement_media')
       .insert([metadaten]);
 
     if (metaError) {
+      console.error('Metadaten-Fehler Details:', metaError);
       // Bild aus Storage löschen wenn Metadaten-Insert fehlschlägt
       await Backend.client.storage.from('achievement-media').remove([pfad]);
-      throw new Error('Metadaten speichern fehlgeschlagen: ' + metaError.message);
+      throw new Error('Metadaten: ' + metaError.message + ' | Code: ' + metaError.code + ' | Details: ' + JSON.stringify(metaError.details));
     }
 
     // Erfolg
     document.querySelector('.modal-overlay')?.remove();
     toast('Bild erfolgreich hochgeladen! ✅', 'success');
-    // Seite neu laden um Bild anzuzeigen
     navigateTo('erfolg-detail', { currentErfolgId: erfolgId });
 
   } catch(e) {
