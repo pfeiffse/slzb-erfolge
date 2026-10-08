@@ -347,6 +347,24 @@ function htmlZuBlobUrl(html) {
   return URL.createObjectURL(blob);
 }
 
+async function zeigeA3Vorschau(erfolgId) {
+  toast('A3-Ausgabe wird vorbereitet...','info');
+  try {
+    const e = await DB.getErfolgById(erfolgId);
+    if (!e) { toast('Erfolg nicht gefunden','danger'); return; }
+    const html = erzeugeJTFOHtml(e, 'a3');
+    const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.target = '_blank'; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url), 5000);
+    toast('A3-Ausgabe geöffnet – im neuen Tab drucken (Strg+P)','success');
+  } catch(err) {
+    toast('Fehler: '+err.message,'danger');
+    console.error('A3 Fehler:', err);
+  }
+}
+
 async function zeigeBildschirmModal(erfolgId) {
   toast('Bildschirm-Ausgabe wird vorbereitet...','info');
   try {
@@ -443,19 +461,7 @@ async function druckeJTFO(erfolgId) {
 
 // ── JTFO-HTML-Generator ──────────────────────────────────────
 function erzeugeJTFOHtml(e, typ) {
-  // Sportart: mehrere Quellen versuchen
-  const sportart = e.sportartText ||
-    SLZB_DB.getSportart(e.sportartId)?.name ||
-    SLZB_DB.sportarten.find(s=>s.id===e.sportartId)?.name ||
-    e.sportartId || e.sport || '';
-
-  // Wettbewerb: mehrere Quellen versuchen
-  const wettbewerb = e.wettbewerbText ||
-    SLZB_DB.getWettbewerb(e.wettbewerbId)?.name ||
-    e.wettbewerbId || '';
-
-  // Titel als Fallback wenn Sportart leer
-  const titelSauber = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
+  
 
   const platz      = e.platzierung || '';
   const medaille   = e.medaille && e.medaille !== 'keine' ? e.medaille.toUpperCase() : '';
