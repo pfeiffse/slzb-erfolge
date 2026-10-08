@@ -192,6 +192,80 @@ const DB = {
   
 
 
+  // Bilder für einen Erfolg laden (mit Signed URLs)
+  async getBilder(erfolgId) {
+    const { data, error } = await Backend.client
+      .from('achievement_media')
+      .select('*')
+      .eq('achievement_id', erfolgId)
+      .order('created_at');
+    if (error || !data?.length) return [];
+    const bilder = await Promise.all(data.map(async (b) => {
+      let signedUrl = null;
+      try {
+        const { data: urlData } = await Backend.client.storage
+          .from('achievement-media')
+          .createSignedUrl(b.storage_path, 3600);
+        signedUrl = urlData?.signedUrl || null;
+      } catch(e) { console.warn('Signed URL:', e.message); }
+      return {
+        id:           b.id,
+        storagePath:  b.storage_path,
+        originalName: b.original_name,
+        mimeType:     b.mime_type,
+        signedUrl,
+        caption:      b.caption || '',
+        altText:      b.alt_text || '',
+        creator:      b.creator || b.copyright_holder || '',
+        source:       b.source || '',
+        fileSize:     b.file_size,
+      };
+    }));
+    return bilder;
+  },
+
+  // Einzelnen Erfolg laden
+  async getErfolgById(id) {
+    const { data, error } = await Backend.client
+      .from('achievements')
+      .select('*, competitions(name)')
+      .eq('id', id)
+      .single();
+    if (error) return null;
+    const erfolg = this._mapErfolg(data);
+
+    // Beteiligungen laden
+    const { data: bet } = await Backend.client
+      .from('achievement_participants')
+      .select('*')
+      .eq('achievement_id', id);
+    erfolg.beteiligte = (bet || []).map(b => ({
+      schuelerId:          b.student_id,
+      anzeigename:         b.student_id || b.participant_role || '–',
+      rolle:               b.participant_role || 'Athlet',
+      einwilligungsstatus: b.consent_status || 'Nicht geprüft',
+    }));
+
+    // Protokoll laden
+    const { data: prot } = await Backend.client
+      .from('achievement_status_history')
+      .select('*')
+      .eq('achievement_id', id)
+      .order('changed_at', { ascending: true });
+    erfolg.protokoll = (prot || []).map(p => ({
+      statusAlt: p.old_status      || '',
+      statusNeu: p.new_status      || '',
+      zeitpunkt: p.changed_at      || new Date().toISOString(),
+      person:    p.changed_by_name || '',
+      kommentar: p.comment         || '',
+    }));
+
+    // Bilder laden
+    erfolg.bilder = await this.getBilder(id);
+
+    return erfolg;
+  },
+
   async erstelleErfolg(daten, beteiligte = []) {
     const nr = await this.naechsteErfolgNr();
     const row = await this.unmapErfolg({ ...daten, erfolgNr: nr });
