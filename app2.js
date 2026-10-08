@@ -861,6 +861,11 @@ async function fuehreBildUploadDurch(erfolgId) {
   progEl.style.display = 'flex';
 
   try {
+    // Session prüfen
+    const session = await Backend.session();
+    if (!session) throw new Error('Nicht angemeldet – bitte neu einloggen.');
+    console.log('Session vorhanden:', session.user.id);
+
     // 1. Datei in Supabase Storage hochladen
     const userId    = Auth.id();
     const dateiname = `${Date.now()}_${datei.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
@@ -874,7 +879,11 @@ async function fuehreBildUploadDurch(erfolgId) {
         contentType: datei.type,
       });
 
-    if (uploadError) throw new Error('Upload fehlgeschlagen: ' + uploadError.message);
+    if (uploadError) {
+      console.error('Storage Upload Fehler:', uploadError);
+      throw new Error('Storage Upload: ' + uploadError.message + ' (Status: ' + uploadError.statusCode + ')');
+    }
+    console.log('Storage Upload OK:', uploadData);
 
     
 
