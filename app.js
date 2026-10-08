@@ -440,6 +440,41 @@ function bilderBlock() {
 
 
 
+function kerndatenFelder(extra='') {
+  return `<div id="form-errors"></div>
+  <div class="form-group"><label>Titel <span class="required">*</span></label>
+    <input type="text" id="f-titel" placeholder="z.B. Landesmeister 100m Sprint 2026" maxlength="300"></div>
+  <div class="form-row cols-2">
+    <div class="form-group"><label>Sportart <span class="required">*</span></label>
+      <input type="text" id="f-sportart-text" placeholder="z.B. Leichtathletik" autocomplete="off"></div>
+    <div class="form-group"><label>Disziplin</label>
+      <input type="text" id="f-disziplin" placeholder="z.B. 100m Sprint" autocomplete="off"></div>
+  </div>
+  <div class="form-group"><label>Wettbewerb / Veranstaltung</label>
+    <input type="text" id="f-wettbewerb-text" placeholder="z.B. Berliner Landesmeisterschaften 2026" autocomplete="off"></div>
+  <div class="form-row cols-4">
+    <div class="form-group"><label>Datum <span class="required">*</span></label><input type="date" id="f-datum"></div>
+    <div class="form-group"><label>Ort</label><input type="text" id="f-ort" placeholder="z.B. Berlin"></div>
+    <div class="form-group"><label>Ebene</label>
+      <select id="f-ebene"><option value="">–</option>${ebeneOptions()}</select></div>
+    <div class="form-group"><label>Medaille</label>
+      <select id="f-medaille">${['keine','Bronze','Silber','Gold'].map(m=>`<option>${m}</option>`).join('')}</select></div>
+  </div>
+  <div class="form-row cols-3">
+    <div class="form-group"><label>Platzierung</label>
+      <input type="number" id="f-platzierung" min="1" placeholder="1"></div>
+    <div class="form-group"><label>Ergebnis (Wert)</label>
+      <input type="number" id="f-ergebnis-wert" step="0.001" placeholder="10.85"></div>
+    <div class="form-group"><label>Einheit</label>
+      <input type="text" id="f-ergebnis-einheit" placeholder="Sekunden / Meter / Punkte"></div>
+  </div>
+  <div class="form-group"><label>Ergebnis (Text)</label>
+    <input type="text" id="f-ergebnis-text" placeholder="z.B. Neuer Schulrekord"></div>
+  <div class="form-group"><label>Kurzinfo</label>
+    <textarea id="f-kurzinfo" rows="3" placeholder="Kurze Beschreibung..."></textarea></div>
+  ${extra}`;
+}
+
 function bindKerndatenAC() {
   setTimeout(()=>{
     bindSportartAC('f-sportart-text','f-disziplin');
