@@ -311,17 +311,22 @@ const DB = {
 
   // Protokolleintrag
   async protokolliere(erfolgId, statusAlt, statusNeu, kommentar = '') {
+    // ENUM-Felder dürfen keinen leeren String haben
+    const row = {
+      achievement_id:  erfolgId,
+      new_status:      statusNeu,
+      changed_at:      new Date().toISOString(),
+      changed_by:      Auth.id(),
+      changed_by_name: Auth.name(),
+      comment:         kommentar || null,
+    };
+    // old_status nur setzen wenn nicht leer (ENUM akzeptiert keinen leeren String)
+    if (statusAlt && statusAlt.trim()) {
+      row.old_status = statusAlt;
+    }
     const { error } = await Backend.client
       .from('achievement_status_history')
-      .insert([{
-        achievement_id:  erfolgId,
-        old_status:      statusAlt || '',
-        new_status:      statusNeu,
-        changed_at:      new Date().toISOString(),
-        changed_by:      Auth.id(),
-        changed_by_name: Auth.name(),
-        comment:         kommentar || '',
-      }]);
+      .insert([row]);
     if (error) console.warn('Protokoll speichern:', error.message);
   },
 
