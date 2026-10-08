@@ -339,6 +339,21 @@ async function generiereKIText(erfolgId) {
 
 
 
+// ── A3-Ausgabe (immer Querformat) ────────────────────────────
+async function zeigeA3Vorschau(erfolgId) {
+  const e = await DB.getErfolgById(erfolgId);
+  if (!e) { toast('Erfolg nicht gefunden','danger'); return; }
+  const html = erzeugeJTFOHtml(e, 'a3');
+  const win = window.open('', '_blank');
+  if (win) {
+    win.document.write(html);
+    win.document.close();
+    setTimeout(() => win.print(), 800);
+  } else {
+    toast('Popup wurde blockiert – bitte Popup-Blocker deaktivieren','warning');
+  }
+}
+
 async function zeigeBildschirmModal(erfolgId) {
   const e = await DB.getErfolgById(erfolgId); if(!e) return;
   const html = erzeugeJTFOHtml(e, 'screen');
@@ -427,10 +442,7 @@ function erzeugeJTFOHtml(e, typ) {
   // Medaillen-Farbe
   const medailleColor = medaille==='GOLD' ? '#FFD700' : medaille==='SILBER' ? '#C0C0C0' : medaille==='BRONZE' ? '#CD7F32' : '#003366';
 
-  // Dimensionen je Typ
-  const w = typ==='social' ? '1080px' : typ==='screen' ? '960px' : '297mm';
-  const h = typ==='social' ? '1080px' : typ==='screen' ? '1080px' : '420mm';
-  const fontSize = typ==='a3' ? '1' : '1';
+  
 
   return `<!DOCTYPE html>
 <html lang="de">
@@ -537,9 +549,7 @@ function erzeugeJTFOHtml(e, typ) {
     font-size:${typ==='a3'?'7pt':'10px'};
     opacity:.6;
   }
-  @media print {
-    body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-  }
+  
 </style>
 </head>
 <body>
@@ -735,6 +745,122 @@ function renderMeinProfil() {
       </div>
     </div>
   </div>`;
+}
+
+// ── Bild-Upload Modal ────────────────────────────────────────
+function zeigeBildUploadModal(erfolgId) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `<div class="modal">
+    <div class="modal-header"><h3>📷 Bild hochladen</h3>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+    <div class="modal-body">
+      <div class="alert alert-warning mb-3"><span class="alert-icon">⚠️</span>
+        <span>Nur Bilder hochladen für die Sie die Nutzungsrechte besitzen. Urheber und Quelle sind Pflichtfelder.</span></div>
+      <div class="form-group"><label>Datei <span class="required">*</span></label>
+        <input type="file" id="upload-datei" accept="image/jpeg,image/png,image/webp"></div>
+      <div class="form-row cols-2">
+        <div class="form-group"><label>Urheber <span class="required">*</span></label>
+          <input type="text" id="upload-urheber" placeholder="Name des Fotografen"></div>
+        <div class="form-group"><label>Quelle <span class="required">*</span></label>
+          <input type="text" id="upload-quelle" placeholder="z.B. SLZB-Archiv"></div>
+      </div>
+      <div class="form-row cols-2">
+        <div class="form-group"><label>Bildunterschrift</label>
+          <input type="text" id="upload-caption" placeholder="z.B. Die Staffel beim Start"></div>
+        <div class="form-group"><label>Alternativtext</label>
+          <input type="text" id="upload-alt" placeholder="Beschreibung für Barrierefreiheit"></div>
+      </div>
+      <div id="upload-error"></div>
+      <div id="upload-progress" style="display:none" class="alert alert-info mt-2">
+        <span class="alert-icon">⏳</span><span>Wird hochgeladen...</span></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
+      <button class="btn btn-primary" id="upload-btn" onclick="fuehreBildUploadDurch('${erfolgId}')">📤 Hochladen</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
+async function fuehreBildUploadDurch(erfolgId) {
+  const dateiInput = document.getElementById('upload-datei');
+  const urheber    = document.getElementById('upload-urheber')?.value?.trim()||'';
+  const quelle     = document.getElementById('upload-quelle')?.value?.trim()||'';
+  const caption    = document.getElementById('upload-caption')?.value?.trim()||'';
+  const altText    = document.getElementById('upload-alt')?.value?.trim()||'';
+  const errEl      = document.getElementById('upload-error');
+  const progEl     = document.getElementById('upload-progress');
+  const btn        = document.getElementById('upload-btn');
+
+  const zeigeErr = (msg) => {
+    errEl.innerHTML = `<div class="alert alert-danger mt-2"><span class="alert-icon">❌</span><span>${esc(msg)}</span></div>`;
+  };
+  errEl.innerHTML = '';
+
+  if (!dateiInput?.files?.length) { zeigeErr('Bitte Datei auswählen.'); return; }
+  if (!urheber) { zeigeErr('Urheber ist Pflichtfeld.'); return; }
+  if (!quelle)  { zeigeErr('Quelle ist Pflichtfeld.'); return; }
+
+  const datei = dateiInput.files[0];
+  if (datei.size > 10 * 1024 * 1024) { zeigeErr('Datei zu groß (max. 10 MB).'); return; }
+
+  btn.disabled = true;
+  progEl.style.display = 'flex';
+
+  try {
+    // 1. Datei in Supabase Storage hochladen
+    const userId    = Auth.id();
+    const dateiname = `${Date.now()}_${datei.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+    const pfad      = `${userId}/${erfolgId}/${dateiname}`;
+
+    const { data: uploadData, error: uploadError } = await Backend.client.storage
+      .from('achievement-media')
+      .upload(pfad, datei, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: datei.type,
+      });
+
+    if (uploadError) throw new Error('Upload fehlgeschlagen: ' + uploadError.message);
+
+    // 2. Metadaten in achievement_media speichern
+    const metadaten = {
+      achievement_id:    erfolgId,
+      storage_path:      uploadData.path || pfad,
+      original_name:     datei.name,
+      mime_type:         datei.type,
+      file_size:         datei.size,
+      creator:           urheber,           // Pflichtfeld laut Schema
+      copyright_holder:  urheber,           // Alias
+      source:            quelle,
+      caption:           caption || null,
+      alt_text:          altText || null,
+      uploaded_by:       userId,
+    };
+
+    const { error: metaError } = await Backend.client
+      .from('achievement_media')
+      .insert([metadaten]);
+
+    if (metaError) {
+      // Bild aus Storage löschen wenn Metadaten-Insert fehlschlägt
+      await Backend.client.storage.from('achievement-media').remove([pfad]);
+      throw new Error('Metadaten speichern fehlgeschlagen: ' + metaError.message);
+    }
+
+    // Erfolg
+    document.querySelector('.modal-overlay')?.remove();
+    toast('Bild erfolgreich hochgeladen! ✅', 'success');
+    // Seite neu laden um Bild anzuzeigen
+    navigateTo('erfolg-detail', { currentErfolgId: erfolgId });
+
+  } catch(e) {
+    debug('Bild-Upload Fehler: ' + e.message);
+    zeigeErr(e.message);
+    btn.disabled = false;
+    progEl.style.display = 'none';
+  }
 }
 
 function pruefePwStaerke(pw) {
