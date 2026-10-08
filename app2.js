@@ -354,15 +354,25 @@ async function zeigeA3Vorschau(erfolgId) {
   }
 }
 
+// Hilfsfunktion: HTML als Blob-URL in iframe laden (sicherer als srcdoc)
+function htmlZuBlobUrl(html) {
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  return URL.createObjectURL(blob);
+}
+
 async function zeigeBildschirmModal(erfolgId) {
-  const e = await DB.getErfolgById(erfolgId); if(!e) return;
-  const html = erzeugeJTFOHtml(e, 'screen');
-  const overlay=document.createElement('div'); overlay.className='modal-overlay';
-  overlay.innerHTML=`<div class="modal modal-xl">
+  const e = await DB.getErfolgById(erfolgId);
+  if (!e) { toast('Erfolg nicht gefunden','danger'); return; }
+  const html    = erzeugeJTFOHtml(e, 'screen');
+  const blobUrl = htmlZuBlobUrl(html);
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `<div class="modal modal-xl">
     <div class="modal-header"><h3>🖥️ Ausgabe-Vorschau (JTFO-Stil)</h3>
       <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
     <div class="modal-body" style="padding:0;background:#000;border-radius:0 0 var(--radius-lg) var(--radius-lg)">
-      <iframe srcdoc="${html.replace(/"/g,'&quot;')}" style="width:100%;height:500px;border:none;border-radius:0 0 var(--radius-lg) var(--radius-lg)"></iframe>
+      <iframe id="vorschau-frame-${erfolgId}" src="${blobUrl}"
+        style="width:100%;height:500px;border:none;border-radius:0 0 var(--radius-lg) var(--radius-lg)"></iframe>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Schließen</button>
@@ -374,17 +384,20 @@ async function zeigeBildschirmModal(erfolgId) {
 }
 
 async function zeigeSocialModal(erfolgId) {
-  const e = await DB.getErfolgById(erfolgId); if(!e) return;
-  const html = erzeugeJTFOHtml(e, 'social');
-  const overlay=document.createElement('div'); overlay.className='modal-overlay';
-  overlay.innerHTML=`<div class="modal modal-lg">
+  const e = await DB.getErfolgById(erfolgId);
+  if (!e) { toast('Erfolg nicht gefunden','danger'); return; }
+  const html    = erzeugeJTFOHtml(e, 'social');
+  const blobUrl = htmlZuBlobUrl(html);
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `<div class="modal modal-lg">
     <div class="modal-header"><h3>📱 Social-Media-Ausgabe (JTFO-Stil)</h3>
       <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
     <div class="modal-body">
       <div class="alert alert-danger mb-3"><span class="alert-icon">🔒</span>
         <span><strong>Social Media ist standardmäßig gesperrt.</strong> Kein Auto-Posting. Nur Export-Paket.</span></div>
       <div style="background:#000;border-radius:12px;overflow:hidden;max-width:400px;margin:0 auto">
-        <iframe srcdoc="${html.replace(/"/g,'&quot;')}" style="width:100%;height:400px;border:none"></iframe>
+        <iframe src="${blobUrl}" style="width:100%;height:400px;border:none"></iframe>
       </div>
     </div>
     <div class="modal-footer">
