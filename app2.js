@@ -890,13 +890,7 @@ async function fuehreBildUploadDurch(erfolgId) {
       console.error('Storage Upload Fehler:', uploadError);
       throw new Error('Storage Upload: ' + uploadError.message + ' (Status: ' + uploadError.statusCode + ')');
     }
-    console.log('Storage Upload OK:', uploadData);
-
     
-
-    const { error: metaError } = await Backend.client
-      .from('achievement_media')
-      .insert([metadaten]);
 
     if (metaError) {
       console.error('Metadaten-Fehler Details:', metaError);
