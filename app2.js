@@ -888,15 +888,34 @@ async function fuehreBildUploadDurch(erfolgId) {
 
     if (uploadError) {
       console.error('Storage Upload Fehler:', uploadError);
-      throw new Error('Storage Upload: ' + uploadError.message + ' (Status: ' + uploadError.statusCode + ')');
+      throw new Error('Storage Upload: ' + uploadError.message);
     }
-    
+    console.log('Storage Upload OK:', uploadData);
+
+    // 2. Metadaten in achievement_media speichern
+    const metadaten = {
+      achievement_id:   erfolgId,
+      storage_path:     uploadData.path || pfad,
+      original_name:    datei.name,
+      mime_type:        datei.type,
+      file_size:        datei.size || null,
+      creator:          urheber,
+      copyright_holder: urheber,
+      source:           quelle,
+      caption:          caption || null,
+      alt_text:         altText || null,
+      uploaded_by:      userId || null,
+      created_at:       new Date().toISOString(),
+    };
+    console.log('Metadaten:', metadaten);
+
+    const { error: metaError } = await Backend.client
+      .from('achievement_media')
+      .insert([metadaten]);
 
     if (metaError) {
-      console.error('Metadaten-Fehler Details:', metaError);
-      // Bild aus Storage löschen wenn Metadaten-Insert fehlschlägt
       await Backend.client.storage.from('achievement-media').remove([pfad]);
-      throw new Error('Metadaten: ' + metaError.message + ' | Code: ' + metaError.code + ' | Details: ' + JSON.stringify(metaError.details));
+      throw new Error('Metadaten-Fehler: ' + metaError.message);
     }
 
     // Erfolg
