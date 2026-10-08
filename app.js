@@ -438,148 +438,13 @@ function bilderBlock() {
   </div>`;
 }
 
-function kerndatenFelder(extra='') {
-  return `<div class="alert alert-info mb-3"><span class="alert-icon">💡</span>
-    <span>Tippen Sie in die Felder – Vorschläge erscheinen automatisch.</span></div>
-  <div id="form-errors"></div>
-  <div class="form-group"><label>Titel <span class="required">*</span></label>
-    <input type="text" id="f-titel" placeholder="z.B. Landesmeister 100m Sprint 2026" maxlength="300"></div>
-  <div class="form-row cols-2">
-    <div class="form-group"><label>Sportart <span class="required">*</span></label>
-      <input type="text" id="f-sportart-text" placeholder="z.B. Leichtathletik" autocomplete="off"></div>
-    <div class="form-group"><label>Disziplin</label>
-      <input type="text" id="f-disziplin" placeholder="z.B. 100m Sprint" autocomplete="off"></div>
-  </div>
-  <div class="form-group"><label>Wettbewerb / Veranstaltung</label>
-    <input type="text" id="f-wettbewerb-text" placeholder="z.B. Berliner Landesmeisterschaften 2026" autocomplete="off"></div>
-  <div class="form-row cols-4">
-    <div class="form-group"><label>Datum <span class="required">*</span></label><input type="date" id="f-datum"></div>
-    <div class="form-group"><label>Ort</label><input type="text" id="f-ort" placeholder="z.B. Berlin"></div>
-    <div class="form-group"><label>Ebene</label>
-      <select id="f-ebene"><option value="">–</option>${ebeneOptions()}</select></div>
-    <div class="form-group"><label>Medaille</label>
-      <select id="f-medaille">${['keine','Bronze','Silber','Gold'].map(m=>`<option>${m}</option>`).join('')}</select></div>
-  </div>
-  <div class="form-row cols-3">
-    <div class="form-group"><label>Platzierung</label>
-      <input type="number" id="f-platzierung" min="1" placeholder="1"></div>
-    <div class="form-group"><label>Ergebnis (Wert)</label>
-      <input type="number" id="f-ergebnis-wert" step="0.001" placeholder="10.85"></div>
-    <div class="form-group"><label>Einheit</label>
-      <input type="text" id="f-ergebnis-einheit" placeholder="Sekunden / Meter / Punkte"></div>
-  </div>
-  <div class="form-group"><label>Ergebnis (Text)</label>
-    <input type="text" id="f-ergebnis-text" placeholder="z.B. Neuer Schulrekord"></div>
-  <div class="form-group"><label>Kurzinfo</label>
-    <textarea id="f-kurzinfo" rows="3" placeholder="Kurze Beschreibung..."></textarea></div>
-  ${extra}`;
-}
+
 
 function bindKerndatenAC() {
   setTimeout(()=>{
     bindSportartAC('f-sportart-text','f-disziplin');
     bindAutocomplete('f-wettbewerb-text', SLZB_DB.wettbewerbe.map(w=>w.name));
   },100);
-}
-
-function renderEinzelerfolgForm() {
-  const html = `<div class="page">
-    ${formularKopf('Einzelerfolg melden','🏅')}
-    <div class="card mb-3">
-      <div class="card-header"><h2>Kerndaten</h2></div>
-      <div class="card-body">
-        ${kerndatenFelder(`<div class="form-group"><label>Schüler/in <span class="required">*</span></label>
-          <input type="text" id="f-schueler-text" placeholder="Name der Schülerin / des Schülers" autocomplete="off"></div>
-        <div class="form-group"><label>Quell-URL</label>
-          <input type="url" id="f-quelle" placeholder="https://..."></div>`)}
-      </div>
-    </div>
-    ${bilderBlock()}
-    <div class="card"><div class="card-footer">
-      <button class="btn btn-ghost" onclick="APP.selectedMeldungsart=null;navigateTo('neue-meldung')">Abbrechen</button>
-      <button class="btn btn-outline" onclick="speichereErfolg('Entwurf','Einzelerfolg')">💾 Entwurf</button>
-      <button class="btn btn-primary" onclick="speichereErfolg('Eingereicht','Einzelerfolg')">📤 Einreichen</button>
-    </div></div>
-  </div>`;
-  setTimeout(()=>{
-    bindKerndatenAC();
-    bindAutocomplete('f-schueler-text', SLZB_DB.schueler.map(s=>s.anzeigename));
-  },100);
-  return html;
-}
-
-function renderTeamerfolgForm() {
-  APP._teamBeteiligte = [];
-  const html = `<div class="page">
-    ${formularKopf('Teamerfolg melden','🏆')}
-    <div class="card mb-3">
-      <div class="card-header"><h2>Team & Kerndaten</h2></div>
-      <div class="card-body">
-        ${kerndatenFelder(`<div class="form-group"><label>Team/Mannschaft</label>
-          <input type="text" id="f-team-text" placeholder="z.B. Staffel 4×100m Männer" autocomplete="off"></div>`)}
-      </div>
-    </div>
-    <div class="card mb-3">
-      <div class="card-header"><h2>👥 Beteiligte Schüler/innen</h2></div>
-      <div class="card-body">
-        <div class="alert alert-warning"><span class="alert-icon">⚠️</span>
-          <span><strong>Teamfoto-Regel:</strong> Fehlt für eine identifizierbare Person die Einwilligung, darf das Teamfoto nicht verwendet werden.</span></div>
-        <div class="form-row cols-2 mt-3">
-          <div class="form-group"><label>Schüler/in hinzufügen</label>
-            <input type="text" id="schueler-add-text" placeholder="Name" autocomplete="off"></div>
-          <div class="form-group"><label>Rolle</label>
-            <select id="schueler-add-rolle">
-              ${['Athlet','Kapitän','Ersatz','Trainer','Betreuer','Sonstiges'].map(r=>`<option>${r}</option>`).join('')}
-            </select></div>
-        </div>
-        <button class="btn btn-outline btn-sm mb-3" onclick="addSchuelerZuTeam()">+ Hinzufügen</button>
-        <div id="team-beteiligte-liste"><p class="text-muted text-sm">Noch keine Beteiligten.</p></div>
-      </div>
-    </div>
-    ${bilderBlock()}
-    <div class="card"><div class="card-footer">
-      <button class="btn btn-ghost" onclick="APP.selectedMeldungsart=null;navigateTo('neue-meldung')">Abbrechen</button>
-      <button class="btn btn-outline" onclick="speichereTeamerfolg('Entwurf')">💾 Entwurf</button>
-      <button class="btn btn-primary" onclick="speichereTeamerfolg('Eingereicht')">📤 Einreichen</button>
-    </div></div>
-  </div>`;
-  setTimeout(()=>{
-    bindKerndatenAC();
-    bindAutocomplete('f-team-text', SLZB_DB.teams.map(t=>t.name));
-    bindAutocomplete('schueler-add-text', SLZB_DB.schueler.map(s=>s.anzeigename));
-  },100);
-  return html;
-}
-
-function renderMinimalmeldungForm() {
-  return `<div class="page">
-    ${formularKopf('Minimalmeldung','⚡')}
-    <div class="alert alert-warning"><span class="alert-icon">⚠️</span>
-      <span>Minimalmeldungen erhalten automatisch den Status <strong>Unvollständig</strong>.</span></div>
-    <div class="card">
-      <div class="card-body">
-        <div id="form-errors"></div>
-        <div class="form-row cols-2">
-          <div class="form-group"><label>Sportart <span class="required">*</span></label>
-            <input type="text" id="f-sportart-text" placeholder="z.B. Leichtathletik" autocomplete="off"></div>
-          <div class="form-group"><label>Wettbewerb</label>
-            <input type="text" id="f-wettbewerb-text" placeholder="z.B. Berliner Landesmeisterschaften" autocomplete="off"></div>
-        </div>
-        <div class="form-row cols-2">
-          <div class="form-group"><label>Datum <span class="required">*</span></label><input type="date" id="f-datum"></div>
-          <div class="form-group"><label>Ort</label><input type="text" id="f-ort"></div>
-        </div>
-        <div class="form-group"><label>Titel</label>
-          <input type="text" id="f-titel" placeholder="Kurzer Titel (optional)"></div>
-        <div class="form-group"><label>Kurzinfo <span class="required">*</span></label>
-          <textarea id="f-kurzinfo" rows="3" placeholder="Was ist passiert?"></textarea></div>
-      </div>
-      <div class="card-footer">
-        <button class="btn btn-ghost" onclick="APP.selectedMeldungsart=null;navigateTo('neue-meldung')">Abbrechen</button>
-        <button class="btn btn-warning" onclick="speichereErfolg('Unvollständig','Minimalmeldung')">⚡ Einreichen</button>
-      </div>
-    </div>
-  </div>`;
 }
 
 function renderArtikelForm() {
@@ -769,17 +634,7 @@ function switchTab(id) {
   });
 }
 
-function addSchuelerZuTeam() {
-  const text=document.getElementById('schueler-add-text')?.value?.trim()||'';
-  const rolle=document.getElementById('schueler-add-rolle')?.value||'Athlet';
-  if (!text){toast('Bitte Name eingeben','warning');return;}
-  const s=SLZB_DB.schueler.find(s=>s.anzeigename.toLowerCase()===text.toLowerCase());
-  if (!s){toast(`Schüler/in "${text}" nicht gefunden.`,'warning');return;}
-  if (APP._teamBeteiligte.find(b=>b.schuelerId===s.id)){toast('Bereits hinzugefügt','warning');return;}
-  APP._teamBeteiligte.push({schuelerId:s.id,rolle,einwilligungsstatus:'Nicht geprüft'});
-  renderTeamBeteiligteUI();
-  document.getElementById('schueler-add-text').value='';
-}
+
 function removeSchuelerVonTeam(id) {
   APP._teamBeteiligte=APP._teamBeteiligte.filter(b=>b.schuelerId!==id);
   renderTeamBeteiligteUI();
@@ -812,7 +667,7 @@ function addBildRow() {
     <button class="btn btn-ghost btn-sm" onclick="document.getElementById('bild-row-${id}').remove()">✕</button>
   </div>
   <div class="form-row cols-3">
-    <div class="form-group"><label>Datei</label><input type="file" id="bild-datei-${id}" accept="image/jpeg,image/png,image/webp"></div>
+    <div class="form-group"><label>Datei</label><input type="file" accept="image/*"></div>
     <div class="form-group"><label>Urheber <span class="required">*</span></label><input type="text" id="bild-urheber-${id}" placeholder="Name des Fotografen"></div>
     <div class="form-group"><label>Quelle <span class="required">*</span></label><input type="text" id="bild-quelle-${id}" placeholder="z.B. SLZB-Archiv"></div>
   </div>
@@ -822,110 +677,6 @@ function addBildRow() {
   </div>`;
   c.appendChild(div);
 }
-
-// ── Medien-Upload ────────────────────────────────────────────
-const MediaUpload = {
-  bucket: 'achievement-media',
-  maxDateigroesse: 6 * 1024 * 1024,
-  erlaubteTypen: ['image/jpeg', 'image/png', 'image/webp'],
-
-  sammleAusFormular() {
-    return [...document.querySelectorAll('[id^="bild-row-"]')]
-      .map(row => {
-        const id = row.id.replace('bild-row-', '');
-        return {
-          file: document.getElementById(`bild-datei-${id}`)?.files?.[0] || null,
-          urheber: document.getElementById(`bild-urheber-${id}`)?.value?.trim() || '',
-          quelle: document.getElementById(`bild-quelle-${id}`)?.value?.trim() || '',
-          bildunterschrift: document.getElementById(`bild-caption-${id}`)?.value?.trim() || '',
-          alternativtext: document.getElementById(`bild-alt-${id}`)?.value?.trim() || '',
-        };
-      })
-      .filter(bild => bild.file);
-  },
-
-  validiere(bilder) {
-    const fehler = [];
-    bilder.forEach((bild, index) => {
-      const nr = index + 1;
-      if (!this.erlaubteTypen.includes(bild.file.type)) {
-        fehler.push(`Bild ${nr}: Nur JPEG, PNG und WebP sind erlaubt.`);
-      }
-      if (bild.file.size > this.maxDateigroesse) {
-        fehler.push(`Bild ${nr}: Die Datei darf höchstens 6 MB groß sein.`);
-      }
-      if (!bild.urheber) fehler.push(`Bild ${nr}: Urheber ist ein Pflichtfeld.`);
-      if (!bild.quelle) fehler.push(`Bild ${nr}: Quelle ist ein Pflichtfeld.`);
-    });
-    return fehler;
-  },
-
-  sichereDateiendung(file) {
-    const nachTyp = {
-      'image/jpeg': 'jpg',
-      'image/png': 'png',
-      'image/webp': 'webp',
-    };
-    return nachTyp[file.type] || 'bin';
-  },
-
-  async uploadAlle(erfolgId, bilder) {
-    if (!bilder.length) return [];
-    if (!Backend.client) throw new Error('Supabase ist nicht initialisiert.');
-    if (!Auth.id()) throw new Error('Für den Bildupload ist eine Anmeldung erforderlich.');
-
-    const fehler = this.validiere(bilder);
-    if (fehler.length) throw new Error(fehler.join(' '));
-
-    const gespeichert = [];
-    for (let i = 0; i < bilder.length; i++) {
-      const bild = bilder[i];
-      const dateiId = crypto.randomUUID();
-      const endung = this.sichereDateiendung(bild.file);
-      const pfad = `${Auth.id()}/${erfolgId}/${dateiId}.${endung}`;
-
-      const { data: upload, error: uploadFehler } = await Backend.client.storage
-        .from(this.bucket)
-        .upload(pfad, bild.file, {
-          cacheControl: '3600',
-          contentType: bild.file.type,
-          upsert: false,
-        });
-
-      if (uploadFehler) {
-        throw new Error(`Bild ${i + 1} konnte nicht hochgeladen werden: ${uploadFehler.message}`);
-      }
-
-      const metadaten = {
-        achievement_id: erfolgId,
-        storage_path: upload.path,
-        original_name: bild.file.name,
-        mime_type: bild.file.type,
-        file_size: bild.file.size,
-        creator: bild.urheber,
-        copyright_holder: bild.urheber,
-        source: bild.quelle,
-        caption: bild.bildunterschrift || null,
-        alt_text: bild.alternativtext || null,
-        uploaded_by: Auth.id(),
-      };
-
-      const { data: medium, error: dbFehler } = await Backend.client
-        .from('achievement_media')
-        .insert([metadaten])
-        .select()
-        .single();
-
-      if (dbFehler) {
-        await Backend.client.storage.from(this.bucket).remove([upload.path]);
-        throw new Error(`Metadaten für Bild ${i + 1} konnten nicht gespeichert werden: ${dbFehler.message}`);
-      }
-
-      gespeichert.push(medium);
-    }
-    return gespeichert;
-  },
-};
 
 function leseDatenAusFormular(meldungsart) {
   const sportartText=document.getElementById('f-sportart-text')?.value?.trim()||'';
@@ -967,91 +718,15 @@ function validiereFormular(daten, meldungsart) {
   return fehler;
 }
 
-async function speichereErfolg(status, meldungsart) {
-  const daten=leseDatenAusFormular(meldungsart);
-  const schuelerText=document.getElementById('f-schueler-text')?.value?.trim()||'';
-  const schueler=schuelerText?SLZB_DB.schueler.find(s=>s.anzeigename.toLowerCase()===schuelerText.toLowerCase()):null;
-  const fehler=validiereFormular(daten,meldungsart);
-  const bilder=MediaUpload.sammleAusFormular();
-  fehler.push(...MediaUpload.validiere(bilder));
-  if(!schuelerText&&status==='Eingereicht'&&meldungsart==='Einzelerfolg') fehler.push('Schüler/in ist Pflichtfeld.');
-  if(schuelerText&&!schueler&&meldungsart==='Einzelerfolg') fehler.push(`Schüler/in "${schuelerText}" nicht gefunden.`);
-  if(fehler.length){
-    const el=document.getElementById('form-errors');
-    if(el) el.innerHTML=`<div class="alert alert-danger"><span class="alert-icon">❌</span><ul>${fehler.map(f=>`<li>${esc(f)}</li>`).join('')}</ul></div>`;
-    return;
-  }
-  // Button sperren
-  const btn=document.querySelector('.card-footer .btn-primary');
-  if(btn){btn.disabled=true;btn.textContent='Wird gespeichert...';}
-  try {
-    const beteiligte=schueler?[{
-      schuelerId:schueler.id,
-      anzeigename:schueler.anzeigename,
-      rolle:'Athlet',
-      einwilligungsstatus:'Nicht geprüft'
-    }]:[];
-    const result=await DB.erstelleErfolg({...daten,status}, beteiligte);
-    if(!result.ok) throw new Error(result.fehler||'Unbekannter Fehler');
-    if(bilder.length) {
-      btn.textContent=`Bilder werden hochgeladen (0/${bilder.length})...`;
-      await MediaUpload.uploadAlle(result.id, bilder);
-    }
-    APP.selectedMeldungsart=null;
-    APP._erfolgeCache=null;
-    debug(`Erfolg gespeichert: ${result.nr} (${status}), Bilder: ${bilder.length}`);
-    toast(`Erfolg ${result.nr} ${status==='Entwurf'?'als Entwurf gespeichert':'eingereicht'}!`,'success');
-    navigateTo('erfolg-detail',{currentErfolgId:result.id});
-  } catch(e) {
-    debug('Fehler beim Speichern: '+e.message);
-    toast('Fehler: '+e.message,'danger');
-    if(btn){btn.disabled=false;btn.textContent='📤 Einreichen';}
-  }
-}
 
-async function speichereTeamerfolg(status) {
-  const daten=leseDatenAusFormular('Teamerfolg');
-  const fehler=validiereFormular(daten,'Teamerfolg');
-  const bilder=MediaUpload.sammleAusFormular();
-  fehler.push(...MediaUpload.validiere(bilder));
-  if(!APP._teamBeteiligte.length&&status==='Eingereicht') fehler.push('Mindestens ein Beteiligter erforderlich.');
-  if(fehler.length){
-    const el=document.getElementById('form-errors');
-    if(el) el.innerHTML=`<div class="alert alert-danger"><span class="alert-icon">❌</span><ul>${fehler.map(f=>`<li>${esc(f)}</li>`).join('')}</ul></div>`;
-    return;
-  }
-  const btn=document.querySelector('.card-footer .btn-primary');
-  if(btn){btn.disabled=true;btn.textContent='Wird gespeichert...';}
-  try {
-    const beteiligte=APP._teamBeteiligte.map(b=>({
-      schuelerId:b.schuelerId,
-      anzeigename:SLZB_DB.getSchueler(b.schuelerId)?.anzeigename||b.schuelerId,
-      rolle:b.rolle,
-      einwilligungsstatus:'Nicht geprüft'
-    }));
-    const result=await DB.erstelleErfolg({...daten,status}, beteiligte);
-    if(!result.ok) throw new Error(result.fehler||'Unbekannter Fehler');
-    if(bilder.length) {
-      btn.textContent=`Bilder werden hochgeladen (0/${bilder.length})...`;
-      await MediaUpload.uploadAlle(result.id, bilder);
-    }
-    APP._teamBeteiligte=[]; APP.selectedMeldungsart=null;
-    APP._erfolgeCache=null;
-    toast(`Teamerfolg ${result.nr} ${status==='Entwurf'?'gespeichert':'eingereicht'}!`,'success');
-    navigateTo('meine-meldungen');
-  } catch(e) {
-    toast('Fehler: '+e.message,'danger');
-    if(btn){btn.disabled=false;btn.textContent='📤 Einreichen';}
-  }
-}
+
+
 
 async function speichereArtikel() {
   const text=document.getElementById('f-artikel-text')?.value?.trim()||'';
   const sportartText=document.getElementById('f-sportart-text')?.value?.trim()||'';
   const datum=document.getElementById('f-datum')?.value||null;
   const fehler=[];
-  const bilder=MediaUpload.sammleAusFormular();
-  fehler.push(...MediaUpload.validiere(bilder));
   if(!text) fehler.push('Artikeltext ist Pflichtfeld');
   if(!sportartText) fehler.push('Sportart ist Pflichtfeld');
   if(!datum) fehler.push('Datum ist Pflichtfeld');
@@ -1070,10 +745,8 @@ async function speichereArtikel() {
       quelleOriginal:text,
     },[]);
     if(!result.ok) throw new Error(result.fehler);
-    if(bilder.length) await MediaUpload.uploadAlle(result.id, bilder);
     APP.selectedMeldungsart=null;
-    APP._erfolgeCache=null;
-    toast(`Artikel ${result.nr} eingereicht${bilder.length ? `, ${bilder.length} Bild(er) gespeichert` : ''}!`,'success');
+    toast(`Artikel ${result.nr} eingereicht!`,'success');
     navigateTo('meine-meldungen');
   } catch(e) {
     toast('Fehler: '+e.message,'danger');

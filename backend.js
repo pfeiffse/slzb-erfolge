@@ -189,47 +189,9 @@ const DB = {
     return (data || []).map(e => this._mapErfolg(e));
   },
 
-  // Einzelnen Erfolg laden
-  async getErfolgById(id) {
-    const { data, error } = await Backend.client
-      .from('achievements')
-      .select('*, competitions(name)')
-      .eq('id', id)
-      .single();
-    if (error) return null;
-    const erfolg = this._mapErfolg(data);
+  
 
-    // Beteiligungen laden
-    const { data: bet } = await Backend.client
-      .from('achievement_participants')
-      .select('*')
-      .eq('achievement_id', id);
-    erfolg.beteiligte = (bet || []).map(b => ({
-      schuelerId:          b.student_id,
-      anzeigename:         b.student_id, // kein student_name in der Tabelle
-      rolle:               b.participant_role || 'Athlet',
-      einwilligungsstatus: b.consent_status || 'Nicht geprüft',
-    }));
 
-    // Protokoll laden
-    const { data: prot } = await Backend.client
-      .from('achievement_status_history')
-      .select('*')
-      .eq('achievement_id', id)
-      .order('changed_at', { ascending: true });
-
-    erfolg.protokoll = (prot || []).map(p => ({
-      statusAlt: p.old_status      || '',
-      statusNeu: p.new_status      || '',
-      zeitpunkt: p.changed_at      || new Date().toISOString(),
-      person:    p.changed_by_name || '',
-      kommentar: p.comment         || '',
-    }));
-
-    return erfolg;
-  },
-
-  // Erfolg erstellen
   async erstelleErfolg(daten, beteiligte = []) {
     const nr = await this.naechsteErfolgNr();
     const row = await this.unmapErfolg({ ...daten, erfolgNr: nr });

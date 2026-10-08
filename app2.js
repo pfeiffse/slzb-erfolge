@@ -24,12 +24,7 @@ async function renderErfolgDetail() {
 
     <div class="tabs">
       <button class="tab-btn active" onclick="switchTab('kerndaten')">Kerndaten</button>
-      <button class="tab-btn" onclick="switchTab('beteiligte')">Beteiligte (${e.beteiligte?.length||0})</button>
-      <button class="tab-btn" onclick="switchTab('texte')">Texte</button>
-      <button class="tab-btn" onclick="switchTab('datenschutz')">Datenschutz</button>
-      <button class="tab-btn" onclick="switchTab('ausgaben')">Ausgaben</button>
-      <button class="tab-btn" onclick="switchTab('protokoll')">Protokoll (${e.protokoll?.length||0})</button>
-    </div>
+      
 
     <div id="tab-kerndaten" class="tab-panel active">
       <div class="grid grid-2">
@@ -78,6 +73,33 @@ async function renderErfolgDetail() {
       <div class="card">
         <div class="card-header"><h2>👥 Beteiligte</h2></div>
         <div class="card-body">${renderBeteiligteTabelle(e.beteiligte||[])}</div>
+      </div>
+    </div>
+
+    <div id="tab-medien" class="tab-panel">
+      <div class="card">
+        <div class="card-header"><h2>📷 Medien</h2>
+          ${Auth.canDo('erfassen')?`<button class="btn btn-outline btn-sm" onclick="zeigeBildUploadModal('${e.id}')">+ Bild hochladen</button>`:''}
+        </div>
+        <div class="card-body">
+          ${!e.bilder?.length ? '<p class="text-muted">Keine Bilder vorhanden. Über „+ Bild hochladen" hinzufügen.</p>' :
+            `<div class="grid grid-3">${(e.bilder||[]).map(b=>`
+              <div class="card" style="border:1.5px solid var(--slzb-border);overflow:hidden">
+                ${b.signedUrl
+                  ? `<div style="height:160px;overflow:hidden;background:#111">
+                       <img src="${esc(b.signedUrl)}" alt="${esc(b.altText||b.caption||'Bild')}"
+                         style="width:100%;height:100%;object-fit:cover"
+                         onerror="this.parentNode.innerHTML='<div style=\\'display:flex;align-items:center;justify-content:center;height:100%;font-size:2rem;color:#666\\'>🖼️</div>'">
+                     </div>`
+                  : `<div style="height:160px;background:#222;display:flex;align-items:center;justify-content:center;font-size:2rem">🖼️</div>`}
+                <div class="card-body" style="padding:10px">
+                  ${b.caption?`<div class="text-sm font-bold">${esc(b.caption)}</div>`:''}
+                  <div class="text-xs text-muted mt-1">📸 ${esc(b.creator||'–')}</div>
+                  <div class="text-xs text-muted">📂 ${esc(b.source||'–')}</div>
+                  ${b.signedUrl?`<a href="${esc(b.signedUrl)}" target="_blank" class="btn btn-ghost btn-sm mt-2" style="font-size:.75rem">🔍 Vollbild</a>`:''}
+                </div>
+              </div>`).join('')}</div>`}
+        </div>
       </div>
     </div>
 
@@ -315,12 +337,7 @@ async function generiereKIText(erfolgId) {
 // ── Ausgabe-Modals ───────────────────────────────────────────
 // ── Ausgaben im JTFO-Stil ────────────────────────────────────
 
-async function zeigeA3Vorschau(erfolgId) {
-  const e = await DB.getErfolgById(erfolgId); if(!e) return;
-  const html = erzeugeJTFOHtml(e, 'a3');
-  const win = window.open('','_blank');
-  if (win) { win.document.write(html); win.document.close(); setTimeout(()=>win.print(),800); }
-}
+
 
 async function zeigeBildschirmModal(erfolgId) {
   const e = await DB.getErfolgById(erfolgId); if(!e) return;
@@ -405,9 +422,7 @@ function erzeugeJTFOHtml(e, typ) {
 
   // Platzierungstext
   const platzText = platz === 1 ? '1. PLATZ' : platz === 2 ? '2. PLATZ' : platz === 3 ? '3. PLATZ' : platz ? `${platz}. PLATZ` : '';
-  const platzLabel = platz === 1 ? (e.meldungsart==='Teamerfolg'?'BUNDESSIEGER':'SIEGER') :
-                     platz === 2 ? 'VIZE-BUNDESSIEGER' :
-                     platz === 3 ? 'BRONZE BEIM BUNDESFINALE' : platzText;
+  
 
   // Medaillen-Farbe
   const medailleColor = medaille==='GOLD' ? '#FFD700' : medaille==='SILBER' ? '#C0C0C0' : medaille==='BRONZE' ? '#CD7F32' : '#003366';
@@ -539,17 +554,7 @@ function erzeugeJTFOHtml(e, typ) {
     <div class="header-hashtag">#SLZBerlin</div>
   </div>
 
-  <div class="body">
-    <div class="sport-label">${esc(sportart || titelSauber)}</div>
-    ${disziplin?`<div class="disziplin-label">${esc(disziplin)}</div>`:''}
-    ${sportart&&titelSauber&&titelSauber!==sportart?`<div class="disziplin-label" style="font-size:${typ==='a3'?'8pt':'13px'};opacity:.7">${esc(titelSauber)}</div>`:''}
-    ${platz?`<div class="platz-number">${platz}</div>`:''}
-    ${platzText?`<div class="platz-text">${platzText}</div>`:''}
-    ${platzLabel?`<div class="platz-label">${esc(platzLabel)}</div>`:''}
-    ${ergebnis?`<div class="ergebnis">${esc(ergebnis)}</div>`:''}
-    ${datum?`<div class="wettbewerb">${esc(datum)}${e.ort?' · '+esc(e.ort):''}</div>`:''}
-    <div class="schule">Schul- und Leistungssportzentrum Berlin</div>
-  </div>
+  
 
   <div class="footer">
     <span>SLZB-Erfolge · ${new Date().toLocaleDateString('de-DE')}</span>
