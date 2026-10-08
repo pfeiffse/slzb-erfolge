@@ -461,7 +461,20 @@ async function druckeJTFO(erfolgId) {
 
 // ── JTFO-HTML-Generator ──────────────────────────────────────
 function erzeugeJTFOHtml(e, typ) {
-  
+  // Sportart: alle möglichen Quellen
+  const sportart = e.sportartText ||
+    SLZB_DB.getSportart(e.sportartId)?.name ||
+    SLZB_DB.sportarten.find(s=>s.id===e.sportartId)?.name ||
+    SLZB_DB.sportarten.find(s=>s.kuerzel===e.sportartId)?.name ||
+    (e.sportartId && !e.sportartId.startsWith('SP') ? e.sportartId : '') || '';
+
+  // Wettbewerb: alle möglichen Quellen
+  const wettbewerb = e.wettbewerbText ||
+    SLZB_DB.getWettbewerb(e.wettbewerbId)?.name ||
+    (e.wettbewerbId && !e.wettbewerbId.startsWith('WB-') ? e.wettbewerbId : '') || '';
+
+  // Titel bereinigt
+  const titelSauber = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
 
   const platz      = e.platzierung || '';
   const medaille   = e.medaille && e.medaille !== 'keine' ? e.medaille.toUpperCase() : '';
