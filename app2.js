@@ -24,7 +24,13 @@ async function renderErfolgDetail() {
 
     <div class="tabs">
       <button class="tab-btn active" onclick="switchTab('kerndaten')">Kerndaten</button>
-      
+      <button class="tab-btn" onclick="switchTab('beteiligte')">Beteiligte (${e.beteiligte?.length||0})</button>
+      <button class="tab-btn" onclick="switchTab('medien')">📷 Medien (${e.bilder?.length||0})</button>
+      <button class="tab-btn" onclick="switchTab('texte')">Texte</button>
+      <button class="tab-btn" onclick="switchTab('datenschutz')">Datenschutz</button>
+      <button class="tab-btn" onclick="switchTab('ausgaben')">Ausgaben</button>
+      <button class="tab-btn" onclick="switchTab('protokoll')">Protokoll (${e.protokoll?.length||0})</button>
+    </div>
 
     <div id="tab-kerndaten" class="tab-panel active">
       <div class="grid grid-2">
@@ -81,6 +87,10 @@ async function renderErfolgDetail() {
         <div class="card-header"><h2>📷 Medien</h2>
           ${Auth.canDo('erfassen')?`<button class="btn btn-outline btn-sm" onclick="zeigeBildUploadModal('${e.id}')">+ Bild hochladen</button>`:''}
         </div>
+        ${!['Freigegeben','Veröffentlicht','Redaktion','Freigabe Öffentlichkeitsarbeit','Teilweise freigegeben'].includes(e.status)?
+          `<div class="alert alert-warning" style="margin:12px 12px 0"><span class="alert-icon">ℹ️</span>
+            <span>Bilder können jetzt hochgeladen werden. Sie werden erst nach Freigabe in Ausgaben verwendet.</span></div>`:
+          ''}
         <div class="card-body">
           ${!e.bilder?.length ? '<p class="text-muted">Keine Bilder vorhanden. Über „+ Bild hochladen" hinzufügen.</p>' :
             `<div class="grid grid-3">${(e.bilder||[]).map(b=>`
@@ -229,10 +239,7 @@ function renderAusgabenTab(e) {
 // ── Statusaktionen ───────────────────────────────────────────
 function getStatusAktionen(status,rolle) {
   const map={
-    trainer:{
-      'Entwurf':[{status:'Eingereicht',label:'📤 Einreichen',cls:'primary'}],
-      'Rückfrage an Melder':[{status:'Eingereicht',label:'📤 Erneut einreichen',cls:'primary'}],
-    },
+    
     redaktion:{
       'Eingereicht':[
         {status:'Datenprüfung',label:'🔍 Datenprüfung',cls:'outline'},
