@@ -339,20 +339,7 @@ async function generiereKIText(erfolgId) {
 
 
 
-// ── A3-Ausgabe (immer Querformat) ────────────────────────────
-async function zeigeA3Vorschau(erfolgId) {
-  const e = await DB.getErfolgById(erfolgId);
-  if (!e) { toast('Erfolg nicht gefunden','danger'); return; }
-  const html = erzeugeJTFOHtml(e, 'a3');
-  const win = window.open('', '_blank');
-  if (win) {
-    win.document.write(html);
-    win.document.close();
-    setTimeout(() => win.print(), 800);
-  } else {
-    toast('Popup wurde blockiert – bitte Popup-Blocker deaktivieren','warning');
-  }
-}
+
 
 // Hilfsfunktion: HTML als Blob-URL in iframe laden (sicherer als srcdoc)
 function htmlZuBlobUrl(html) {
@@ -361,51 +348,79 @@ function htmlZuBlobUrl(html) {
 }
 
 async function zeigeBildschirmModal(erfolgId) {
-  const e = await DB.getErfolgById(erfolgId);
-  if (!e) { toast('Erfolg nicht gefunden','danger'); return; }
-  const html    = erzeugeJTFOHtml(e, 'screen');
-  const blobUrl = htmlZuBlobUrl(html);
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  overlay.innerHTML = `<div class="modal modal-xl">
-    <div class="modal-header"><h3>🖥️ Ausgabe-Vorschau (JTFO-Stil)</h3>
-      <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-    <div class="modal-body" style="padding:0;background:#000;border-radius:0 0 var(--radius-lg) var(--radius-lg)">
-      <iframe id="vorschau-frame-${erfolgId}" src="${blobUrl}"
-        style="width:100%;height:500px;border:none;border-radius:0 0 var(--radius-lg) var(--radius-lg)"></iframe>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Schließen</button>
-      <button class="btn btn-outline" onclick="downloadJTFO('${erfolgId}','screen')">🖥️ HTML herunterladen</button>
-      <button class="btn btn-primary" onclick="druckeJTFO('${erfolgId}')">🖨️ Drucken</button>
-    </div>
-  </div>`;
-  document.body.appendChild(overlay);
+  toast('Bildschirm-Ausgabe wird vorbereitet...','info');
+  try {
+    const e = await DB.getErfolgById(erfolgId);
+    if (!e) { toast('Erfolg nicht gefunden','danger'); return; }
+    const html    = erzeugeJTFOHtml(e, 'screen');
+    const blobUrl = htmlZuBlobUrl(html);
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    // Overlay direkt aufbauen ohne innerHTML (vermeidet Escape-Probleme)
+    const modal = document.createElement('div');
+    modal.className = 'modal modal-xl';
+    modal.innerHTML = `
+      <div class="modal-header">
+        <h3>🖥️ Bildschirm-Ausgabe (JTFO-Stil)</h3>
+        <button class="btn btn-ghost btn-sm">✕</button>
+      </div>
+      <div class="modal-body" style="padding:0;background:#000">
+        <iframe src="${blobUrl}" style="width:100%;height:500px;border:none"></iframe>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost close-btn">Schließen</button>
+        <button class="btn btn-outline dl-btn">🖥️ HTML herunterladen</button>
+      </div>`;
+    modal.querySelector('.btn-ghost.close-btn, .btn-ghost:first-child').onclick = () => overlay.remove();
+    modal.querySelectorAll('.btn-ghost').forEach(b => { if(b.textContent.includes('✕')||b.textContent.includes('Schließen')) b.onclick = ()=>overlay.remove(); });
+    modal.querySelector('.dl-btn').onclick = () => downloadJTFO(erfolgId,'screen');
+    overlay.appendChild(modal);
+    overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+  } catch(err) {
+    toast('Fehler: '+err.message,'danger');
+    console.error('Bildschirm Fehler:', err);
+  }
 }
 
 async function zeigeSocialModal(erfolgId) {
-  const e = await DB.getErfolgById(erfolgId);
-  if (!e) { toast('Erfolg nicht gefunden','danger'); return; }
-  const html    = erzeugeJTFOHtml(e, 'social');
-  const blobUrl = htmlZuBlobUrl(html);
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  overlay.innerHTML = `<div class="modal modal-lg">
-    <div class="modal-header"><h3>📱 Social-Media-Ausgabe (JTFO-Stil)</h3>
-      <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-    <div class="modal-body">
-      <div class="alert alert-danger mb-3"><span class="alert-icon">🔒</span>
-        <span><strong>Social Media ist standardmäßig gesperrt.</strong> Kein Auto-Posting. Nur Export-Paket.</span></div>
-      <div style="background:#000;border-radius:12px;overflow:hidden;max-width:400px;margin:0 auto">
-        <iframe src="${blobUrl}" style="width:100%;height:400px;border:none"></iframe>
+  toast('Social-Media-Ausgabe wird vorbereitet...','info');
+  try {
+    const e = await DB.getErfolgById(erfolgId);
+    if (!e) { toast('Erfolg nicht gefunden','danger'); return; }
+    const html    = erzeugeJTFOHtml(e, 'social');
+    const blobUrl = htmlZuBlobUrl(html);
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const modal = document.createElement('div');
+    modal.className = 'modal modal-lg';
+    modal.innerHTML = `
+      <div class="modal-header">
+        <h3>📱 Social-Media-Ausgabe (JTFO-Stil)</h3>
+        <button class="btn btn-ghost btn-sm">✕</button>
       </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Schließen</button>
-      <button class="btn btn-warning" onclick="downloadJTFO('${erfolgId}','social');this.closest('.modal-overlay').remove()">📦 HTML herunterladen</button>
-    </div>
-  </div>`;
-  document.body.appendChild(overlay);
+      <div class="modal-body">
+        <div class="alert alert-danger mb-3">
+          <span class="alert-icon">🔒</span>
+          <span><strong>Social Media ist standardmäßig gesperrt.</strong> Kein Auto-Posting. Nur Export-Paket.</span>
+        </div>
+        <div style="background:#000;border-radius:12px;overflow:hidden;max-width:400px;margin:0 auto">
+          <iframe src="${blobUrl}" style="width:100%;height:400px;border:none"></iframe>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost close-btn">Schließen</button>
+        <button class="btn btn-warning dl-btn">📦 HTML herunterladen</button>
+      </div>`;
+    modal.querySelectorAll('.btn-ghost').forEach(b=>b.onclick=()=>overlay.remove());
+    modal.querySelector('.dl-btn').onclick = ()=>{ downloadJTFO(erfolgId,'social'); overlay.remove(); };
+    overlay.appendChild(modal);
+    overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+  } catch(err) {
+    toast('Fehler: '+err.message,'danger');
+    console.error('Social Fehler:', err);
+  }
 }
 
 async function downloadJTFO(erfolgId, typ) {
