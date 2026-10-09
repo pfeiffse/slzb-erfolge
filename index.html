@@ -200,7 +200,10 @@ async function doLogin() {
     return;
   }
   debug(`Login OK: ${Auth.name()} (${Auth.rolle()})`);
-  
+  errEl.style.display = 'none';
+  showApp();
+  initApp();
+}
 
 async function doLogout() {
   if (!confirm('Wirklich abmelden?')) return;
