@@ -261,7 +261,8 @@ function getStatusAktionen(status,rolle) {
         {status:'Gelöscht/Anonymisiert',label:'🗑️ Als Duplikat löschen',cls:'danger'},
       ],
       'Redaktion':[
-        {status:'Freigabe Öffentlichkeitsarbeit',label:'📢 Zur ÖA-Freigabe',cls:'primary'},
+        {status:'Freigegeben',label:'✅ Freigeben',cls:'success'},
+        {status:'Freigabe Öffentlichkeitsarbeit',label:'📢 Zur ÖA-Freigabe (optional)',cls:'outline'},
         {status:'Rückfrage an Melder',label:'💬 Rückfrage',cls:'warning'},
       ],
       'Unvollständig':[
@@ -623,7 +624,28 @@ function erzeugeJTFOHtml(e, typ) {
     <div class="header-hashtag">#SLZBerlin</div>
   </div>
 
-  
+  <div class="body">
+    ${hauptbild ? `<div style="position:absolute;inset:0;z-index:0;overflow:hidden">
+      <img src="${hauptbild.signedUrl}" alt="${esc(hauptbild.altText||hauptbild.caption||'')}"
+        style="width:100%;height:100%;object-fit:cover;opacity:.2;filter:blur(3px)">
+    </div>` : ''}
+    <div class="sport-label" style="position:relative">${esc(sportart || titelSauber)}</div>
+    ${disziplin?`<div class="disziplin-label" style="position:relative">${esc(disziplin)}</div>`:''}
+    ${platz?`<div class="platz-number" style="position:relative">${platz}</div>`:''}
+    ${platzText?`<div class="platz-text" style="position:relative">${platzText}</div>`:''}
+    ${platzLabel?`<div class="platz-label" style="position:relative">${esc(platzLabel)}</div>`:''}
+    ${ergebnis?`<div class="ergebnis" style="position:relative">${esc(ergebnis)}</div>`:''}
+    ${datum?`<div class="wettbewerb" style="position:relative">${esc(datum)}${e.ort?' · '+esc(e.ort):''}</div>`:''}
+    <div class="schule" style="position:relative">Schul- und Leistungssportzentrum Berlin</div>
+    ${hauptbild?`
+    <div style="position:relative;margin-top:${typ==='a3'?'6mm':'16px'};max-width:${typ==='a3'?'160mm':'380px'}">
+      <img src="${hauptbild.signedUrl}" alt="${esc(hauptbild.altText||hauptbild.caption||'')}"
+        style="width:100%;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.5)">
+      ${hauptbild.caption?`<div style="font-size:${typ==='a3'?'7pt':'11px'};opacity:.8;margin-top:6px;font-style:italic;color:#fff">${esc(hauptbild.caption)}</div>`:''}
+      <div style="font-size:${typ==='a3'?'6pt':'9px'};opacity:.5;margin-top:2px;color:#fff">© ${esc(hauptbild.creator||hauptbild.source||'')}</div>
+    </div>`:''}
+    ${e.kurzinfo?`<div style="font-size:${typ==='a3'?'9pt':'14px'};opacity:.85;margin-top:${typ==='a3'?'5mm':'14px'};max-width:${typ==='a3'?'180mm':'420px'};line-height:1.5;text-align:center;position:relative;color:#fff">${esc(e.kurzinfo)}</div>`:''}
+  </div>
 
   <div class="footer">
     <span>SLZB-Erfolge · ${new Date().toLocaleDateString('de-DE')}</span>
@@ -818,11 +840,10 @@ function zeigeBildUploadModal(erfolgId) {
         <span>Nur Bilder hochladen für die Sie die Nutzungsrechte besitzen. Urheber und Quelle sind Pflichtfelder.</span></div>
       <div class="form-group"><label>Datei <span class="required">*</span></label>
         <input type="file" id="upload-datei" accept="image/jpeg,image/png,image/webp"></div>
-      <div class="form-row cols-2">
-        <div class="form-group"><label>Urheber <span class="required">*</span></label>
-          <input type="text" id="upload-urheber" placeholder="Name des Fotografen"></div>
-        <div class="form-group"><label>Quelle <span class="required">*</span></label>
-          <input type="text" id="upload-quelle" placeholder="z.B. SLZB-Archiv"></div>
+      <div class="form-group">
+        <label>Fotograf / Urheber / Quelle <span class="required">*</span></label>
+        <input type="text" id="upload-urheber" placeholder="z.B. Max Mustermann / SLZB-Archiv">
+        <div class="form-hint">Name des Fotografen oder der Bildquelle</div>
       </div>
       <div class="form-row cols-2">
         <div class="form-group"><label>Bildunterschrift</label>
@@ -845,7 +866,7 @@ function zeigeBildUploadModal(erfolgId) {
 async function fuehreBildUploadDurch(erfolgId) {
   const dateiInput = document.getElementById('upload-datei');
   const urheber    = document.getElementById('upload-urheber')?.value?.trim()||'';
-  const quelle     = document.getElementById('upload-quelle')?.value?.trim()||'';
+  const quelle     = urheber; // Quelle = Urheber (ein Feld)
   const caption    = document.getElementById('upload-caption')?.value?.trim()||'';
   const altText    = document.getElementById('upload-alt')?.value?.trim()||'';
   const errEl      = document.getElementById('upload-error');
@@ -858,8 +879,7 @@ async function fuehreBildUploadDurch(erfolgId) {
   errEl.innerHTML = '';
 
   if (!dateiInput?.files?.length) { zeigeErr('Bitte Datei auswählen.'); return; }
-  if (!urheber) { zeigeErr('Urheber ist Pflichtfeld.'); return; }
-  if (!quelle)  { zeigeErr('Quelle ist Pflichtfeld.'); return; }
+  if (!urheber) { zeigeErr('Fotograf / Urheber / Quelle ist Pflichtfeld.'); return; }
 
   const datei = dateiInput.files[0];
   if (datei.size > 10 * 1024 * 1024) { zeigeErr('Datei zu groß (max. 10 MB).'); return; }

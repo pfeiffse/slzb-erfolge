@@ -246,15 +246,15 @@ async function renderDashboard() {
     <div class="page-header"><h1>Dashboard</h1>
       <p>Willkommen, ${esc(Auth.name())}. <span class="text-muted text-sm">v3 · Supabase Auth</span></p></div>
     <div class="grid grid-4 mb-4">
-      <div class="stat-card"><div class="stat-icon blue">📋</div><div><div class="stat-value">${alle.length}</div><div class="stat-label">Meldungen gesamt</div></div></div>
-      <div class="stat-card"><div class="stat-icon green">✅</div><div><div class="stat-value">${freigegeben}</div><div class="stat-label">Freigegeben</div></div></div>
-      <div class="stat-card"><div class="stat-icon orange">⏳</div><div><div class="stat-value">${offen}</div><div class="stat-label">In Bearbeitung</div></div></div>
-      <div class="stat-card"><div class="stat-icon red">🔒</div><div><div class="stat-value">${gesperrt}</div><div class="stat-label">Gesperrt</div></div></div>
+      <div class="stat-card clickable" style="cursor:pointer" onclick="navigateTo('archiv')"><div class="stat-icon blue">📋</div><div><div class="stat-value">${alle.length}</div><div class="stat-label">Meldungen gesamt</div></div></div>
+      <div class="stat-card clickable" style="cursor:pointer" onclick="navigateTo('ausgaben')"><div class="stat-icon green">✅</div><div><div class="stat-value">${freigegeben}</div><div class="stat-label">Freigegeben</div></div></div>
+      <div class="stat-card clickable" style="cursor:pointer" onclick="navigateTo('redaktion')"><div class="stat-icon orange">⏳</div><div><div class="stat-value">${offen}</div><div class="stat-label">In Bearbeitung</div></div></div>
+      <div class="stat-card clickable" style="cursor:pointer" onclick="navigateTo('einwilligungen')"><div class="stat-icon red">🔒</div><div><div class="stat-value">${gesperrt}</div><div class="stat-label">Gesperrt</div></div></div>
     </div>
     <div class="grid grid-3 mb-4">
-      <div class="stat-card"><div class="stat-icon orange">⚠️</div><div><div class="stat-value">${unvollst}</div><div class="stat-label">Unvollständig</div></div></div>
-      <div class="stat-card"><div class="stat-icon purple">💬</div><div><div class="stat-value">${rueck}</div><div class="stat-label">Rückfragen</div></div></div>
-      <div class="stat-card"><div class="stat-icon gold">🏆</div><div><div class="stat-value">${frg}</div><div class="stat-label">Warten auf ÖA</div></div></div>
+      <div class="stat-card clickable" style="cursor:pointer" onclick="navigateTo('redaktion')"><div class="stat-icon orange">⚠️</div><div><div class="stat-value">${unvollst}</div><div class="stat-label">Unvollständig</div></div></div>
+      <div class="stat-card clickable" style="cursor:pointer" onclick="navigateTo('rueckfragen')"><div class="stat-icon purple">💬</div><div><div class="stat-value">${rueck}</div><div class="stat-label">Rückfragen</div></div></div>
+      <div class="stat-card clickable" style="cursor:pointer" onclick="navigateTo('ausgaben')"><div class="stat-icon gold">🏆</div><div><div class="stat-value">${frg}</div><div class="stat-label">Warten auf ÖA</div></div></div>
     </div>
     ${Auth.canDo('erfassen') ? `<div class="card mb-4">
       <div class="card-header"><h2>➕ Schnellerfassung</h2></div>
