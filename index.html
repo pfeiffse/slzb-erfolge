@@ -123,6 +123,9 @@
 </div>
 <!-- Debug Panel (Strg+D) -->
 <div id="debug-panel"></div>
+<!-- Google Fonts: Montserrat -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,700;1,700&amp;display=swap" rel="stylesheet"/>
 <!-- Supabase lokal (kein CDN – verhindert Tracking-Prevention-Blockierung) -->
 <script src="supabase.min.js"></script>
 <!-- App-Dateien -->
@@ -130,6 +133,7 @@
 <script src="backend.js"></script>
 <script src="data.js"></script>
 <script src="pdf.js"></script>
+<script src="poster.js"></script>
 <script src="app.js"></script>
 <script src="app2.js"></script>
 <script src="user-admin.js"></script>
@@ -196,10 +200,7 @@ async function doLogin() {
     return;
   }
   debug(`Login OK: ${Auth.name()} (${Auth.rolle()})`);
-  errEl.style.display = 'none';
-  showApp();
-  initApp();
-}
+  
 
 async function doLogout() {
   if (!confirm('Wirklich abmelden?')) return;
@@ -227,13 +228,7 @@ async function startApp() {
     const eingeloggt = await Auth.init();
     debug(`Session: ${eingeloggt ? Auth.name() : 'keine'}`);
 
-    hideLoading();
-    if (eingeloggt) {
-      showApp();
-      initApp();
-    } else {
-      showLogin();
-    }
+    
   } catch(e) {
     debug(`Start-Fehler: ${e.message}`);
     hideLoading();
