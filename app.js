@@ -217,8 +217,8 @@ APP._lastLoad = 0;
 
 async function ladeErfolge(force=false) {
   const jetzt = Date.now();
-  // 5 Sekunden Cache (Realtime übernimmt die Invalidierung)
-  if (!force && APP._erfolgeCache && (jetzt - APP._lastLoad) < 5000) {
+  // 30 Sekunden Cache
+  if (!force && APP._erfolgeCache && (jetzt - APP._lastLoad) < 30000) {
     return APP._erfolgeCache;
   }
   try {
