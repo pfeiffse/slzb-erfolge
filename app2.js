@@ -360,13 +360,52 @@ async function zeigeA3Vorschau(erfolgId) {
   try {
     const e = await DB.getErfolgById(erfolgId);
     if (!e) { toast('Erfolg nicht gefunden','danger'); return; }
-    const html = erzeugeJTFOHtml(e, 'a3');
-    const blob = new Blob([html], {type:'text/html;charset=utf-8'});
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href = url; a.target = '_blank'; a.click();
-    setTimeout(()=>URL.revokeObjectURL(url), 5000);
-    toast('A3-Ausgabe geöffnet – im neuen Tab drucken (Strg+P)','success');
+
+    // Poster-Canvas erstellen (1080×1350 → A3 Querformat via CSS)
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const modal = document.createElement('div');
+    modal.className = 'modal modal-xl';
+    modal.innerHTML = `
+      <div class="modal-header">
+        <h3>📄 A3-Aushang – SLZB Poster-Stil</h3>
+        <button class="btn btn-ghost btn-sm close-x">✕</button>
+      </div>
+      <div class="modal-body text-center" style="background:#111;padding:20px">
+        <canvas id="a3-canvas" width="1080" height="1350"
+          style="max-width:100%;max-height:70vh;display:block;margin:0 auto;border-radius:8px"></canvas>
+        <p class="text-xs text-muted mt-2" style="color:#888">Vorschau · PNG-Export oder Drucken</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost close-btn">Schließen</button>
+        <button class="btn btn-outline dl-png">🖼️ PNG herunterladen</button>
+        <button class="btn btn-primary print-btn">🖨️ Drucken</button>
+      </div>`;
+    modal.querySelector('.close-x').onclick = ()=>overlay.remove();
+    modal.querySelector('.close-btn').onclick = ()=>overlay.remove();
+    modal.querySelector('.dl-png').onclick = ()=>exportPosterPNG(e,'a3-canvas');
+    modal.querySelector('.print-btn').onclick = ()=>{
+      const canvas = document.getElementById('a3-canvas');
+      if (!canvas) return;
+      const url = canvas.toDataURL('image/png');
+      const win = window.open('','_blank');
+      if (win) {
+        win.document.write(`<!DOCTYPE html><html><head><style>
+          body{margin:0;background:#000}
+          img{width:100%;height:auto;display:block}
+          @page{size:A3 landscape;margin:0}
+          @media print{body{background:#fff}}
+        </style></head><body><img src="${url}"></body></html>`);
+        win.document.close();
+        setTimeout(()=>win.print(), 800);
+      }
+    };
+    overlay.appendChild(modal);
+    overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+
+    setTimeout(()=>zeichneSLZBPoster('a3-canvas', e), 100);
+    toast('A3-Poster wird gezeichnet...','success');
   } catch(err) {
     toast('Fehler: '+err.message,'danger');
     console.error('A3 Fehler:', err);
@@ -444,13 +483,13 @@ async function zeigeSocialModal(erfolgId) {
     modal.querySelector('.close-x').onclick = ()=>overlay.remove();
     modal.querySelector('.close-btn').onclick = ()=>overlay.remove();
     modal.querySelector('.dl-html').onclick = ()=>{ downloadJTFO(erfolgId,'social'); };
-    modal.querySelector('.dl-png').onclick = ()=>{ exportSocialPNG(e); };
+    modal.querySelector('.dl-png').onclick = ()=>{ exportPosterPNG(e, 'social-canvas'); };
     overlay.appendChild(modal);
     overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
     document.body.appendChild(overlay);
 
-    // Canvas nach dem Einfügen zeichnen
-    setTimeout(()=>zeichneSocialCanvas(e), 100);
+    // SLZB-Poster zeichnen (neuer Generator)
+    setTimeout(()=>zeichneSLZBPoster('social-canvas', e), 100);
 
   } catch(err) {
     toast('Fehler: '+err.message,'danger');
