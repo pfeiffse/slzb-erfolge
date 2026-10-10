@@ -365,6 +365,9 @@ async function zeigeA3Vorschau(erfolgId) {
     const anzBilder = (e.bilder||[]).filter(b=>b.signedUrl).length;
     const extraTabs = anzBilder>=2 ? `<button class="tab-btn" style="color:#aaa;flex:1" onclick="wechsleA3Variante(4)">4: 2 Bilder</button>` : '';
     const extraTabs2 = anzBilder>=4 ? `<button class="tab-btn" style="color:#aaa;flex:1" onclick="wechsleA3Variante(5)">5: 4 Bilder</button>` : '';
+    const hatTeam = (e.beteiligte||[]).length > 1;
+    const extraTabTeam = hatTeam ? `<button class="tab-btn" style="color:#aaa;flex:1" onclick="wechsleA3Variante(6)">6: Tabelle</button>` : '';
+    const extraTabPortrait = `<button class="tab-btn" style="color:#aaa;flex:1" onclick="wechsleA3Variante(7)">7: Porträt</button>`;
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     const modal = document.createElement('div');
@@ -376,10 +379,7 @@ async function zeigeA3Vorschau(erfolgId) {
       </div>
       <div class="modal-body" style="background:#111;padding:16px">
         <div class="tabs mb-3" style="background:rgba(255,255,255,.08);border-radius:8px;padding:4px;display:flex;gap:4px;flex-wrap:wrap">
-          <button class="tab-btn active" style="color:#fff;flex:1" onclick="wechsleA3Variante(1)">1: Bild oben</button>
-          <button class="tab-btn" style="color:#aaa;flex:1" onclick="wechsleA3Variante(2)">2: Split</button>
-          <button class="tab-btn" style="color:#aaa;flex:1" onclick="wechsleA3Variante(3)">3: Vollbild</button>
-          ${extraTabs}${extraTabs2}
+          
         </div>
         <div style="text-align:center">
           <canvas id="a3-canvas" width="1587" height="1123"
@@ -440,10 +440,7 @@ async function zeigeBildschirmModal(erfolgId) {
         <button class="btn btn-ghost btn-sm close-x">✕</button>
       </div>
       <div class="modal-body" style="background:#111;padding:16px">
-        <div class="tabs mb-3" style="background:rgba(255,255,255,.08);border-radius:8px;padding:4px;display:flex;gap:4px">
-          <button class="tab-btn active" style="color:#fff;flex:1" onclick="wechsleBildschirmFormat('hochformat')">📱 Hochformat (4:5)</button>
-          <button class="tab-btn" style="color:#aaa;flex:1" onclick="wechsleBildschirmFormat('querformat')">🖥️ Querformat (16:9)</button>
-        </div>
+        
         <div style="text-align:center">
           <canvas id="screen-canvas" width="1080" height="1350"
             style="max-width:100%;max-height:65vh;display:block;margin:0 auto;border-radius:8px"></canvas>
@@ -491,6 +488,14 @@ async function zeigeSocialModal(erfolgId) {
           <span><strong>Social Media ist standardmäßig gesperrt.</strong> Kein Auto-Posting.</span>
         </div>
         
+        <div class="tabs mb-3" style="flex-wrap:wrap;gap:4px;display:flex">
+          <button class="tab-btn active" onclick="wechsleSocialFormat('beitrag','${e.id}')">📸 Beitrag (1:1)</button>
+          <button class="tab-btn" onclick="wechsleSocialFormat('story','${e.id}')">📱 Story/Reel (9:16)</button>
+          ${(e.bilder||[]).filter(b=>b.signedUrl).length>=2?'<button class=\\"tab-btn\\" onclick=\\"wechsleSocialFormat(\'2bilder\',\''+e.id+'\')\">🖼️ 2 Bilder</button>':''}
+          ${(e.bilder||[]).filter(b=>b.signedUrl).length>=4?'<button class=\\"tab-btn\\" onclick=\\"wechsleSocialFormat(\'4bilder\',\''+e.id+'\')\">🖼️ 4 Bilder</button>':''}
+          <button class="tab-btn" onclick="wechsleSocialFormat('portrait','${e.id}')">👤 Porträt</button>
+          <button class="tab-btn" onclick="wechsleSocialFormat('multierfolg','${e.id}')">🏅 Multi</button>
+        </div>
         <div style="text-align:center;background:#111;padding:16px;border-radius:8px">
           <canvas id="social-canvas" width="1080" height="1080"
             style="max-width:100%;max-height:60vh;display:block;margin:0 auto;border-radius:8px"></canvas>
@@ -536,6 +541,22 @@ async function wechsleBildschirmFormat(format) {
     if (canvas) { canvas.width=1920; canvas.height=1080; canvas.style.maxHeight='50vh'; }
     if (info) info.textContent='1920×1080 px · Querformat (16:9)';
     await zeichneBildschirmQuerformat('screen-canvas', e);
+  } else if (format==='tabelle') {
+    if (canvas) { canvas.width=1920; canvas.height=1080; canvas.style.maxHeight='50vh'; }
+    if (info) info.textContent='1920×1080 px · Tabellen-Layout (Team/Staffel)';
+    await zeichneTabellenLayout('screen-canvas', e);
+  } else if (format==='infografik') {
+    if (canvas) { canvas.width=1920; canvas.height=1080; canvas.style.maxHeight='50vh'; }
+    if (info) info.textContent='1920×1080 px · Infografik-Layout (Bilanz)';
+    await zeichneInfografikLayout('screen-canvas', e);
+  } else if (format==='portrait') {
+    if (canvas) { canvas.width=1080; canvas.height=1350; canvas.style.maxHeight='65vh'; }
+    if (info) info.textContent='1080×1350 px · Porträt-Layout (Einzelperson)';
+    await zeichnePortraitLayout('screen-canvas', e);
+  } else if (format==='multierfolg') {
+    if (canvas) { canvas.width=1080; canvas.height=1350; canvas.style.maxHeight='65vh'; }
+    if (info) info.textContent='1080×1350 px · Multi-Erfolg-Layout';
+    await zeichneMultiErfolgLayout('screen-canvas', e);
   } else {
     if (canvas) { canvas.width=1080; canvas.height=1350; canvas.style.maxHeight='65vh'; }
     if (info) info.textContent='1080×1350 px · Hochformat';
@@ -552,6 +573,8 @@ async function wechsleSocialFormat(format, erfolgId) {
     else if (format==='story') active = txt.includes('story');
     else if (format==='2bilder') active = txt.includes('2 bilder');
     else if (format==='4bilder') active = txt.includes('4 bilder');
+    else if (format==='portrait') active = txt.includes('porträt');
+    else if (format==='multierfolg') active = txt.includes('multi');
     b.classList.toggle('active', active);
   });
   const canvas = document.getElementById('social-canvas');
@@ -565,17 +588,7 @@ async function wechsleSocialFormat(format, erfolgId) {
     canvas.style.maxHeight='70vh';
     if(info) info.textContent='1080×1920 px · Story/Reel';
     await zeichneSocialFormat('social-canvas', e, 'story');
-  } else if (format==='2bilder') {
-    canvas.width=1080; canvas.height=1080;
-    canvas.style.maxHeight='60vh';
-    if(info) info.textContent='1080×1080 px · 2 Bilder';
-    await zeichnePoster2Bilder('social-canvas', e);
-  } else if (format==='4bilder') {
-    canvas.width=1080; canvas.height=1080;
-    canvas.style.maxHeight='60vh';
-    if(info) info.textContent='1080×1080 px · 4 Bilder';
-    await zeichnePoster4Bilder('social-canvas', e);
-  } else {
+  
     canvas.width=1080; canvas.height=1080;
     canvas.style.maxHeight='60vh';
     if(info) info.textContent='1080×1080 px · Beitrag';
@@ -597,6 +610,8 @@ async function wechsleA3Variante(nr) {
     3: 'Variante 3: Vollbild · A3 Querformat',
     4: 'Variante 4: 2 Bilder · A3 Querformat',
     5: 'Variante 5: 4 Bilder · A3 Querformat',
+    6: 'Variante 6: Tabellen-Layout (Team/Staffel) · 1920×1080',
+    7: 'Variante 7: Porträt-Layout (Einzelperson) · 1080×1350',
   };
   const info = document.getElementById('a3-variante-info');
   if (info) info.textContent = labels[nr] || '';
@@ -611,6 +626,8 @@ async function zeichneA3Variante(canvasId, e, nr) {
   else if (nr===3) await zeichneA3Vollbild(canvasId, e);
   else if (nr===4) await zeichnePoster2Bilder(canvasId, e);
   else if (nr===5) await zeichnePoster4Bilder(canvasId, e);
+  else if (nr===6) await zeichneTabellenLayout(canvasId, e);
+  else if (nr===7) await zeichnePortraitLayout(canvasId, e);
 }
 
 
