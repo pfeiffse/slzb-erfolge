@@ -818,3 +818,155 @@ async function zeichneA3Vollbild(canvasId, e) {
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText('Schul- und Leistungssportzentrum Berlin · #SLZBerlin', W/2, H-25);
 }
+
+// ── MULTI-BILD LAYOUTS ────────────────────────────────────────
+
+// 2 Bilder: Collage (links groß, rechts klein oben+unten)
+async function zeichnePoster2Bilder(canvasId, e) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  canvas.width=1080; canvas.height=1350;
+  const ctx = canvas.getContext('2d');
+  await ladeMontserrat(); await ladeLogo();
+  const bilder = (e.bilder||[]).filter(b=>b.signedUrl).slice(0,2);
+  const imgs = await Promise.all(bilder.map(b=>ladeBild(b.signedUrl)));
+  const W=1080, H=1350;
+  const sportart = e.sportartText || SLZB_DB.getSportart(e.sportartId)?.name || '';
+  const platz = e.platzierung || '';
+  const medaille = e.medaille && e.medaille!=='keine' ? e.medaille : '';
+  const mColor = medailleColor(medaille);
+  const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
+
+  ctx.fillStyle=SLZB_COLORS.bg; ctx.fillRect(0,0,W,H);
+
+  const fotoH = Math.round(H*0.55);
+  if (imgs[0]) {
+    // Bild 1: links 60%
+    ctx.save(); ctx.beginPath(); ctx.rect(0,0,Math.round(W*0.6),fotoH); ctx.clip();
+    drawCover(ctx, imgs[0], 0, 0, Math.round(W*0.6), fotoH); ctx.restore();
+  }
+  if (imgs[1]) {
+    // Bild 2: rechts 40%, mit 4px Abstand
+    const rx = Math.round(W*0.6)+4;
+    ctx.save(); ctx.beginPath(); ctx.rect(rx,0,W-rx,fotoH); ctx.clip();
+    drawCover(ctx, imgs[1], rx, 0, W-rx, fotoH); ctx.restore();
+  }
+  // Trennlinie
+  ctx.fillStyle=SLZB_COLORS.bg; ctx.fillRect(Math.round(W*0.6),0,4,fotoH);
+
+  // Fade
+  const fadeGrad = ctx.createLinearGradient(0, fotoH-100, 0, fotoH);
+  fadeGrad.addColorStop(0,'rgba(27,28,31,0)'); fadeGrad.addColorStop(1,'rgba(27,28,31,1)');
+  ctx.fillStyle=fadeGrad; ctx.fillRect(0, fotoH-100, W, 100);
+
+  zeichneTextbereich(ctx, e, W, H, fotoH, mColor, sportart, platz, medaille, titel);
+  zeichneKopfzeile(ctx, e.wettbewerbText, e.disziplin);
+  zeichneFusszeile(ctx, W, H);
+}
+
+// 4 Bilder: 2×2 Grid oben, Text unten
+async function zeichnePoster4Bilder(canvasId, e) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  canvas.width=1080; canvas.height=1350;
+  const ctx = canvas.getContext('2d');
+  await ladeMontserrat(); await ladeLogo();
+  const bilder = (e.bilder||[]).filter(b=>b.signedUrl).slice(0,4);
+  const imgs = await Promise.all(bilder.map(b=>ladeBild(b.signedUrl)));
+  const W=1080, H=1350;
+  const sportart = e.sportartText || SLZB_DB.getSportart(e.sportartId)?.name || '';
+  const platz = e.platzierung || '';
+  const medaille = e.medaille && e.medaille!=='keine' ? e.medaille : '';
+  const mColor = medailleColor(medaille);
+  const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
+
+  ctx.fillStyle=SLZB_COLORS.bg; ctx.fillRect(0,0,W,H);
+
+  // 2×2 Grid (obere 52%)
+  const gridH = Math.round(H*0.52);
+  const cellW = Math.round(W/2)-2, cellH = Math.round(gridH/2)-2;
+  const positions = [[0,0],[cellW+4,0],[0,cellH+4],[cellW+4,cellH+4]];
+  imgs.forEach((img,i) => {
+    if (!img) return;
+    const [gx,gy] = positions[i];
+    ctx.save(); ctx.beginPath(); ctx.rect(gx,gy,cellW,cellH); ctx.clip();
+    drawCover(ctx, img, gx, gy, cellW, cellH); ctx.restore();
+  });
+
+  // Fade
+  const fadeGrad = ctx.createLinearGradient(0, gridH-80, 0, gridH);
+  fadeGrad.addColorStop(0,'rgba(27,28,31,0)'); fadeGrad.addColorStop(1,'rgba(27,28,31,1)');
+  ctx.fillStyle=fadeGrad; ctx.fillRect(0, gridH-80, W, 80);
+
+  zeichneTextbereich(ctx, e, W, H, gridH, mColor, sportart, platz, medaille, titel);
+  zeichneKopfzeile(ctx, e.wettbewerbText, e.disziplin);
+  zeichneFusszeile(ctx, W, H);
+}
+
+// Bildschirm Querformat (1920×1080)
+async function zeichneBildschirmQuerformat(canvasId, e) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const W=1920, H=1080;
+  canvas.width=W; canvas.height=H;
+  const ctx = canvas.getContext('2d');
+  await ladeMontserrat(); await ladeLogo();
+  const hauptbild = (e.bilder||[]).find(b=>b.signedUrl) || null;
+  const bild = hauptbild ? await ladeBild(hauptbild.signedUrl) : null;
+  const sportart = e.sportartText || SLZB_DB.getSportart(e.sportartId)?.name || '';
+  const platz = e.platzierung || '';
+  const medaille = e.medaille && e.medaille!=='keine' ? e.medaille : '';
+  const mColor = medailleColor(medaille);
+  const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
+
+  ctx.fillStyle=SLZB_COLORS.bg; ctx.fillRect(0,0,W,H);
+
+  if (bild) {
+    // Bild links 55%
+    const fotoW = Math.round(W*0.55);
+    ctx.save(); ctx.beginPath(); ctx.rect(0,0,fotoW,H); ctx.clip();
+    drawCover(ctx, bild, 0, 0, fotoW, H); ctx.restore();
+    // Fade rechts
+    const fadeGrad = ctx.createLinearGradient(fotoW-200, 0, fotoW, 0);
+    fadeGrad.addColorStop(0,'rgba(27,28,31,0)'); fadeGrad.addColorStop(1,'rgba(27,28,31,1)');
+    ctx.fillStyle=fadeGrad; ctx.fillRect(fotoW-200, 0, 200, H);
+  }
+
+  // Text rechts
+  const tx = bild ? Math.round(W*0.55)+20 : 80;
+  const tw = W - tx - 60;
+  let y = 120;
+  ctx.fillStyle=SLZB_COLORS.red; ctx.font='bold 20px Montserrat, Arial, sans-serif';
+  ctx.textAlign='left'; ctx.textBaseline='top';
+  ctx.fillText(sportart.toUpperCase(), tx, y); y+=30;
+  ctx.fillStyle=SLZB_COLORS.red; ctx.fillRect(tx, y, 60, 3); y+=14;
+
+  const woerter = titel.toUpperCase().split(' ');
+  const mid = Math.ceil(woerter.length/2);
+  ctx.font='bold italic 80px Montserrat, Arial, sans-serif';
+  ctx.fillStyle=SLZB_COLORS.white;
+  ctx.fillText(woerter.slice(0,mid).join(' '), tx, y, tw); y+=90;
+  ctx.fillStyle=SLZB_COLORS.red;
+  if (woerter.slice(mid).length) { ctx.fillText(woerter.slice(mid).join(' '), tx, y, tw); y+=90; }
+
+  if (platz) {
+    const ovalW=100, ovalH=52, ovalX=tx, ovalY=y;
+    ctx.fillStyle=mColor; slzbRoundRect(ctx,ovalX,ovalY,ovalW,ovalH,26); ctx.fill();
+    ctx.fillStyle=SLZB_COLORS.bgDark; ctx.font='bold italic 32px Montserrat, Arial, sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(String(platz), ovalX+ovalW/2, ovalY+ovalH/2);
+    const pt = platz===1?'1. PLATZ':platz===2?'2. PLATZ':platz===3?'3. PLATZ':`${platz}. PLATZ`;
+    ctx.fillStyle=SLZB_COLORS.white; ctx.font='bold italic 28px Montserrat, Arial, sans-serif';
+    ctx.textAlign='left'; ctx.textBaseline='top';
+    ctx.fillText(pt, ovalX+ovalW+16, ovalY+10); y+=70;
+  }
+
+  // Kopfzeile oben links
+  zeichneKopfzeile(ctx, e.wettbewerbText, e.disziplin);
+
+  // Footer
+  ctx.fillStyle=SLZB_COLORS.bgDark; ctx.fillRect(0, H-60, W, 60);
+  ctx.fillStyle=SLZB_COLORS.white; ctx.font='bold 16px Montserrat, Arial, sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('Schul- und Leistungssportzentrum Berlin · #SLZBerlin', W/2, H-30);
+}

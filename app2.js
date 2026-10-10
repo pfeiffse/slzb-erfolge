@@ -362,6 +362,9 @@ async function zeigeA3Vorschau(erfolgId) {
     if (!e) { toast('Erfolg nicht gefunden','danger'); return; }
 
     // Poster-Canvas erstellen (1080×1350 → A3 Querformat via CSS)
+    const anzBilder = (e.bilder||[]).filter(b=>b.signedUrl).length;
+    const extraTabs = anzBilder>=2 ? `<button class="tab-btn" style="color:#aaa;flex:1" onclick="wechsleA3Variante(4)">4: 2 Bilder</button>` : '';
+    const extraTabs2 = anzBilder>=4 ? `<button class="tab-btn" style="color:#aaa;flex:1" onclick="wechsleA3Variante(5)">5: 4 Bilder</button>` : '';
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     const modal = document.createElement('div');
@@ -372,10 +375,11 @@ async function zeigeA3Vorschau(erfolgId) {
         <button class="btn btn-ghost btn-sm close-x">✕</button>
       </div>
       <div class="modal-body" style="background:#111;padding:16px">
-        <div class="tabs mb-3" style="background:rgba(255,255,255,.08);border-radius:8px;padding:4px;display:flex;gap:4px">
+        <div class="tabs mb-3" style="background:rgba(255,255,255,.08);border-radius:8px;padding:4px;display:flex;gap:4px;flex-wrap:wrap">
           <button class="tab-btn active" style="color:#fff;flex:1" onclick="wechsleA3Variante(1)">1: Bild oben</button>
           <button class="tab-btn" style="color:#aaa;flex:1" onclick="wechsleA3Variante(2)">2: Split</button>
           <button class="tab-btn" style="color:#aaa;flex:1" onclick="wechsleA3Variante(3)">3: Vollbild</button>
+          ${extraTabs}${extraTabs2}
         </div>
         <div style="text-align:center">
           <canvas id="a3-canvas" width="1587" height="1123"
@@ -435,10 +439,16 @@ async function zeigeBildschirmModal(erfolgId) {
         <h3>🖥️ Bildschirm-Ausgabe (SLZB-Poster-Stil)</h3>
         <button class="btn btn-ghost btn-sm close-x">✕</button>
       </div>
-      <div class="modal-body text-center" style="background:#111;padding:20px">
-        <canvas id="screen-canvas" width="1080" height="1350"
-          style="max-width:100%;max-height:70vh;display:block;margin:0 auto;border-radius:8px"></canvas>
-        <p class="text-xs mt-2" style="color:#888">1080×1350 px · SLZB Poster-Stil</p>
+      <div class="modal-body" style="background:#111;padding:16px">
+        <div class="tabs mb-3" style="background:rgba(255,255,255,.08);border-radius:8px;padding:4px;display:flex;gap:4px">
+          <button class="tab-btn active" style="color:#fff;flex:1" onclick="wechsleBildschirmFormat('hochformat')">📱 Hochformat (4:5)</button>
+          <button class="tab-btn" style="color:#aaa;flex:1" onclick="wechsleBildschirmFormat('querformat')">🖥️ Querformat (16:9)</button>
+        </div>
+        <div style="text-align:center">
+          <canvas id="screen-canvas" width="1080" height="1350"
+            style="max-width:100%;max-height:65vh;display:block;margin:0 auto;border-radius:8px"></canvas>
+          <p class="text-xs mt-2" style="color:#888" id="screen-format-info">1080×1350 px · Hochformat</p>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost close-btn">Schließen</button>
@@ -450,6 +460,8 @@ async function zeigeBildschirmModal(erfolgId) {
     overlay.appendChild(modal);
     overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
     document.body.appendChild(overlay);
+    window._screenErfolg = e;
+    window._screenFormat = 'hochformat';
     setTimeout(()=>zeichneSLZBPoster('screen-canvas', e), 100);
   } catch(err) {
     toast('Fehler: '+err.message,'danger');
@@ -478,10 +490,7 @@ async function zeigeSocialModal(erfolgId) {
           <span class="alert-icon">🔒</span>
           <span><strong>Social Media ist standardmäßig gesperrt.</strong> Kein Auto-Posting.</span>
         </div>
-        <div class="tabs mb-3">
-          <button class="tab-btn active" onclick="wechsleSocialFormat('beitrag','${e.id}')">📸 Beitrag (1:1)</button>
-          <button class="tab-btn" onclick="wechsleSocialFormat('story','${e.id}')">📱 Story/Reel (9:16)</button>
-        </div>
+        
         <div style="text-align:center;background:#111;padding:16px;border-radius:8px">
           <canvas id="social-canvas" width="1080" height="1080"
             style="max-width:100%;max-height:60vh;display:block;margin:0 auto;border-radius:8px"></canvas>
@@ -510,29 +519,75 @@ async function zeigeSocialModal(erfolgId) {
   }
 }
 
+async function wechsleBildschirmFormat(format) {
+  const tabs = document.querySelectorAll('.modal .tabs .tab-btn');
+  tabs.forEach(b => {
+    const isActive = (format==='hochformat' && b.textContent.includes('Hochformat')) ||
+                     (format==='querformat' && b.textContent.includes('Querformat'));
+    b.classList.toggle('active', isActive);
+    b.style.color = isActive ? '#fff' : '#aaa';
+  });
+  const info = document.getElementById('screen-format-info');
+  const canvas = document.getElementById('screen-canvas');
+  window._screenFormat = format;
+  const e = window._screenErfolg;
+  if (!e) return;
+  if (format==='querformat') {
+    if (canvas) { canvas.width=1920; canvas.height=1080; canvas.style.maxHeight='50vh'; }
+    if (info) info.textContent='1920×1080 px · Querformat (16:9)';
+    await zeichneBildschirmQuerformat('screen-canvas', e);
+  } else {
+    if (canvas) { canvas.width=1080; canvas.height=1350; canvas.style.maxHeight='65vh'; }
+    if (info) info.textContent='1080×1350 px · Hochformat';
+    await zeichneSLZBPoster('screen-canvas', e);
+  }
+}
+
 async function wechsleSocialFormat(format, erfolgId) {
   // Tab-Buttons aktualisieren
-  document.querySelectorAll('.tabs .tab-btn').forEach(b=>{
-    b.classList.toggle('active', b.textContent.toLowerCase().includes(format==='beitrag'?'beitrag':'story'));
+  document.querySelectorAll('.modal .tabs .tab-btn').forEach(b=>{
+    const txt = b.textContent.toLowerCase();
+    let active = false;
+    if (format==='beitrag') active = txt.includes('beitrag');
+    else if (format==='story') active = txt.includes('story');
+    else if (format==='2bilder') active = txt.includes('2 bilder');
+    else if (format==='4bilder') active = txt.includes('4 bilder');
+    b.classList.toggle('active', active);
   });
-  // Canvas-Größe anpassen
   const canvas = document.getElementById('social-canvas');
   const info = document.getElementById('social-format-info');
-  if (format==='story') {
-    canvas.style.maxHeight='70vh';
-    if(info) info.textContent='1080×1920 px · Story/Reel';
-  } else {
-    canvas.style.maxHeight='60vh';
-    if(info) info.textContent='1080×1080 px · Beitrag';
-  }
   window._socialFormat = format;
   const e = window._socialErfolg;
-  if (e) await zeichneSocialFormat('social-canvas', e, format);
+  if (!e) return;
+
+  if (format==='story') {
+    canvas.width=1080; canvas.height=1920;
+    canvas.style.maxHeight='70vh';
+    if(info) info.textContent='1080×1920 px · Story/Reel';
+    await zeichneSocialFormat('social-canvas', e, 'story');
+  } else if (format==='2bilder') {
+    canvas.width=1080; canvas.height=1080;
+    canvas.style.maxHeight='60vh';
+    if(info) info.textContent='1080×1080 px · 2 Bilder';
+    await zeichnePoster2Bilder('social-canvas', e);
+  } else if (format==='4bilder') {
+    canvas.width=1080; canvas.height=1080;
+    canvas.style.maxHeight='60vh';
+    if(info) info.textContent='1080×1080 px · 4 Bilder';
+    await zeichnePoster4Bilder('social-canvas', e);
+  } else {
+    canvas.width=1080; canvas.height=1080;
+    canvas.style.maxHeight='60vh';
+    if(info) info.textContent='1080×1080 px · Beitrag';
+    await zeichneSocialFormat('social-canvas', e, 'beitrag');
+  }
 }
 
 
 async function wechsleA3Variante(nr) {
-  document.querySelectorAll('.tabs .tab-btn').forEach((b,i)=>{
+  document.querySelectorAll('#a3-canvas').length; // ensure modal open
+  const tabs = document.querySelectorAll('.modal .tabs .tab-btn');
+  tabs.forEach((b,i)=>{
     b.classList.toggle('active', i===nr-1);
     b.style.color = i===nr-1 ? '#fff' : '#aaa';
   });
@@ -540,6 +595,8 @@ async function wechsleA3Variante(nr) {
     1: 'Variante 1: Bild oben · A3 Querformat',
     2: 'Variante 2: Split (Bild links) · A3 Querformat',
     3: 'Variante 3: Vollbild · A3 Querformat',
+    4: 'Variante 4: 2 Bilder · A3 Querformat',
+    5: 'Variante 5: 4 Bilder · A3 Querformat',
   };
   const info = document.getElementById('a3-variante-info');
   if (info) info.textContent = labels[nr] || '';
@@ -551,7 +608,9 @@ async function wechsleA3Variante(nr) {
 async function zeichneA3Variante(canvasId, e, nr) {
   if (nr===1) await zeichneA3Druckfreundlich(canvasId, e);
   else if (nr===2) await zeichneA3Split(canvasId, e);
-  else await zeichneA3Vollbild(canvasId, e);
+  else if (nr===3) await zeichneA3Vollbild(canvasId, e);
+  else if (nr===4) await zeichnePoster2Bilder(canvasId, e);
+  else if (nr===5) await zeichnePoster4Bilder(canvasId, e);
 }
 
 

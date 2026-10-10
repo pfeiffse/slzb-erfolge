@@ -601,16 +601,7 @@ function renderMinimalmeldungForm() {
         </div>
         <div class="form-group"><label>Titel</label>
           <input type="text" id="f-titel" placeholder="Kurzer Titel (optional)"></div>
-        <div class="form-group"><label>Kurzinfo <span class="required">*</span></label>
-          <textarea id="f-kurzinfo" rows="3" placeholder="Was ist passiert?"></textarea></div>
-      </div>
-      <div class="card-footer">
-        <button class="btn btn-ghost" onclick="APP.selectedMeldungsart=null;navigateTo('neue-meldung')">Abbrechen</button>
-        <button class="btn btn-warning" onclick="speichereErfolg('Unvollständig','Minimalmeldung')">⚡ Einreichen</button>
-      </div>
-    </div>
-  </div>`;
-}
+        
 
 function renderArtikelForm() {
   return `<div class="page">
@@ -622,18 +613,58 @@ function renderArtikelForm() {
           <span>KI-Extraktion erzeugt nur einen <strong>Entwurf</strong>. Alle Daten müssen manuell bestätigt werden.</span></div>
         <div class="form-group"><label>Artikeltext <span class="required">*</span></label>
           <textarea id="f-artikel-text" rows="10" placeholder="Fügen Sie hier den vollständigen Artikeltext ein..."></textarea></div>
-        <div class="form-row cols-2">
-          <div class="form-group"><label>Sportart <span class="required">*</span></label>
-            <input type="text" id="f-sportart-text" placeholder="z.B. Leichtathletik" autocomplete="off"></div>
-          <div class="form-group"><label>Datum <span class="required">*</span></label><input type="date" id="f-datum"></div>
-        </div>
-      </div>
-      <div class="card-footer">
-        <button class="btn btn-ghost" onclick="APP.selectedMeldungsart=null;navigateTo('neue-meldung')">Abbrechen</button>
-        <button class="btn btn-primary" onclick="speichereArtikel()">📤 Einreichen</button>
-      </div>
-    </div>
-  </div>`;
+        
+
+// Bilder aus bilderBlock() nach dem Speichern hochladen
+async function uploadBilderAusFormular(erfolgId) {
+  const rows = document.querySelectorAll('[id^="bild-row-"]');
+  let ok=0, fehler=0;
+  for (const row of rows) {
+    const id = row.id.replace('bild-row-','');
+    const fileInput = row.querySelector('input[type="file"]');
+    const urheber = row.querySelector(`#bild-urheber-${id}`)?.value?.trim()||'';
+    const quelle = row.querySelector(`#bild-quelle-${id}`)?.value?.trim()||urheber;
+    const caption = row.querySelector(`#bild-caption-${id}`)?.value?.trim()||null;
+    const altText = row.querySelector(`#bild-alt-${id}`)?.value?.trim()||null;
+    if (!fileInput?.files?.length) continue;
+    if (!urheber) { toast(`Bild ${id}: Urheber fehlt – übersprungen`,'warning'); fehler++; continue; }
+    const datei = fileInput.files[0];
+    if (datei.size > 10*1024*1024) { toast(`Bild ${id}: Datei zu groß – übersprungen`,'warning'); fehler++; continue; }
+    try {
+      const session = await Backend.session();
+      if (!session) throw new Error('Nicht angemeldet');
+      const userId = Auth.id();
+      const dateiname = `${Date.now()}_${datei.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+      const pfad = `${userId}/${erfolgId}/${dateiname}`;
+      const { data: uploadData, error: uploadError } = await Backend.client.storage
+        .from('achievement-media').upload(pfad, datei, { cacheControl:'3600', upsert:false, contentType:datei.type });
+      if (uploadError) throw new Error('Storage: '+uploadError.message);
+      const { error: metaError } = await Backend.client.from('achievement_media').insert([{
+        achievement_id: erfolgId,
+        storage_path: uploadData.path || pfad,
+        original_name: datei.name,
+        mime_type: datei.type,
+        file_size: datei.size || null,
+        creator: urheber,
+        copyright_holder: urheber,
+        source: quelle,
+        caption: caption,
+        alt_text: altText,
+        uploaded_by: userId || null,
+        created_at: new Date().toISOString(),
+      }]);
+      if (metaError) {
+        await Backend.client.storage.from('achievement-media').remove([pfad]);
+        throw new Error('Metadaten: '+metaError.message);
+      }
+      ok++;
+    } catch(err) {
+      toast(`Bild ${id} Fehler: ${err.message}`,'danger');
+      fehler++;
+    }
+  }
+  if (ok>0) toast(`${ok} Bild(er) erfolgreich hochgeladen`,'success');
+  if (fehler>0) toast(`${fehler} Bild(er) konnten nicht hochgeladen werden`,'warning');
 }
 
 async function speichereErfolg(status, meldungsart) {
@@ -645,7 +676,7 @@ async function speichereErfolg(status, meldungsart) {
     if(el) el.innerHTML=`<div class="alert alert-danger"><span class="alert-icon">❌</span><ul>${fehler.map(f=>`<li>${esc(f)}</li>`).join('')}</ul></div>`;
     return;
   }
-  const btn=document.querySelector('.card-footer .btn-primary');
+  const btn=document.querySelector('.card-footer .btn-primary,.card-footer .btn-warning');
   if(btn){btn.disabled=true;btn.textContent='Wird gespeichert...';}
   try {
     const beteiligte = athletText ? [{
@@ -654,6 +685,8 @@ async function speichereErfolg(status, meldungsart) {
     }] : [];
     const result = await DB.erstelleErfolg({...daten,status}, beteiligte);
     if (!result.ok) throw new Error(result.fehler||'Unbekannter Fehler');
+    // Bilder aus Formular hochladen
+    await uploadBilderAusFormular(result.id);
     APP.selectedMeldungsart=null;
     toast(`Erfolg ${result.nr} ${status==='Entwurf'?'als Entwurf gespeichert':'eingereicht'}!`,'success');
     navigateTo('erfolg-detail',{currentErfolgId:result.id});
@@ -682,6 +715,8 @@ async function speichereTeamerfolg(status) {
     const titelFinal = daten.titel || teamText || 'Teamerfolg';
     const result = await DB.erstelleErfolg({...daten,titel:titelFinal,status}, beteiligte);
     if (!result.ok) throw new Error(result.fehler||'Unbekannter Fehler');
+    // Bilder aus Formular hochladen
+    await uploadBilderAusFormular(result.id);
     APP._teamBeteiligte=[]; APP.selectedMeldungsart=null;
     toast(`Teamerfolg ${result.nr} ${status==='Entwurf'?'gespeichert':'eingereicht'}!`,'success');
     navigateTo('meine-meldungen');
@@ -702,13 +737,7 @@ function renderSammelmeldungForm() {
         <button class="btn btn-outline mt-2" onclick="PDF.downloadImportvorlage()">⬇️ Vorlage herunterladen (CSV)</button>
         <div class="form-group mt-3"><label>CSV-Datei hochladen</label>
           <input type="file" id="import-file" accept=".csv" onchange="importDateiGewaehlt(this)"></div>
-        <div id="import-preview"></div>
-      </div>
-    </div>
-  </div>`;
-}
-
-// ── Meine Meldungen ──────────────────────────────────────────
+         ──────────────────────────────────────────
 async function renderMeineMeldungen() {
   const r = Auth.rolle();
   const filter = r==='admin' ? {} : { melderId: Auth.id() };
@@ -964,6 +993,8 @@ async function speichereArtikel() {
       quelleOriginal:text,
     },[]);
     if(!result.ok) throw new Error(result.fehler);
+    // Bilder aus Formular hochladen
+    await uploadBilderAusFormular(result.id);
     APP.selectedMeldungsart=null;
     toast(`Artikel ${result.nr} eingereicht!`,'success');
     navigateTo('meine-meldungen');
