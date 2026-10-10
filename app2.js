@@ -599,7 +599,28 @@ async function wechsleSocialFormat(format, erfolgId) {
     canvas.style.maxHeight='70vh';
     if(info) info.textContent='1080×1920 px · Story/Reel';
     await zeichneSocialFormat('social-canvas', e, 'story');
-  
+  } else if (format==='2bilder') {
+    canvas.width=1080; canvas.height=1080;
+    canvas.style.maxHeight='60vh';
+    if(info) info.textContent='1080×1080 px · 2 Bilder';
+    await zeichnePoster2Bilder('social-canvas', e);
+  } else if (format==='4bilder') {
+    canvas.width=1080; canvas.height=1080;
+    canvas.style.maxHeight='60vh';
+    if(info) info.textContent='1080×1080 px · 4 Bilder';
+    await zeichnePoster4Bilder('social-canvas', e);
+  } else if (format==='portrait') {
+    canvas.width=1080; canvas.height=1350;
+    canvas.style.maxHeight='65vh';
+    if(info) info.textContent='1080×1350 px · Porträt-Layout';
+    await zeichnePortraitLayout('social-canvas', e);
+  } else if (format==='multierfolg') {
+    canvas.width=1080; canvas.height=1350;
+    canvas.style.maxHeight='65vh';
+    if(info) info.textContent='1080×1350 px · Multi-Erfolg-Layout';
+    await zeichneMultiErfolgLayout('social-canvas', e);
+  } else {
+    // Beitrag (Standard)
     canvas.width=1080; canvas.height=1080;
     canvas.style.maxHeight='60vh';
     if(info) info.textContent='1080×1080 px · Beitrag';

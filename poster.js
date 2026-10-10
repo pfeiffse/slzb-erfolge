@@ -188,11 +188,12 @@ async function zeichnePosterLandscape(ctx, e, bild, meta) {
   drawCover(ctx, bild, 0, 0, W, fotoH);
   ctx.restore();
 
-  // Fade unten am Bildrand
-  const fadeGrad = ctx.createLinearGradient(0, fotoH-120, 0, fotoH);
+  // Fade ganz unten am Bildrand (letzte 8%)
+  const fadeStart_l = fotoH - Math.round(fotoH*0.08);
+  const fadeGrad = ctx.createLinearGradient(0, fadeStart_l, 0, fotoH);
   fadeGrad.addColorStop(0, 'rgba(27,28,31,0)');
   fadeGrad.addColorStop(1, 'rgba(27,28,31,1)');
-  ctx.fillStyle = fadeGrad; ctx.fillRect(0, fotoH-120, W, 120);
+  ctx.fillStyle = fadeGrad; ctx.fillRect(0, fadeStart_l, W, fotoH-fadeStart_l);
 
   // Textbereich unten
   zeichneTextbereich(ctx, e, W, H, fotoH, mColor, sportart, platz, medaille, titel);
@@ -218,12 +219,13 @@ async function zeichnePosterPortrait(ctx, e, bild, meta) {
   drawCover(ctx, bild, 0, 0, W, fotoH);
   ctx.restore();
 
-  // Starker Fade erst ganz unten
-  const fadeGrad = ctx.createLinearGradient(0, fotoH-200, 0, fotoH);
+  // Fade ganz unten am Bildrand (letzte 8%)
+  const fadeStart_p = fotoH - Math.round(fotoH*0.08);
+  const fadeGrad = ctx.createLinearGradient(0, fadeStart_p, 0, fotoH);
   fadeGrad.addColorStop(0, 'rgba(27,28,31,0)');
-  fadeGrad.addColorStop(0.5, 'rgba(226,0,26,0.3)');
+  fadeGrad.addColorStop(0.6, 'rgba(226,0,26,0.2)');
   fadeGrad.addColorStop(1, 'rgba(27,28,31,1)');
-  ctx.fillStyle = fadeGrad; ctx.fillRect(0, fotoH-200, W, 200);
+  ctx.fillStyle = fadeGrad; ctx.fillRect(0, fadeStart_p, W, fotoH-fadeStart_p);
 
   zeichneTextbereich(ctx, e, W, H, fotoH, mColor, sportart, platz, medaille, titel);
   zeichneKopfzeile(ctx, e.wettbewerbText, e.disziplin);
@@ -730,13 +732,93 @@ async function zeichneSocialStory(ctx, e, bild, meta, W, H) {
 
 // ── A3 VARIANTE 2: Split (Bild links, Text rechts) ───────────
 async function zeichneA3Split(canvasId, e) {
-  // Alias für Portrait-Layout
+  // Echtes Split-Layout: Bild links 55%, Text rechts – SLZB-Dunkelstil
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
+  const W=1587, H=1123;
+  canvas.width=W; canvas.height=H;
+  const ctx = canvas.getContext('2d');
   await ladeMontserrat(); await ladeLogo();
   const hauptbild = (e.bilder||[]).find(b=>b.signedUrl) || null;
   const bild = hauptbild ? await ladeBild(hauptbild.signedUrl) : null;
-  await zeichneA3Portrait(canvas, e, bild, hauptbild);
+  const sportart = e.sportartText || SLZB_DB.getSportart(e.sportartId)?.name || '';
+  const platz = e.platzierung || '';
+  const medaille = e.medaille && e.medaille!=='keine' ? e.medaille : '';
+  const mColor = medailleColor(medaille);
+  const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
+
+  // Dunkler Hintergrund
+  ctx.fillStyle = SLZB_COLORS.bg; ctx.fillRect(0,0,W,H);
+
+  // Bild links 55%
+  const FOTO_W = Math.round(W*0.55);
+  if (bild) {
+    ctx.save(); ctx.beginPath(); ctx.rect(0,0,FOTO_W,H); ctx.clip();
+    drawCover(ctx, bild, 0, 0, FOTO_W, H); ctx.restore();
+    // Fade von ganz links der Bildkante nach rechts ins Bild
+    const fg = ctx.createLinearGradient(FOTO_W-300, 0, FOTO_W+20, 0);
+    fg.addColorStop(0,'rgba(27,28,31,0)');
+    fg.addColorStop(1,'rgba(27,28,31,1)');
+    ctx.fillStyle=fg; ctx.fillRect(FOTO_W-300, 0, 320, H);
+    // Vignette oben/unten
+    const fgT = ctx.createLinearGradient(0,0,0,100);
+    fgT.addColorStop(0,'rgba(27,28,31,0.5)'); fgT.addColorStop(1,'rgba(27,28,31,0)');
+    ctx.fillStyle=fgT; ctx.fillRect(0,0,FOTO_W,100);
+    const fgB = ctx.createLinearGradient(0,H-100,0,H);
+    fgB.addColorStop(0,'rgba(27,28,31,0)'); fgB.addColorStop(1,'rgba(27,28,31,0.6)');
+    ctx.fillStyle=fgB; ctx.fillRect(0,H-100,FOTO_W,100);
+  }
+
+  // Blauer Header
+  ctx.fillStyle='rgba(0,51,102,0.92)'; ctx.fillRect(0,0,W,80);
+  const lw = drawLogo(ctx, 16, 6, 68);
+  ctx.fillStyle='#fff'; ctx.font='bold 18px Montserrat, Arial, sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('Schul- und Leistungssportzentrum Berlin', W/2, 40);
+  ctx.font='bold italic 18px Montserrat, Arial, sans-serif';
+  ctx.textAlign='right'; ctx.fillStyle=SLZB_COLORS.pinkLight;
+  ctx.fillText('#SLZBerlin', W-20, 40);
+
+  // Text rechts
+  const TX = FOTO_W + 50;
+  const TW = W - TX - 50;
+  const FOOTER_H = 60;
+  const nutzH = H - 80 - FOOTER_H;
+  const tSz = querTitelFontSize(titel, TW, ctx);
+  const woerter = titel.toUpperCase().split(' ');
+  const mid = woerter.length > 3 ? Math.ceil(woerter.length/2) : woerter.length;
+  const z1 = woerter.slice(0,mid).join(' ');
+  const z2 = woerter.slice(mid).join(' ');
+  let blockH = 26+14 + tSz+12 + (z2?tSz+12:0) + (platz?70:0);
+  let y = 80 + Math.round((nutzH - blockH)/2);
+  if (y < 100) y = 100;
+
+  ctx.textAlign='left'; ctx.textBaseline='top';
+  ctx.fillStyle=SLZB_COLORS.red; ctx.font='bold 20px Montserrat, Arial, sans-serif';
+  ctx.fillText(sportart.toUpperCase(), TX, y); y+=26;
+  ctx.fillStyle=SLZB_COLORS.red; ctx.fillRect(TX, y, 80, 3); y+=14;
+  ctx.font=`bold italic ${tSz}px Montserrat, Arial, sans-serif`;
+  ctx.fillStyle=SLZB_COLORS.white;
+  ctx.fillText(z1, TX, y, TW); y+=tSz+12;
+  if (z2) { ctx.fillStyle=SLZB_COLORS.red; ctx.fillText(z2, TX, y, TW); y+=tSz+12; }
+  y+=8;
+  if (platz) {
+    const ow=110, oh=56;
+    ctx.fillStyle=mColor; slzbRoundRect(ctx,TX,y,ow,oh,28); ctx.fill();
+    ctx.fillStyle=SLZB_COLORS.bgDark; ctx.font=`bold italic 34px Montserrat, Arial, sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(String(platz), TX+ow/2, y+oh/2);
+    const pt = platz===1?'1. PLATZ':platz===2?'2. PLATZ':platz===3?'3. PLATZ':`${platz}. PLATZ`;
+    ctx.fillStyle=SLZB_COLORS.white; ctx.font=`bold italic 28px Montserrat, Arial, sans-serif`;
+    ctx.textAlign='left'; ctx.textBaseline='middle';
+    ctx.fillText(pt, TX+ow+16, y+oh/2);
+  }
+
+  // Footer
+  ctx.fillStyle='rgba(0,51,102,0.88)'; ctx.fillRect(0, H-FOOTER_H, W, FOOTER_H);
+  ctx.fillStyle='#fff'; ctx.font='13px Montserrat, Arial, sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('Schul- und Leistungssportzentrum Berlin · #SLZBerlin', W/2, H-FOOTER_H/2);
 }
 
 // ── A3 VARIANTE 3: Vollbild mit Overlay ──────────────────────
@@ -962,10 +1044,11 @@ async function zeichneBildschirmQuerformat(canvasId, e) {
       // Bild links, Text rechts
       ctx.save(); ctx.beginPath(); ctx.rect(0,0,fotoW,H); ctx.clip();
       drawCover(ctx, bild, 0, 0, fotoW, H); ctx.restore();
-      // Horizontaler Fade rechts vom Bild
-      const fg = ctx.createLinearGradient(fotoW-240, 0, fotoW+40, 0);
+      // Fade von ganz links der Bildkante nach rechts ins Bild (letzte 25%)
+      const fadeW_q = Math.round(fotoW*0.25);
+      const fg = ctx.createLinearGradient(fotoW-fadeW_q, 0, fotoW+20, 0);
       fg.addColorStop(0,'rgba(27,28,31,0)'); fg.addColorStop(1,'rgba(27,28,31,1)');
-      ctx.fillStyle=fg; ctx.fillRect(fotoW-240, 0, 280, H);
+      ctx.fillStyle=fg; ctx.fillRect(fotoW-fadeW_q, 0, fadeW_q+20, H);
       // Leichter vertikaler Vignette-Fade oben/unten über dem Bild
       const fgTop = ctx.createLinearGradient(0,0,0,120);
       fgTop.addColorStop(0,'rgba(27,28,31,0.55)'); fgTop.addColorStop(1,'rgba(27,28,31,0)');
@@ -980,10 +1063,11 @@ async function zeichneBildschirmQuerformat(canvasId, e) {
       const bildX = W - fotoW;
       ctx.save(); ctx.beginPath(); ctx.rect(bildX,0,fotoW,H); ctx.clip();
       drawCover(ctx, bild, bildX, 0, fotoW, H); ctx.restore();
-      // Fade links vom Bild
-      const fg = ctx.createLinearGradient(bildX-40, 0, bildX+200, 0);
+      // Fade von ganz rechts der Bildkante nach links ins Bild (erste 25% des Bildes)
+      const fadeW_p = Math.round(fotoW*0.25);
+      const fg = ctx.createLinearGradient(bildX-20, 0, bildX+fadeW_p, 0);
       fg.addColorStop(0,'rgba(27,28,31,1)'); fg.addColorStop(1,'rgba(27,28,31,0)');
-      ctx.fillStyle=fg; ctx.fillRect(bildX-40, 0, 240, H);
+      ctx.fillStyle=fg; ctx.fillRect(bildX-20, 0, fadeW_p+20, H);
       textX = 80;
       textW = bildX - 120;
     }
