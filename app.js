@@ -186,7 +186,9 @@ function renderSidebar() {
   });
   document.getElementById('sidebar').innerHTML = `
     <div class="sidebar-logo"><div class="logo-badge">
-      <div class="logo-icon">S</div>
+      <img src="slzb-logo.png" alt="SLZB Logo" style="height:44px;width:auto;border-radius:6px"
+        onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div class="logo-icon" style="display:none">S</div>
       <div class="logo-text"><strong>SLZB-Erfolge</strong><small>v3 · Schul- und Leistungssportzentrum Berlin</small></div>
     </div></div>
     <div class="sidebar-user">

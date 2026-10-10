@@ -404,8 +404,8 @@ async function zeigeA3Vorschau(erfolgId) {
     overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
     document.body.appendChild(overlay);
 
-    setTimeout(()=>zeichneSLZBPoster('a3-canvas', e), 100);
-    toast('A3-Poster wird gezeichnet...','success');
+    setTimeout(()=>zeichneA3Druckfreundlich('a3-canvas', e), 100);
+    toast('A3-Aushang wird gezeichnet...','success');
   } catch(err) {
     toast('Fehler: '+err.message,'danger');
     console.error('A3 Fehler:', err);
@@ -417,36 +417,37 @@ async function zeigeBildschirmModal(erfolgId) {
   try {
     const e = await DB.getErfolgById(erfolgId);
     if (!e) { toast('Erfolg nicht gefunden','danger'); return; }
-    const html    = erzeugeJTFOHtml(e, 'screen');
-    const blobUrl = htmlZuBlobUrl(html);
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
-    // Overlay direkt aufbauen ohne innerHTML (vermeidet Escape-Probleme)
     const modal = document.createElement('div');
     modal.className = 'modal modal-xl';
     modal.innerHTML = `
       <div class="modal-header">
-        <h3>🖥️ Bildschirm-Ausgabe (JTFO-Stil)</h3>
-        <button class="btn btn-ghost btn-sm">✕</button>
+        <h3>🖥️ Bildschirm-Ausgabe (SLZB-Poster-Stil)</h3>
+        <button class="btn btn-ghost btn-sm close-x">✕</button>
       </div>
-      <div class="modal-body" style="padding:0;background:#000">
-        <iframe src="${blobUrl}" style="width:100%;height:500px;border:none"></iframe>
+      <div class="modal-body text-center" style="background:#111;padding:20px">
+        <canvas id="screen-canvas" width="1080" height="1350"
+          style="max-width:100%;max-height:70vh;display:block;margin:0 auto;border-radius:8px"></canvas>
+        <p class="text-xs mt-2" style="color:#888">1080×1350 px · SLZB Poster-Stil</p>
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost close-btn">Schließen</button>
-        <button class="btn btn-outline dl-btn">🖥️ HTML herunterladen</button>
+        <button class="btn btn-primary dl-png">🖼️ PNG herunterladen</button>
       </div>`;
-    modal.querySelector('.btn-ghost.close-btn, .btn-ghost:first-child').onclick = () => overlay.remove();
-    modal.querySelectorAll('.btn-ghost').forEach(b => { if(b.textContent.includes('✕')||b.textContent.includes('Schließen')) b.onclick = ()=>overlay.remove(); });
-    modal.querySelector('.dl-btn').onclick = () => downloadJTFO(erfolgId,'screen');
+    modal.querySelector('.close-x').onclick = ()=>overlay.remove();
+    modal.querySelector('.close-btn').onclick = ()=>overlay.remove();
+    modal.querySelector('.dl-png').onclick = ()=>exportPosterPNG(e,'screen-canvas');
     overlay.appendChild(modal);
-    overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+    overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
     document.body.appendChild(overlay);
+    setTimeout(()=>zeichneSLZBPoster('screen-canvas', e), 100);
   } catch(err) {
     toast('Fehler: '+err.message,'danger');
     console.error('Bildschirm Fehler:', err);
   }
 }
+
 
 async function zeigeSocialModal(erfolgId) {
   toast('Social-Media-Ausgabe wird vorbereitet...','info');

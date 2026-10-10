@@ -22,6 +22,18 @@ const SLZB_COLORS = {
 
 const W = 1080, H = 1350; // 4:5 Hochformat
 
+// ── Logo laden ───────────────────────────────────────────────
+let _slzbLogo = null;
+async function ladeLogo() {
+  if (_slzbLogo) return _slzbLogo;
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => { _slzbLogo = img; resolve(img); };
+    img.onerror = () => resolve(null);
+    img.src = 'slzb-logo.png';
+  });
+}
+
 // ── Schrift laden ────────────────────────────────────────────
 async function ladeMontserrat() {
   if (document.fonts) {
@@ -100,15 +112,19 @@ async function ladeBild(url) {
 
 // ── Kopfzeile ────────────────────────────────────────────────
 function zeichneKopfzeile(ctx, wettbewerb, disziplin) {
-  // Logo-Box
-  ctx.fillStyle = SLZB_COLORS.red;
-  slzbRoundRect(ctx, 54, 28, 130, 65, 6);
-  ctx.fill();
-  ctx.fillStyle = SLZB_COLORS.white;
-  ctx.font = 'bold 26px Montserrat, Arial, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('SLZB', 119, 61);
+  // Logo (echt oder Fallback)
+  if (_slzbLogo) {
+    ctx.drawImage(_slzbLogo, 54, 20, 110, 75);
+  } else {
+    ctx.fillStyle = SLZB_COLORS.red;
+    slzbRoundRect(ctx, 54, 28, 130, 65, 6);
+    ctx.fill();
+    ctx.fillStyle = SLZB_COLORS.white;
+    ctx.font = 'bold 26px Montserrat, Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('SLZB', 119, 61);
+  }
 
   // Senkrechte Akzentlinie
   ctx.fillStyle = SLZB_COLORS.red;
@@ -187,13 +203,13 @@ async function zeichneErgebnisposter(ctx, e, hauptbild) {
     ctx.drawImage(hauptbild, (W-sw)/2, (fotoH-sh)/2, sw, sh);
     ctx.restore();
 
-    // Roter Transparenzverlauf über Foto (unten)
-    const grad = ctx.createLinearGradient(0, 604, 0, 1128);
+    // Roter Transparenzverlauf – erst ganz unten am Rand starten
+    const grad = ctx.createLinearGradient(0, 1000, 0, 1128);
     grad.addColorStop(0,   'rgba(226,0,26,0)');
-    grad.addColorStop(0.3, 'rgba(226,0,26,0.30)');
-    grad.addColorStop(1,   'rgba(226,0,26,0.82)');
+    grad.addColorStop(0.5, 'rgba(226,0,26,0.25)');
+    grad.addColorStop(1,   'rgba(226,0,26,0.70)');
     ctx.fillStyle = grad;
-    ctx.fillRect(0, 604, W, 1128 - 604);
+    ctx.fillRect(0, 1000, W, 128);
   } else {
     // Kein Foto: Gradient-Hintergrund
     const grad = ctx.createLinearGradient(0, 0, 0, H);
@@ -359,6 +375,7 @@ async function zeichneSLZBPoster(canvasId, e) {
   const ctx = canvas.getContext('2d');
 
   await ladeMontserrat();
+  await ladeLogo();
 
   const hauptbild = (e.bilder||[]).find(b=>b.signedUrl) || null;
   const bild = hauptbild ? await ladeBild(hauptbild.signedUrl) : null;
@@ -383,3 +400,174 @@ function exportPosterPNG(e, canvasId='social-canvas') {
     toast(`PNG heruntergeladen: ${dateiname}`,'success');
   }, 'image/png');
 }
+// ── A3-Aushang (druckfreundlich, weniger Farbe, Querformat) ──
+// Format: 1587×1123 px (A3 quer bei 96dpi)
+async function zeichneA3Druckfreundlich(canvasId, e) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const W = 1587, H = 1123; // A3 quer
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  await ladeMontserrat();
+  await ladeLogo();
+
+  const sportart   = e.sportartText || SLZB_DB.getSportart(e.sportartId)?.name || '';
+  const platz      = e.platzierung || '';
+  const medaille   = e.medaille && e.medaille !== 'keine' ? e.medaille : '';
+  const mColor     = medaille==='Gold' ? '#B8860B' : medaille==='Silber' ? '#708090' : medaille==='Bronze' ? '#8B4513' : '#003366';
+  const titelSauber = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
+  const kurzinfo   = e.kurzinfo || '';
+  const ergebnis   = e.ergebnisWert ? `${e.ergebnisWert} ${e.ergebnisEinheit||''}` : e.ergebnisText || '';
+  const datum      = e.datum ? new Date(e.datum).toLocaleDateString('de-DE') : '';
+  const hauptbild  = (e.bilder||[]).find(b=>b.signedUrl) || null;
+
+  // ── Weißer Hintergrund (druckfreundlich) ─────────────────
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, W, H);
+
+  // ── Schmale rote Kopfleiste ───────────────────────────────
+  ctx.fillStyle = '#E2001A';
+  ctx.fillRect(0, 0, W, 80);
+
+  // Logo in Kopfleiste
+  if (_slzbLogo) {
+    ctx.drawImage(_slzbLogo, 20, 5, 105, 70);
+  } else {
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 28px Montserrat, Arial, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('SLZB', 30, 40);
+  }
+
+  // Schulname in Kopfleiste
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = 'bold 18px Montserrat, Arial, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Schul- und Leistungssportzentrum Berlin', W/2, 40);
+
+  // Hashtag rechts
+  ctx.font = 'bold italic 18px Montserrat, Arial, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('#SLZBerlin', W - 30, 40);
+
+  // ── Foto links (wenn vorhanden) ───────────────────────────
+  const fotoBreite = hauptbild ? Math.round(W * 0.45) : 0;
+  if (hauptbild) {
+    const bild = await ladeBild(hauptbild.signedUrl);
+    if (bild) {
+      const fotoH = H - 80 - 60;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 80, fotoBreite, fotoH);
+      ctx.clip();
+      const scale = Math.max(fotoBreite/bild.width, fotoH/bild.height);
+      const sw = bild.width*scale, sh = bild.height*scale;
+      ctx.drawImage(bild, (fotoBreite-sw)/2, 80+(fotoH-sh)/2, sw, sh);
+      ctx.restore();
+      // Bildunterschrift
+      if (hauptbild.caption || hauptbild.creator) {
+        ctx.fillStyle = '#666';
+        ctx.font = '11px Montserrat, Arial, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillText(`${hauptbild.caption||''} © ${hauptbild.creator||''}`, 10, H-55);
+      }
+    }
+  }
+
+  // ── Textbereich rechts ────────────────────────────────────
+  const textX = fotoBreite + 40;
+  const textW = W - textX - 40;
+  let textY = 110;
+
+  // Sportart
+  ctx.fillStyle = '#E2001A';
+  ctx.font = 'bold 16px Montserrat, Arial, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText(sportart.toUpperCase(), textX, textY);
+  textY += 30;
+
+  // Trennlinie
+  ctx.fillStyle = '#E2001A';
+  ctx.fillRect(textX, textY, 60, 3);
+  textY += 16;
+
+  // Titel
+  ctx.fillStyle = '#1B1C1F';
+  ctx.font = 'bold italic 52px Montserrat, Arial, sans-serif';
+  const titelWoerter = titelSauber.toUpperCase().split(' ');
+  const mid = Math.ceil(titelWoerter.length / 2);
+  ctx.fillText(titelWoerter.slice(0, mid).join(' '), textX, textY, textW);
+  textY += 62;
+  ctx.fillStyle = '#E2001A';
+  ctx.fillText(titelWoerter.slice(mid).join(' '), textX, textY, textW);
+  textY += 70;
+
+  // Platzierung
+  if (platz) {
+    // Oval
+    ctx.fillStyle = mColor;
+    slzbRoundRect(ctx, textX, textY, 90, 50, 25);
+    ctx.fill();
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold italic 28px Montserrat, Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(platz), textX + 45, textY + 25);
+
+    // Platztext
+    const platzText = platz === 1 ? '1. PLATZ' : platz === 2 ? '2. PLATZ' : platz === 3 ? '3. PLATZ' : `${platz}. PLATZ`;
+    ctx.fillStyle = '#1B1C1F';
+    ctx.font = 'bold italic 24px Montserrat, Arial, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(platzText, textX + 105, textY + 25);
+    textY += 70;
+  }
+
+  // Ergebnis
+  if (ergebnis) {
+    ctx.fillStyle = '#555';
+    ctx.font = '18px Montserrat, Arial, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(ergebnis, textX, textY);
+    textY += 30;
+  }
+
+  // Datum + Ort
+  if (datum || e.ort) {
+    ctx.fillStyle = '#777';
+    ctx.font = '16px Montserrat, Arial, sans-serif';
+    ctx.fillText([datum, e.ort, e.ebene].filter(Boolean).join(' · '), textX, textY);
+    textY += 30;
+  }
+
+  // Kurzinfo
+  if (kurzinfo) {
+    textY += 10;
+    ctx.fillStyle = '#444';
+    ctx.font = '15px Montserrat, Arial, sans-serif';
+    const zeilen = slzbWrapText(ctx, kurzinfo, textW);
+    zeilen.slice(0,4).forEach(z => {
+      ctx.fillText(z, textX, textY);
+      textY += 22;
+    });
+  }
+
+  // ── Schmale Fußleiste ─────────────────────────────────────
+  ctx.fillStyle = '#F5F5F5';
+  ctx.fillRect(0, H-60, W, 60);
+  ctx.fillStyle = '#E2001A';
+  ctx.fillRect(0, H-60, W, 3);
+  ctx.fillStyle = '#333';
+  ctx.font = '13px Montserrat, Arial, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Schul- und Leistungssportzentrum Berlin · #SLZBerlin · SLZB-Erfolge', W/2, H-30);
+}
+
