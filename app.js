@@ -764,7 +764,13 @@ function renderSammelmeldungForm() {
         <button class="btn btn-outline mt-2" onclick="PDF.downloadImportvorlage()">⬇️ Vorlage herunterladen (CSV)</button>
         <div class="form-group mt-3"><label>CSV-Datei hochladen</label>
           <input type="file" id="import-file" accept=".csv" onchange="importDateiGewaehlt(this)"></div>
-         ──────────────────────────────────────────
+        <div id="import-preview"></div>
+      </div>
+    </div>
+    ${bilderBlock()}
+  </div>`;
+}
+
 async function renderMeineMeldungen() {
   const r = Auth.rolle();
   const filter = r==='admin' ? {} : { melderId: Auth.id() };
