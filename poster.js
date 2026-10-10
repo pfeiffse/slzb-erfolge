@@ -81,13 +81,30 @@ async function ladeLogo() {
   });
 }
 
+
+// Logo proportional zeichnen
+function drawLogo(ctx, x, y, maxH) {
+  if (!_slzbLogo) return 0;
+  const ratio = _slzbLogo.width / _slzbLogo.height;
+  const w = maxH * ratio;
+  ctx.drawImage(_slzbLogo, x, y, w, maxH);
+  return w;
+}
+
 async function ladeBild(url) {
   if (!url) return null;
+  // Erst mit CORS versuchen, dann ohne
   return new Promise(resolve => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => resolve(img);
-    img.onerror = () => resolve(null);
+    img.onerror = () => {
+      // Fallback: ohne crossOrigin (kein PNG-Export möglich, aber Vorschau)
+      const img2 = new Image();
+      img2.onload = () => resolve(img2);
+      img2.onerror = () => resolve(null);
+      img2.src = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
+    };
     img.src = url;
   });
 }
@@ -275,6 +292,15 @@ function zeichneTextbereich(ctx, e, W, H, startY, mColor, sportart, platz, medai
     ctx.fillText(erg, W/2, y); y += 32;
   }
 
+  // Datum + Ort
+  const datumStr = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  const ortStr = [datumStr, e.ort, e.ebene].filter(Boolean).join(' · ');
+  if (ortStr) {
+    ctx.fillStyle='rgba(201,204,210,0.8)'; ctx.font='16px Montserrat, Arial, sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillText(ortStr, W/2, y); y += 28;
+  }
+
   // Kurzinfo
   if (e.kurzinfo) {
     ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.font='18px Montserrat, Arial, sans-serif';
@@ -284,25 +310,28 @@ function zeichneTextbereich(ctx, e, W, H, startY, mColor, sportart, platz, medai
   }
 }
 
-// Kopfzeile (dunkel, mit Logo)
+// Kopfzeile (dunkel, mit Logo proportional)
 function zeichneKopfzeile(ctx, wettbewerb, disziplin) {
+  let logoW = 0;
   if (_slzbLogo) {
-    ctx.drawImage(_slzbLogo, 54, 20, 110, 75);
+    logoW = drawLogo(ctx, 20, 15, 70) + 10;
   } else {
     ctx.fillStyle = SLZB_COLORS.red;
-    slzbRoundRect(ctx, 54, 28, 130, 65, 6); ctx.fill();
+    slzbRoundRect(ctx, 20, 20, 110, 60, 6); ctx.fill();
     ctx.fillStyle = SLZB_COLORS.white;
-    ctx.font='bold 26px Montserrat, Arial, sans-serif';
+    ctx.font='bold 24px Montserrat, Arial, sans-serif';
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('SLZB', 119, 61);
+    ctx.fillText('SLZB', 75, 50);
+    logoW = 120;
   }
-  ctx.fillStyle = SLZB_COLORS.red; ctx.fillRect(178, 36, 3, 49);
+  const lineX = 20 + logoW + 10;
+  ctx.fillStyle = SLZB_COLORS.red; ctx.fillRect(lineX, 28, 3, 49);
   ctx.font='bold 17px Montserrat, Arial, sans-serif';
   ctx.fillStyle=SLZB_COLORS.white; ctx.textAlign='left'; ctx.textBaseline='top';
-  ctx.fillText((wettbewerb||'SLZB BERLIN').toUpperCase(), 196, 32);
+  ctx.fillText((wettbewerb||'SLZB BERLIN').toUpperCase(), lineX+12, 24);
   ctx.font='bold 10.5px Montserrat, Arial, sans-serif';
   ctx.fillStyle=SLZB_COLORS.red;
-  ctx.fillText((disziplin||'SCHUL- UND LEISTUNGSSPORTZENTRUM BERLIN').toUpperCase(), 198, 62);
+  ctx.fillText((disziplin||'SCHUL- UND LEISTUNGSSPORTZENTRUM BERLIN').toUpperCase(), lineX+14, 54);
 }
 
 // Fußzeile
