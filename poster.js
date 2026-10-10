@@ -188,12 +188,12 @@ async function zeichnePosterLandscape(ctx, e, bild, meta) {
   drawCover(ctx, bild, 0, 0, W, fotoH);
   ctx.restore();
 
-  // Fade ganz unten am Bildrand (letzte 8%)
-  const fadeStart_l = fotoH - Math.round(fotoH*0.08);
-  const fadeGrad = ctx.createLinearGradient(0, fadeStart_l, 0, fotoH);
+  // Fade: startet bei 85% der Bildhöhe, läuft bis Canvas-Ende (hinter Text)
+  const fadeGrad = ctx.createLinearGradient(0, fotoH*0.85, 0, H);
   fadeGrad.addColorStop(0, 'rgba(27,28,31,0)');
+  fadeGrad.addColorStop(0.3, 'rgba(27,28,31,0.85)');
   fadeGrad.addColorStop(1, 'rgba(27,28,31,1)');
-  ctx.fillStyle = fadeGrad; ctx.fillRect(0, fadeStart_l, W, fotoH-fadeStart_l);
+  ctx.fillStyle = fadeGrad; ctx.fillRect(0, fotoH*0.85, W, H - fotoH*0.85);
 
   // Textbereich unten
   zeichneTextbereich(ctx, e, W, H, fotoH, mColor, sportart, platz, medaille, titel);
@@ -213,20 +213,20 @@ async function zeichnePosterPortrait(ctx, e, bild, meta) {
   // Hintergrund
   ctx.fillStyle = SLZB_COLORS.bg; ctx.fillRect(0,0,W,H);
 
-  // Bild als Vollhintergrund (obere 75%)
-  const fotoH = Math.round(H*0.75);
-  ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,fotoH); ctx.clip();
-  drawCover(ctx, bild, 0, 0, W, fotoH);
+  // Bild als Vollhintergrund (volle Höhe)
+  ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H); ctx.clip();
+  drawCover(ctx, bild, 0, 0, W, H);
   ctx.restore();
 
-  // Fade ganz unten am Bildrand (letzte 8%)
-  const fadeStart_p = fotoH - Math.round(fotoH*0.08);
-  const fadeGrad = ctx.createLinearGradient(0, fadeStart_p, 0, fotoH);
+  // Fade: startet bei 55% der Canvas-Höhe, läuft bis Canvas-Ende (hinter Text)
+  const fadeGrad = ctx.createLinearGradient(0, H*0.55, 0, H);
   fadeGrad.addColorStop(0, 'rgba(27,28,31,0)');
-  fadeGrad.addColorStop(0.6, 'rgba(226,0,26,0.2)');
+  fadeGrad.addColorStop(0.25, 'rgba(226,0,26,0.15)');
+  fadeGrad.addColorStop(0.6, 'rgba(27,28,31,0.9)');
   fadeGrad.addColorStop(1, 'rgba(27,28,31,1)');
-  ctx.fillStyle = fadeGrad; ctx.fillRect(0, fadeStart_p, W, fotoH-fadeStart_p);
+  ctx.fillStyle = fadeGrad; ctx.fillRect(0, H*0.55, W, H*0.45);
 
+  const fotoH = Math.round(H*0.65); // Textbereich beginnt bei 65%
   zeichneTextbereich(ctx, e, W, H, fotoH, mColor, sportart, platz, medaille, titel);
   zeichneKopfzeile(ctx, e.wettbewerbText, e.disziplin);
   zeichneFusszeile(ctx, W, H);
@@ -635,17 +635,17 @@ async function zeichneSocialBeitragLandscape(ctx, e, bild, meta, W, H) {
 
   ctx.fillStyle=SLZB_COLORS.bg; ctx.fillRect(0,0,W,H);
 
-  // Bild oben 50%
-  const fotoH = Math.round(H*0.50);
+  // Bild volle Breite, obere 55%
+  const fotoH = Math.round(H*0.55);
   ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,fotoH); ctx.clip();
   drawCover(ctx, bild, 0, 0, W, fotoH); ctx.restore();
 
-  // Fade NUR ganz unten am Bildrand (letzte 15%)
-  const fadeStart = fotoH - fotoH*0.15;
-  const fadeGrad = ctx.createLinearGradient(0, fadeStart, 0, fotoH);
+  // Fade: startet bei 85% der Bildhöhe, läuft bis Canvas-Ende (hinter Text)
+  const fadeGrad = ctx.createLinearGradient(0, fotoH*0.85, 0, H);
   fadeGrad.addColorStop(0,'rgba(27,28,31,0)');
+  fadeGrad.addColorStop(0.25,'rgba(27,28,31,0.85)');
   fadeGrad.addColorStop(1,'rgba(27,28,31,1)');
-  ctx.fillStyle=fadeGrad; ctx.fillRect(0, fadeStart, W, fotoH-fadeStart);
+  ctx.fillStyle=fadeGrad; ctx.fillRect(0, fotoH*0.85, W, H - fotoH*0.85);
 
   zeichneTextbereich(ctx, e, W, H, fotoH, mColor, sportart, platz, medaille, titel);
   zeichneKopfzeile(ctx, e.wettbewerbText, e.disziplin);
@@ -662,19 +662,19 @@ async function zeichneSocialBeitragPortrait(ctx, e, bild, meta, W, H) {
 
   ctx.fillStyle=SLZB_COLORS.bg; ctx.fillRect(0,0,W,H);
 
-  // Bild als Vollhintergrund
+  // Bild als Vollhintergrund (volle Canvas-Höhe)
   ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H); ctx.clip();
   drawCover(ctx, bild, 0, 0, W, H); ctx.restore();
 
-  // Fade NUR ganz unten (letzte 30%)
-  const fadeStart = H*0.70;
-  const fadeGrad = ctx.createLinearGradient(0, fadeStart, 0, H-80);
+  // Fade: startet bei 50% der Canvas-Höhe, läuft bis Canvas-Ende (hinter Text)
+  const fadeGrad = ctx.createLinearGradient(0, H*0.50, 0, H);
   fadeGrad.addColorStop(0,'rgba(27,28,31,0)');
-  fadeGrad.addColorStop(0.5,'rgba(226,0,26,0.25)');
-  fadeGrad.addColorStop(1,'rgba(27,28,31,0.95)');
-  ctx.fillStyle=fadeGrad; ctx.fillRect(0, fadeStart, W, H-80-fadeStart);
+  fadeGrad.addColorStop(0.2,'rgba(226,0,26,0.15)');
+  fadeGrad.addColorStop(0.55,'rgba(27,28,31,0.88)');
+  fadeGrad.addColorStop(1,'rgba(27,28,31,1)');
+  ctx.fillStyle=fadeGrad; ctx.fillRect(0, H*0.50, W, H*0.50);
 
-  zeichneTextbereich(ctx, e, W, H, fadeStart+20, mColor, sportart, platz, medaille, titel);
+  zeichneTextbereich(ctx, e, W, H, H*0.65, mColor, sportart, platz, medaille, titel);
   zeichneKopfzeile(ctx, e.wettbewerbText, e.disziplin);
   zeichneFusszeile(ctx, W, H);
 }
@@ -711,16 +711,16 @@ async function zeichneSocialStory(ctx, e, bild, meta, W, H) {
   ctx.fillStyle=SLZB_COLORS.bg; ctx.fillRect(0,0,W,H);
 
   if (bild) {
-    // Bild obere 65%
+    // Bild obere 65% der Canvas-Höhe
     const fotoH = Math.round(H*0.65);
     ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,fotoH); ctx.clip();
     drawCover(ctx, bild, 0, 0, W, fotoH); ctx.restore();
-    // Fade ganz unten am Bildrand
-    const fadeStart = fotoH - fotoH*0.12;
-    const fadeGrad = ctx.createLinearGradient(0, fadeStart, 0, fotoH);
+    // Fade: startet bei 85% der Bildhöhe, läuft bis Canvas-Ende (hinter Text)
+    const fadeGrad = ctx.createLinearGradient(0, fotoH*0.85, 0, H);
     fadeGrad.addColorStop(0,'rgba(27,28,31,0)');
+    fadeGrad.addColorStop(0.2,'rgba(27,28,31,0.85)');
     fadeGrad.addColorStop(1,'rgba(27,28,31,1)');
-    ctx.fillStyle=fadeGrad; ctx.fillRect(0, fadeStart, W, fotoH-fadeStart);
+    ctx.fillStyle=fadeGrad; ctx.fillRect(0, fotoH*0.85, W, H - fotoH*0.85);
     zeichneTextbereich(ctx, e, W, H, fotoH+10, mColor, sportart, platz, medaille, titel);
   } else {
     zeichneTextbereich(ctx, e, W, H, H*0.25, mColor, sportart, platz, medaille, titel);
@@ -1593,12 +1593,13 @@ async function zeichnePortraitLayout(canvasId, e) {
   if (bild) {
     ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,FOTO_H); ctx.clip();
     drawCover(ctx, bild, 0, 0, W, FOTO_H); ctx.restore();
-    // Starker Fade unten
-    const fg = ctx.createLinearGradient(0, FOTO_H-280, 0, FOTO_H);
+    // Fade: startet bei 80% der Bildhöhe, läuft bis Canvas-Ende (hinter Text)
+    const fg = ctx.createLinearGradient(0, FOTO_H*0.80, 0, H);
     fg.addColorStop(0,'rgba(27,28,31,0)');
-    fg.addColorStop(0.4,'rgba(226,0,26,0.2)');
+    fg.addColorStop(0.15,'rgba(226,0,26,0.15)');
+    fg.addColorStop(0.4,'rgba(27,28,31,0.9)');
     fg.addColorStop(1,'rgba(27,28,31,1)');
-    ctx.fillStyle=fg; ctx.fillRect(0, FOTO_H-280, W, 280);
+    ctx.fillStyle=fg; ctx.fillRect(0, FOTO_H*0.80, W, H - FOTO_H*0.80);
   } else {
     // Kein Bild: Initialen-Kreis
     ctx.fillStyle='rgba(226,0,26,0.15)';

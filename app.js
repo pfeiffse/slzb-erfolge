@@ -754,21 +754,310 @@ async function speichereTeamerfolg(status) {
 }
 
 function renderSammelmeldungForm() {
+  // Sportart-Optionen für Datalist
+  const sportOptionen = SLZB_DB.sportarten.map(s=>`<option value="${esc(s.name)}">`).join('');
   return `<div class="page">
     ${formularKopf('Sammelmeldung','📊')}
-    <div class="card mb-3">
-      <div class="card-header"><h2>📥 CSV-Import</h2></div>
-      <div class="card-body">
-        <div class="alert alert-info"><span class="alert-icon">ℹ️</span>
-          <span>Pflichtfelder: Titel, Sportart, Datum.</span></div>
-        <button class="btn btn-outline mt-2" onclick="PDF.downloadImportvorlage()">⬇️ Vorlage herunterladen (CSV)</button>
-        <div class="form-group mt-3"><label>CSV-Datei hochladen</label>
-          <input type="file" id="import-file" accept=".csv" onchange="importDateiGewaehlt(this)"></div>
-        <div id="import-preview"></div>
+
+    <!-- Tabs -->
+    <div class="tabs mb-3" style="display:flex;gap:8px">
+      <button class="tab-btn active" id="tab-raster" onclick="sammelTabWechsel('raster')">📋 Raster-Eingabe</button>
+      <button class="tab-btn" id="tab-csv" onclick="sammelTabWechsel('csv')">📥 CSV-Import</button>
+    </div>
+
+    <!-- RASTER-TAB -->
+    <div id="sammel-raster-panel">
+      <div class="card mb-3">
+        <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+          <h2>📋 Schnelleingabe</h2>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost btn-sm" onclick="sammelRasterZeileHinzu()">+ Zeile</button>
+            <button class="btn btn-ghost btn-sm" onclick="sammelRasterLeeren()">🗑️ Leeren</button>
+          </div>
+        </div>
+        <div class="card-body" style="padding:0;overflow-x:auto">
+          <datalist id="sammel-sportarten">${sportOptionen}</datalist>
+          <table id="sammel-tabelle" style="width:100%;border-collapse:collapse;font-size:.85rem">
+            <thead>
+              <tr style="background:rgba(226,0,26,0.12);position:sticky;top:0;z-index:1">
+                <th style="padding:8px 6px;text-align:left;white-space:nowrap;min-width:180px">Titel <span class="required">*</span></th>
+                <th style="padding:8px 6px;text-align:left;white-space:nowrap;min-width:130px">Sportart <span class="required">*</span></th>
+                <th style="padding:8px 6px;text-align:left;white-space:nowrap;min-width:120px">Datum <span class="required">*</span></th>
+                <th style="padding:8px 6px;text-align:left;white-space:nowrap;min-width:120px">Wettbewerb</th>
+                <th style="padding:8px 6px;text-align:left;white-space:nowrap;min-width:80px">Platz</th>
+                <th style="padding:8px 6px;text-align:left;white-space:nowrap;min-width:80px">Medaille</th>
+                <th style="padding:8px 6px;text-align:left;white-space:nowrap;min-width:120px">Athlet/Team</th>
+                <th style="padding:8px 6px;text-align:left;white-space:nowrap;min-width:80px">Ebene</th>
+                <th style="padding:8px 6px;text-align:left;white-space:nowrap;min-width:120px">Kurzinfo</th>
+                <th style="padding:8px 4px;width:36px"></th>
+              </tr>
+            </thead>
+            <tbody id="sammel-tbody"></tbody>
+          </table>
+        </div>
+        <div class="card-footer" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="sammelRasterZeileHinzu()">+ Zeile hinzufügen</button>
+          <span id="sammel-zaehler" class="text-xs text-muted">0 Zeilen</span>
+          <div style="flex:1"></div>
+          <div id="sammel-fehler" style="color:#E2001A;font-size:.8rem"></div>
+          <button class="btn btn-outline btn-sm" onclick="sammelRasterVorschau()">👁️ Vorschau</button>
+          <button class="btn btn-primary" onclick="sammelRasterEinreichen()">📤 Alle einreichen</button>
+        </div>
+      </div>
+      <div id="sammel-vorschau"></div>
+    </div>
+
+    <!-- CSV-TAB -->
+    <div id="sammel-csv-panel" style="display:none">
+      <div class="card mb-3">
+        <div class="card-header"><h2>📥 CSV-Import</h2></div>
+        <div class="card-body">
+          <div class="alert alert-info"><span class="alert-icon">ℹ️</span>
+            <span>Pflichtfelder: Titel, Sportart, Datum. Trennzeichen: Semikolon oder Komma.</span></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+            <button class="btn btn-outline btn-sm" onclick="PDF.downloadImportvorlage()">⬇️ Vorlage herunterladen (CSV)</button>
+            <button class="btn btn-ghost btn-sm" onclick="sammelCSVInRaster()">📋 In Raster übernehmen</button>
+          </div>
+          <div class="form-group mt-3"><label>CSV-Datei hochladen</label>
+            <input type="file" id="import-file" accept=".csv,.xlsx" onchange="importDateiGewaehlt(this)"></div>
+          <div id="import-preview"></div>
+        </div>
       </div>
     </div>
-    ${bilderBlock()}
   </div>`;
+}
+
+// ── Sammelmeldung Raster-Logik ────────────────────────────────
+let _sammelZeilen = [];
+let _sammelNaechsteId = 1;
+
+function sammelTabWechsel(tab) {
+  document.getElementById('sammel-raster-panel').style.display = tab==='raster' ? '' : 'none';
+  document.getElementById('sammel-csv-panel').style.display   = tab==='csv'    ? '' : 'none';
+  document.querySelectorAll('#tab-raster,#tab-csv').forEach(b=>{
+    b.classList.toggle('active', b.id==='tab-'+tab);
+  });
+}
+
+function sammelRasterZeileHinzu(daten={}) {
+  const id = _sammelNaechsteId++;
+  _sammelZeilen.push({id, ...daten});
+  const tbody = document.getElementById('sammel-tbody');
+  if (!tbody) return;
+  const tr = document.createElement('tr');
+  tr.id = `sammel-zeile-${id}`;
+  tr.style.cssText = 'border-bottom:1px solid rgba(255,255,255,.06)';
+  const medailleOpts = ['','Gold','Silber','Bronze'].map(m=>`<option value="${m}"${daten.medaille===m?'selected':''}>${m||'–'}</option>`).join('');
+  const ebeneOpts = ['','Schulebene','Bezirk','Landesebene','Bundesebene','International'].map(e=>`<option value="${e}"${daten.ebene===e?'selected':''}>${e||'–'}</option>`).join('');
+  tr.innerHTML = `
+    <td style="padding:4px 6px"><input type="text" class="sammel-input" data-id="${id}" data-field="titel" value="${esc(daten.titel||'')}" placeholder="Titel" style="width:100%;min-width:170px"></td>
+    <td style="padding:4px 6px"><input type="text" class="sammel-input" data-id="${id}" data-field="sportart" value="${esc(daten.sportart||'')}" list="sammel-sportarten" placeholder="Sportart" style="width:100%;min-width:120px"></td>
+    <td style="padding:4px 6px"><input type="date" class="sammel-input" data-id="${id}" data-field="datum" value="${esc(daten.datum||'')}" style="width:100%;min-width:110px"></td>
+    <td style="padding:4px 6px"><input type="text" class="sammel-input" data-id="${id}" data-field="wettbewerb" value="${esc(daten.wettbewerb||'')}" placeholder="Wettbewerb" style="width:100%;min-width:110px"></td>
+    <td style="padding:4px 6px"><input type="number" class="sammel-input" data-id="${id}" data-field="platz" value="${daten.platz||''}" min="1" placeholder="1" style="width:60px"></td>
+    <td style="padding:4px 6px"><select class="sammel-input" data-id="${id}" data-field="medaille" style="width:80px">${medailleOpts}</select></td>
+    <td style="padding:4px 6px"><input type="text" class="sammel-input" data-id="${id}" data-field="athlet" value="${esc(daten.athlet||'')}" placeholder="Name/Team" style="width:100%;min-width:110px"></td>
+    <td style="padding:4px 6px"><select class="sammel-input" data-id="${id}" data-field="ebene" style="width:100px">${ebeneOpts}</select></td>
+    <td style="padding:4px 6px"><input type="text" class="sammel-input" data-id="${id}" data-field="kurzinfo" value="${esc(daten.kurzinfo||'')}" placeholder="Kurzinfo" style="width:100%;min-width:110px"></td>
+    <td style="padding:4px;text-align:center"><button class="btn btn-ghost btn-sm" onclick="sammelZeileLoeschen(${id})" title="Zeile löschen" style="padding:2px 6px;color:#E2001A">✕</button></td>`;
+  // Tab-Navigation zwischen Zeilen
+  tr.querySelectorAll('input,select').forEach((el,i,arr)=>{
+    el.addEventListener('keydown', ev=>{
+      if (ev.key==='Tab' && !ev.shiftKey && i===arr.length-1) {
+        ev.preventDefault(); sammelRasterZeileHinzu(); 
+        setTimeout(()=>document.querySelector(`#sammel-zeile-${_sammelNaechsteId-1} input`)?.focus(),50);
+      }
+      if (ev.key==='Enter') { ev.preventDefault(); sammelRasterZeileHinzu(); setTimeout(()=>document.querySelector(`#sammel-zeile-${_sammelNaechsteId-1} input`)?.focus(),50); }
+    });
+    el.addEventListener('change', ()=>sammelZeileAktualisieren(id));
+    el.addEventListener('input', ()=>sammelZeileAktualisieren(id));
+  });
+  tbody.appendChild(tr);
+  sammelZaehlerAktualisieren();
+  // Erste Zeile: Fokus auf Titel
+  if (_sammelZeilen.length===1) tr.querySelector('input')?.focus();
+}
+
+function sammelZeileAktualisieren(id) {
+  const tr = document.getElementById(`sammel-zeile-${id}`);
+  if (!tr) return;
+  const zeile = _sammelZeilen.find(z=>z.id===id);
+  if (!zeile) return;
+  tr.querySelectorAll('.sammel-input').forEach(el=>{
+    zeile[el.dataset.field] = el.value;
+  });
+}
+
+function sammelZeileLoeschen(id) {
+  _sammelZeilen = _sammelZeilen.filter(z=>z.id!==id);
+  document.getElementById(`sammel-zeile-${id}`)?.remove();
+  sammelZaehlerAktualisieren();
+}
+
+function sammelRasterLeeren() {
+  if (!confirm('Alle Zeilen löschen?')) return;
+  _sammelZeilen = [];
+  const tbody = document.getElementById('sammel-tbody');
+  if (tbody) tbody.innerHTML = '';
+  sammelZaehlerAktualisieren();
+}
+
+function sammelZaehlerAktualisieren() {
+  const el = document.getElementById('sammel-zaehler');
+  if (el) el.textContent = `${_sammelZeilen.length} Zeile(n)`;
+}
+
+function sammelRasterDatenLesen() {
+  // Aktuelle Werte aus DOM lesen
+  _sammelZeilen.forEach(z=>{
+    const tr = document.getElementById(`sammel-zeile-${z.id}`);
+    if (!tr) return;
+    tr.querySelectorAll('.sammel-input').forEach(el=>{ z[el.dataset.field]=el.value; });
+  });
+  return _sammelZeilen;
+}
+
+function sammelRasterValidieren(zeilen) {
+  const fehler = [];
+  zeilen.forEach((z,i)=>{
+    const nr = i+1;
+    if (!z.titel?.trim()) fehler.push(`Zeile ${nr}: Titel fehlt`);
+    if (!z.sportart?.trim()) fehler.push(`Zeile ${nr}: Sportart fehlt`);
+    if (!z.datum) fehler.push(`Zeile ${nr}: Datum fehlt`);
+    else {
+      const d = new Date(z.datum);
+      if (isNaN(d)) fehler.push(`Zeile ${nr}: Datum ungültig`);
+      else if (d > new Date(Date.now()+365*24*60*60*1000)) fehler.push(`Zeile ${nr}: Datum > 1 Jahr in Zukunft`);
+    }
+    if (z.platz && (isNaN(z.platz)||Number(z.platz)<1)) fehler.push(`Zeile ${nr}: Platzierung muss ≥ 1 sein`);
+  });
+  return fehler;
+}
+
+function sammelRasterVorschau() {
+  const zeilen = sammelRasterDatenLesen();
+  const fehler = sammelRasterValidieren(zeilen);
+  const vorschauEl = document.getElementById('sammel-vorschau');
+  const fehlerEl = document.getElementById('sammel-fehler');
+  if (!vorschauEl) return;
+
+  if (fehler.length) {
+    if (fehlerEl) fehlerEl.innerHTML = fehler.map(f=>`⚠️ ${esc(f)}`).join('<br>');
+    vorschauEl.innerHTML = '';
+    return;
+  }
+  if (fehlerEl) fehlerEl.innerHTML = '';
+
+  const gueltig = zeilen.filter(z=>z.titel?.trim()&&z.sportart?.trim()&&z.datum);
+  if (!gueltig.length) { vorschauEl.innerHTML = '<div class="alert alert-warning mt-2"><span class="alert-icon">⚠️</span><span>Keine gültigen Zeilen.</span></div>'; return; }
+
+  vorschauEl.innerHTML = `<div class="card mt-3">
+    <div class="card-header"><h2>👁️ Vorschau (${gueltig.length} Meldungen)</h2></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>#</th><th>Titel</th><th>Sportart</th><th>Datum</th><th>Wettbewerb</th><th>Platz</th><th>Athlet/Team</th><th>Status</th></tr></thead>
+      <tbody>${gueltig.map((z,i)=>`<tr>
+        <td class="text-xs text-muted">${i+1}</td>
+        <td><strong>${esc(z.titel)}</strong></td>
+        <td class="text-sm">${esc(z.sportart)}</td>
+        <td class="text-sm">${z.datum?new Date(z.datum).toLocaleDateString('de-DE'):''}</td>
+        <td class="text-sm">${esc(z.wettbewerb||'–')}</td>
+        <td class="text-sm">${z.platz?`${z.platz}. Platz`+(z.medaille?` (${z.medaille})`:''):'–'}</td>
+        <td class="text-sm">${esc(z.athlet||'–')}</td>
+        <td><span class="badge badge-eingereicht">Eingereicht</span></td>
+      </tr>`).join('')}
+      </tbody>
+    </table></div>
+    <div class="card-footer">
+      <button class="btn btn-primary" onclick="sammelRasterEinreichen()">📤 ${gueltig.length} Meldungen einreichen</button>
+    </div>
+  </div>`;
+}
+
+async function sammelRasterEinreichen() {
+  const zeilen = sammelRasterDatenLesen();
+  const gueltig = zeilen.filter(z=>z.titel?.trim()&&z.sportart?.trim()&&z.datum);
+  const fehler = sammelRasterValidieren(gueltig);
+  const fehlerEl = document.getElementById('sammel-fehler');
+
+  if (!gueltig.length) { toast('Keine gültigen Zeilen zum Einreichen','warning'); return; }
+  if (fehler.length) {
+    if (fehlerEl) fehlerEl.innerHTML = fehler.map(f=>`⚠️ ${esc(f)}`).join('<br>');
+    return;
+  }
+  if (fehlerEl) fehlerEl.innerHTML = '';
+
+  const btn = document.querySelector('#sammel-raster-panel .btn-primary');
+  if (btn) { btn.disabled=true; btn.textContent='Wird gespeichert...'; }
+
+  let ok=0, fehlgeschlagen=[];
+  for (const z of gueltig) {
+    try {
+      const sp = SLZB_DB.sportarten.find(s=>s.name.toLowerCase()===z.sportart.toLowerCase());
+      const wb = SLZB_DB.wettbewerbe.find(w=>w.name.toLowerCase()===(z.wettbewerb||'').toLowerCase());
+      const daten = {
+        titel: z.titel.trim(),
+        sportartId: sp?.id||null, sportartText: z.sportart.trim(),
+        wettbewerbId: wb?.id||null, wettbewerbText: z.wettbewerb?.trim()||'',
+        datum: z.datum,
+        platzierung: z.platz ? Number(z.platz) : null,
+        medaille: z.medaille||'keine',
+        ebene: z.ebene||'',
+        kurzinfo: z.kurzinfo?.trim()||'',
+        meldungsart: 'Sammelmeldung',
+        status: 'Eingereicht',
+      };
+      const beteiligte = z.athlet?.trim() ? [{
+        schuelerId:null, anzeigename:z.athlet.trim(),
+        rolle:'Athlet', einwilligungsstatus:'Nicht geprüft'
+      }] : [];
+      const result = await DB.erstelleErfolg(daten, beteiligte);
+      if (result.ok) ok++;
+      else fehlgeschlagen.push(`${z.titel}: ${result.fehler}`);
+    } catch(e) {
+      fehlgeschlagen.push(`${z.titel}: ${e.message}`);
+    }
+  }
+
+  if (btn) { btn.disabled=false; btn.textContent='📤 Alle einreichen'; }
+
+  if (ok>0) {
+    toast(`${ok} Meldung(en) erfolgreich eingereicht!`,'success');
+    // Eingereichte Zeilen aus Raster entfernen
+    const eingereichtIds = gueltig.slice(0,ok).map(z=>z.id);
+    eingereichtIds.forEach(id=>{ _sammelZeilen=_sammelZeilen.filter(z=>z.id!==id); document.getElementById(`sammel-zeile-${id}`)?.remove(); });
+    sammelZaehlerAktualisieren();
+    APP._erfolgeCache=null;
+  }
+  if (fehlgeschlagen.length) {
+    const fehlerEl2 = document.getElementById('sammel-fehler');
+    if (fehlerEl2) fehlerEl2.innerHTML = fehlgeschlagen.map(f=>`❌ ${esc(f)}`).join('<br>');
+    toast(`${fehlgeschlagen.length} Meldung(en) fehlgeschlagen`,'danger');
+  }
+}
+
+// CSV-Daten ins Raster übernehmen
+async function sammelCSVInRaster() {
+  const input = document.getElementById('import-file');
+  if (!input?.files?.length) { toast('Bitte zuerst CSV-Datei auswählen','warning'); return; }
+  try {
+    const zeilen = await PDF.leseCSVFlexibel(input.files[0]);
+    if (!zeilen.length) { toast('Keine Daten gefunden','warning'); return; }
+    sammelTabWechsel('raster');
+    zeilen.forEach(z=>{
+      sammelRasterZeileHinzu({
+        titel: z.titel||z.Titel||z.title||'',
+        sportart: z.sportart||z.Sportart||z.sport||'',
+        datum: z.datum||z.Datum||z.date||'',
+        wettbewerb: z.wettbewerb||z.Wettbewerb||z.competition||'',
+        platz: z.platz||z.Platz||z.placement||'',
+        medaille: z.medaille||z.Medaille||z.medal||'',
+        athlet: z.athlet||z.Athlet||z.name||z.Name||'',
+        ebene: z.ebene||z.Ebene||z.level||'',
+        kurzinfo: z.kurzinfo||z.Kurzinfo||z.info||'',
+      });
+    });
+    toast(`${zeilen.length} Zeilen ins Raster übernommen`,'success');
+  } catch(e) { toast('Fehler: '+e.message,'danger'); }
 }
 
 async function renderMeineMeldungen() {
@@ -1069,8 +1358,16 @@ async function importDateiGewaehlt(input) {
   try {
     const zeilen=await PDF.leseCSVFlexibel(datei);
     if(!zeilen.length){preview.innerHTML='<div class="alert alert-warning mt-3"><span class="alert-icon">⚠️</span><span>Keine Daten gefunden.</span></div>';return;}
+    // Vorschau-Tabelle
+    const felder = Object.keys(zeilen[0]);
     preview.innerHTML=`<div class="alert alert-success mt-3"><span class="alert-icon">✅</span>
-      <span>${zeilen.length} Zeilen eingelesen.</span></div>`;
+      <span>${zeilen.length} Zeilen eingelesen. <button class="btn btn-outline btn-sm ml-2" onclick="sammelCSVInRaster()">📋 In Raster übernehmen</button></span></div>
+      <div class="table-wrap mt-2"><table style="font-size:.8rem">
+        <thead><tr>${felder.map(f=>`<th>${esc(f)}</th>`).join('')}</tr></thead>
+        <tbody>${zeilen.slice(0,5).map(z=>`<tr>${felder.map(f=>`<td>${esc(z[f]||'')}</td>`).join('')}</tr>`).join('')}
+        ${zeilen.length>5?`<tr><td colspan="${felder.length}" class="text-center text-muted">... und ${zeilen.length-5} weitere</td></tr>`:''}
+        </tbody>
+      </table></div>`;
   } catch(e) {
     preview.innerHTML=`<div class="alert alert-danger mt-3"><span class="alert-icon">❌</span><span>Fehler: ${esc(e.message)}</span></div>`;
   }
