@@ -586,7 +586,7 @@ function renderMinimalmeldungForm() {
     ${formularKopf('Minimalmeldung','⚡')}
     <div class="alert alert-warning"><span class="alert-icon">⚠️</span>
       <span>Minimalmeldungen erhalten automatisch den Status <strong>Unvollständig</strong>.</span></div>
-    <div class="card">
+    <div class="card mb-3">
       <div class="card-body">
         <div id="form-errors"></div>
         <div class="form-row cols-2">
@@ -601,19 +601,46 @@ function renderMinimalmeldungForm() {
         </div>
         <div class="form-group"><label>Titel</label>
           <input type="text" id="f-titel" placeholder="Kurzer Titel (optional)"></div>
-        
+        <div class="form-group"><label>Kurzinfo <span class="required">*</span></label>
+          <textarea id="f-kurzinfo" rows="3" placeholder="Was ist passiert?"></textarea></div>
+      </div>
+    </div>
+    ${bilderBlock()}
+    <div class="card">
+      <div class="card-footer">
+        <button class="btn btn-ghost" onclick="APP.selectedMeldungsart=null;navigateTo('neue-meldung')">Abbrechen</button>
+        <button class="btn btn-warning" onclick="speichereErfolg('Unvollständig','Minimalmeldung')">⚡ Einreichen</button>
+      </div>
+    </div>
+  </div>`;
+}
 
 function renderArtikelForm() {
   return `<div class="page">
     ${formularKopf('Fertiger Artikel','📰')}
-    <div class="card">
+    <div class="card mb-3">
       <div class="card-body">
         <div id="form-errors"></div>
         <div class="alert alert-info"><span class="alert-icon">🤖</span>
           <span>KI-Extraktion erzeugt nur einen <strong>Entwurf</strong>. Alle Daten müssen manuell bestätigt werden.</span></div>
         <div class="form-group"><label>Artikeltext <span class="required">*</span></label>
           <textarea id="f-artikel-text" rows="10" placeholder="Fügen Sie hier den vollständigen Artikeltext ein..."></textarea></div>
-        
+        <div class="form-row cols-2">
+          <div class="form-group"><label>Sportart <span class="required">*</span></label>
+            <input type="text" id="f-sportart-text" placeholder="z.B. Leichtathletik" autocomplete="off"></div>
+          <div class="form-group"><label>Datum <span class="required">*</span></label><input type="date" id="f-datum"></div>
+        </div>
+      </div>
+    </div>
+    ${bilderBlock()}
+    <div class="card">
+      <div class="card-footer">
+        <button class="btn btn-ghost" onclick="APP.selectedMeldungsart=null;navigateTo('neue-meldung')">Abbrechen</button>
+        <button class="btn btn-primary" onclick="speichereArtikel()">📤 Einreichen</button>
+      </div>
+    </div>
+  </div>`;
+}
 
 // Bilder aus bilderBlock() nach dem Speichern hochladen
 async function uploadBilderAusFormular(erfolgId) {
