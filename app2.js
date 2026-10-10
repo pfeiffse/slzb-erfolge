@@ -379,7 +379,10 @@ async function zeigeA3Vorschau(erfolgId) {
       </div>
       <div class="modal-body" style="background:#111;padding:16px">
         <div class="tabs mb-3" style="background:rgba(255,255,255,.08);border-radius:8px;padding:4px;display:flex;gap:4px;flex-wrap:wrap">
-          
+          <button class=\"tab-btn active\" style=\"color:#fff;flex:1\" onclick=\"wechsleA3Variante(1)\">1: Bild oben</button>
+          <button class=\"tab-btn\" style=\"color:#aaa;flex:1\" onclick=\"wechsleA3Variante(2)\">2: Split</button>
+          <button class=\"tab-btn\" style=\"color:#aaa;flex:1\" onclick=\"wechsleA3Variante(3)\">3: Vollbild</button>
+          ${extraTabs}${extraTabs2}${extraTabTeam}${extraTabPortrait}
         </div>
         <div style="text-align:center">
           <canvas id="a3-canvas" width="1587" height="1123"
@@ -440,11 +443,18 @@ async function zeigeBildschirmModal(erfolgId) {
         <button class="btn btn-ghost btn-sm close-x">✕</button>
       </div>
       <div class="modal-body" style="background:#111;padding:16px">
-        
-        <div style="text-align:center">
-          <canvas id="screen-canvas" width="1080" height="1350"
-            style="max-width:100%;max-height:65vh;display:block;margin:0 auto;border-radius:8px"></canvas>
-          <p class="text-xs mt-2" style="color:#888" id="screen-format-info">1080×1350 px · Hochformat</p>
+        <div class=\"tabs mb-3\" style=\"background:rgba(255,255,255,.08);border-radius:8px;padding:4px;display:flex;gap:4px;flex-wrap:wrap\">
+          <button class=\"tab-btn active\" style=\"color:#fff;flex:1\" onclick=\"wechsleBildschirmFormat('hochformat')\">📱 Hochformat (4:5)</button>
+          <button class=\"tab-btn\" style=\"color:#aaa;flex:1\" onclick=\"wechsleBildschirmFormat('querformat')\">🖥️ Querformat (16:9)</button>
+          <button class=\"tab-btn\" style=\"color:#aaa;flex:1\" onclick=\"wechsleBildschirmFormat('tabelle')\">📊 Tabelle</button>
+          <button class=\"tab-btn\" style=\"color:#aaa;flex:1\" onclick=\"wechsleBildschirmFormat('infografik')\">📈 Infografik</button>
+          <button class=\"tab-btn\" style=\"color:#aaa;flex:1\" onclick=\"wechsleBildschirmFormat('portrait')\">👤 Porträt</button>
+          <button class=\"tab-btn\" style=\"color:#aaa;flex:1\" onclick=\"wechsleBildschirmFormat('multierfolg')\">🏅 Multi-Erfolg</button>
+        </div>
+        <div style=\"text-align:center\">
+          <canvas id=\"screen-canvas\" width=\"1080\" height=\"1350\"
+            style=\"max-width:100%;max-height:65vh;display:block;margin:0 auto;border-radius:8px\"></canvas>
+          <p class=\"text-xs mt-2\" style=\"color:#888\" id=\"screen-format-info\">1080×1350 px · Hochformat</p>
         </div>
       </div>
       <div class="modal-footer">
@@ -473,6 +483,9 @@ async function zeigeSocialModal(erfolgId) {
     const e = await DB.getErfolgById(erfolgId);
     if (!e) { toast('Erfolg nicht gefunden','danger'); return; }
 
+    const anzBilder = (e.bilder||[]).filter(b=>b.signedUrl).length;
+    const tab2 = anzBilder>=2 ? `<button class="tab-btn" onclick="wechsleSocialFormat('2bilder','${e.id}')">🖼️ 2 Bilder</button>` : '';
+    const tab4 = anzBilder>=4 ? `<button class="tab-btn" onclick="wechsleSocialFormat('4bilder','${e.id}')">🖼️ 4 Bilder</button>` : '';
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     const modal = document.createElement('div');
@@ -487,12 +500,10 @@ async function zeigeSocialModal(erfolgId) {
           <span class="alert-icon">🔒</span>
           <span><strong>Social Media ist standardmäßig gesperrt.</strong> Kein Auto-Posting.</span>
         </div>
-        
         <div class="tabs mb-3" style="flex-wrap:wrap;gap:4px;display:flex">
           <button class="tab-btn active" onclick="wechsleSocialFormat('beitrag','${e.id}')">📸 Beitrag (1:1)</button>
           <button class="tab-btn" onclick="wechsleSocialFormat('story','${e.id}')">📱 Story/Reel (9:16)</button>
-          ${(e.bilder||[]).filter(b=>b.signedUrl).length>=2?'<button class=\\"tab-btn\\" onclick=\\"wechsleSocialFormat(\'2bilder\',\''+e.id+'\')\">🖼️ 2 Bilder</button>':''}
-          ${(e.bilder||[]).filter(b=>b.signedUrl).length>=4?'<button class=\\"tab-btn\\" onclick=\\"wechsleSocialFormat(\'4bilder\',\''+e.id+'\')\">🖼️ 4 Bilder</button>':''}
+          ${tab2}${tab4}
           <button class="tab-btn" onclick="wechsleSocialFormat('portrait','${e.id}')">👤 Porträt</button>
           <button class="tab-btn" onclick="wechsleSocialFormat('multierfolg','${e.id}')">🏅 Multi</button>
         </div>
