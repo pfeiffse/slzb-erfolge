@@ -458,233 +458,69 @@ async function zeigeSocialModal(erfolgId) {
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     const modal = document.createElement('div');
-    modal.className = 'modal modal-lg';
+    modal.className = 'modal modal-xl';
     modal.innerHTML = `
       <div class="modal-header">
-        <h3>📱 Social-Media-Ausgabe (1080×1080 px)</h3>
+        <h3>📱 Social-Media-Ausgabe</h3>
         <button class="btn btn-ghost btn-sm close-x">✕</button>
       </div>
-      <div class="modal-body text-center">
+      <div class="modal-body">
         <div class="alert alert-danger mb-3">
           <span class="alert-icon">🔒</span>
           <span><strong>Social Media ist standardmäßig gesperrt.</strong> Kein Auto-Posting.</span>
         </div>
-        <div style="display:inline-block;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.3)">
-          <canvas id="social-canvas" width="1080" height="1080"
-            style="width:400px;height:400px;display:block"></canvas>
+        <div class="tabs mb-3">
+          <button class="tab-btn active" onclick="wechsleSocialFormat('beitrag','${e.id}')">📸 Beitrag (1:1)</button>
+          <button class="tab-btn" onclick="wechsleSocialFormat('story','${e.id}')">📱 Story/Reel (9:16)</button>
         </div>
-        <p class="text-xs text-muted mt-2">Vorschau skaliert · Originalformat: 1080×1080 px</p>
+        <div style="text-align:center;background:#111;padding:16px;border-radius:8px">
+          <canvas id="social-canvas" width="1080" height="1080"
+            style="max-width:100%;max-height:60vh;display:block;margin:0 auto;border-radius:8px"></canvas>
+          <p class="text-xs mt-2" style="color:#888" id="social-format-info">1080×1080 px · Beitrag</p>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost close-btn">Schließen</button>
-        <button class="btn btn-warning dl-html">📄 HTML herunterladen</button>
         <button class="btn btn-primary dl-png">🖼️ PNG herunterladen</button>
       </div>`;
 
     modal.querySelector('.close-x').onclick = ()=>overlay.remove();
     modal.querySelector('.close-btn').onclick = ()=>overlay.remove();
-    modal.querySelector('.dl-html').onclick = ()=>{ downloadJTFO(erfolgId,'social'); };
-    modal.querySelector('.dl-png').onclick = ()=>{ exportPosterPNG(e, 'social-canvas'); };
+    modal.querySelector('.dl-png').onclick = ()=>exportPosterPNG(e,'social-canvas');
     overlay.appendChild(modal);
     overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
     document.body.appendChild(overlay);
 
-    // SLZB-Poster zeichnen (neuer Generator)
-    setTimeout(()=>zeichneSLZBPoster('social-canvas', e), 100);
-
+    // Aktuelles Format merken
+    window._socialErfolg = e;
+    window._socialFormat = 'beitrag';
+    setTimeout(()=>zeichneSocialFormat('social-canvas', e, 'beitrag'), 100);
   } catch(err) {
     toast('Fehler: '+err.message,'danger');
     console.error('Social Fehler:', err);
   }
 }
 
-// ── Canvas-Zeichenfunktion ────────────────────────────────────
-async function zeichneSocialCanvas(e) {
-  const canvas = document.getElementById('social-canvas');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const W = 1080, H = 1080;
-
-  const sportart   = e.sportartText || SLZB_DB.getSportart(e.sportartId)?.name || '';
-  const platz      = e.platzierung || '';
-  const medaille   = e.medaille && e.medaille !== 'keine' ? e.medaille : '';
-  const titelSauber = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
-  const kurzinfo   = e.kurzinfo || '';
-  const hauptbild  = (e.bilder||[]).find(b=>b.signedUrl) || null;
-
-  const medailleColor = medaille==='Gold' ? '#FFD700' :
-                        medaille==='Silber' ? '#C0C0C0' :
-                        medaille==='Bronze' ? '#CD7F32' : '#4a9eff';
-
-  // ── Hintergrund ──────────────────────────────────────────
-  const grad = ctx.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, '#0a0a2e');
-  grad.addColorStop(1, '#001a3a');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, W, H);
-
-  // ── Hintergrundbild (falls vorhanden) ────────────────────
-  if (hauptbild?.signedUrl) {
-    try {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-        img.src = hauptbild.signedUrl;
-      });
-      ctx.save();
-      ctx.globalAlpha = 0.18;
-      // Cover-Fit
-      const scale = Math.max(W/img.width, H/img.height);
-      const sw = img.width * scale, sh = img.height * scale;
-      ctx.drawImage(img, (W-sw)/2, (H-sh)/2, sw, sh);
-      ctx.restore();
-    } catch(err) { console.warn('Hintergrundbild:', err.message); }
-  }
-
-  // ── Akzentlinie oben ─────────────────────────────────────
-  ctx.fillStyle = '#E8001D';
-  ctx.fillRect(0, 0, W, 8);
-
-  // ── SLZB-Logo-Box ─────────────────────────────────────────
-  ctx.fillStyle = '#003366';
-  roundRect(ctx, 60, 40, 100, 60, 10);
-  ctx.fill();
-  ctx.fillStyle = '#fff';
-  ctx.font = 'bold 28px "Segoe UI", Arial, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('SLZB', 110, 80);
-
-  // ── Sportart ──────────────────────────────────────────────
-  ctx.fillStyle = '#4a9eff';
-  ctx.font = 'bold 52px "Segoe UI", Arial, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(sportart.toUpperCase(), W/2, 200);
-
-  // ── Platzierungszahl ──────────────────────────────────────
-  if (platz) {
-    ctx.fillStyle = medailleColor;
-    ctx.font = `bold 320px "Segoe UI", Arial, sans-serif`;
-    ctx.textAlign = 'center';
-    // Schatten
-    ctx.shadowColor = medailleColor;
-    ctx.shadowBlur = 60;
-    ctx.fillText(String(platz), W/2, 560);
-    ctx.shadowBlur = 0;
-
-    // Platz-Text
-    ctx.fillStyle = medailleColor;
-    ctx.font = 'bold 56px "Segoe UI", Arial, sans-serif';
-    ctx.fillText(`${platz}. PLATZ`, W/2, 640);
-  }
-
-  // ── Titel ─────────────────────────────────────────────────
-  ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 44px "Segoe UI", Arial, sans-serif';
-  ctx.textAlign = 'center';
-  const titelZeilen = wrapText(ctx, titelSauber, W - 120);
-  titelZeilen.slice(0,2).forEach((zeile, i) => {
-    ctx.fillText(zeile, W/2, 720 + i * 54);
+async function wechsleSocialFormat(format, erfolgId) {
+  // Tab-Buttons aktualisieren
+  document.querySelectorAll('.tabs .tab-btn').forEach(b=>{
+    b.classList.toggle('active', b.textContent.toLowerCase().includes(format==='beitrag'?'beitrag':'story'));
   });
-
-  // ── Kurzinfo ──────────────────────────────────────────────
-  if (kurzinfo) {
-    ctx.fillStyle = 'rgba(255,255,255,0.75)';
-    ctx.font = '32px "Segoe UI", Arial, sans-serif';
-    const kurzZeilen = wrapText(ctx, kurzinfo, W - 160);
-    kurzZeilen.slice(0,2).forEach((zeile, i) => {
-      ctx.fillText(zeile, W/2, 840 + i * 42);
-    });
-  }
-
-  // ── Hauptbild (klein, unten rechts) ──────────────────────
-  if (hauptbild?.signedUrl) {
-    try {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      await new Promise((resolve, reject) => {
-        img.onload = resolve; img.onerror = reject;
-        img.src = hauptbild.signedUrl;
-      });
-      const bW = 280, bH = 180;
-      const bX = W - bW - 60, bY = H - bH - 100;
-      ctx.save();
-      ctx.beginPath();
-      roundRect(ctx, bX, bY, bW, bH, 12);
-      ctx.clip();
-      const scale = Math.max(bW/img.width, bH/img.height);
-      const sw = img.width*scale, sh = img.height*scale;
-      ctx.drawImage(img, bX+(bW-sw)/2, bY+(bH-sh)/2, sw, sh);
-      ctx.restore();
-      // Rahmen
-      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      roundRect(ctx, bX, bY, bW, bH, 12);
-      ctx.stroke();
-    } catch(err) {}
-  }
-
-  // ── Footer ────────────────────────────────────────────────
-  ctx.fillStyle = 'rgba(0,0,0,0.5)';
-  ctx.fillRect(0, H-80, W, 80);
-  ctx.fillStyle = 'rgba(255,255,255,0.6)';
-  ctx.font = '28px "Segoe UI", Arial, sans-serif';
-  ctx.textAlign = 'left';
-  ctx.fillText('Schul- und Leistungssportzentrum Berlin', 60, H-28);
-  ctx.textAlign = 'right';
-  ctx.fillStyle = '#4a9eff';
-  ctx.font = 'bold 28px "Segoe UI", Arial, sans-serif';
-  ctx.fillText('#SLZBerlin', W-60, H-28);
-}
-
-// Hilfsfunktion: Text umbrechen
-function wrapText(ctx, text, maxWidth) {
-  const words = text.split(' ');
-  const lines = [];
-  let current = '';
-  for (const word of words) {
-    const test = current ? current + ' ' + word : word;
-    if (ctx.measureText(test).width > maxWidth && current) {
-      lines.push(current);
-      current = word;
-    } else {
-      current = test;
-    }
-  }
-  if (current) lines.push(current);
-  return lines;
-}
-
-// Hilfsfunktion: Abgerundetes Rechteck
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x+r, y);
-  ctx.lineTo(x+w-r, y);
-  ctx.quadraticCurveTo(x+w, y, x+w, y+r);
-  ctx.lineTo(x+w, y+h-r);
-  ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
-  ctx.lineTo(x+r, y+h);
-  ctx.quadraticCurveTo(x, y+h, x, y+h-r);
-  ctx.lineTo(x, y+r);
-  ctx.quadraticCurveTo(x, y, x+r, y);
-  ctx.closePath();
-}
-
-// PNG-Export
-function exportSocialPNG(e) {
+  // Canvas-Größe anpassen
   const canvas = document.getElementById('social-canvas');
-  if (!canvas) { toast('Canvas nicht gefunden','danger'); return; }
-  const dateiname = `SLZB_Social_${e.erfolgNr||'ERF'}_${new Date().toISOString().slice(0,10)}.png`;
-  canvas.toBlob(blob => {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = dateiname; a.click();
-    URL.revokeObjectURL(url);
-    toast(`PNG heruntergeladen: ${dateiname}`,'success');
-  }, 'image/png');
+  const info = document.getElementById('social-format-info');
+  if (format==='story') {
+    canvas.style.maxHeight='70vh';
+    if(info) info.textContent='1080×1920 px · Story/Reel';
+  } else {
+    canvas.style.maxHeight='60vh';
+    if(info) info.textContent='1080×1080 px · Beitrag';
+  }
+  window._socialFormat = format;
+  const e = window._socialErfolg;
+  if (e) await zeichneSocialFormat('social-canvas', e, format);
 }
+
 
 async function downloadJTFO(erfolgId, typ) {
   const e = await DB.getErfolgById(erfolgId); if(!e) return;
