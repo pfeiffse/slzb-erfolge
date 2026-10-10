@@ -156,10 +156,17 @@ async function zeichneSLZBPoster(canvasId, e) {
   const ctx = canvas.getContext('2d');
   await ladeMontserrat(); await ladeLogo();
   const hauptbild = (e.bilder||[]).find(b=>b.signedUrl) || null;
-  const bild = hauptbild ? await ladeBild(hauptbild.signedUrl) : null;
+  // Bild laden - mehrere Versuche
+  let bild = null;
+  if (hauptbild?.signedUrl) {
+    bild = await ladeBild(hauptbild.signedUrl);
+    console.log('[Poster] Bild geladen:', bild ? `${bild.width}x${bild.height}` : 'FEHLER');
+  }
   const fmt = bildFormat(bild);
-  if (fmt === 'landscape') await zeichnePosterLandscape(ctx, e, bild, hauptbild);
-  else if (fmt === 'portrait') await zeichnePosterPortrait(ctx, e, bild, hauptbild);
+  console.log('[Poster] Format:', fmt);
+  if (bild && fmt === 'landscape') await zeichnePosterLandscape(ctx, e, bild, hauptbild);
+  else if (bild && fmt === 'portrait') await zeichnePosterPortrait(ctx, e, bild, hauptbild);
+  else if (bild) await zeichnePosterPortrait(ctx, e, bild, hauptbild); // square → portrait-layout
   else await zeichnePosterKeinBild(ctx, e);
 }
 
@@ -384,11 +391,15 @@ async function zeichneA3Druckfreundlich(canvasId, e) {
   if (!canvas) return;
   await ladeMontserrat(); await ladeLogo();
   const hauptbild = (e.bilder||[]).find(b=>b.signedUrl) || null;
-  const bild = hauptbild ? await ladeBild(hauptbild.signedUrl) : null;
+  let bild = null;
+  if (hauptbild?.signedUrl) {
+    bild = await ladeBild(hauptbild.signedUrl);
+    console.log('[A3] Bild geladen:', bild ? `${bild.width}x${bild.height}` : 'FEHLER');
+  }
   const fmt = bildFormat(bild);
-
-  if (fmt==='landscape') await zeichneA3Landscape(canvas, e, bild, hauptbild);
-  else if (fmt==='portrait') await zeichneA3Portrait(canvas, e, bild, hauptbild);
+  console.log('[A3] Format:', fmt);
+  if (bild && fmt==='landscape') await zeichneA3Landscape(canvas, e, bild, hauptbild);
+  else if (bild) await zeichneA3Portrait(canvas, e, bild, hauptbild);
   else await zeichneA3KeinBild(canvas, e);
 }
 
