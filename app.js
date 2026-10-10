@@ -804,6 +804,19 @@ function renderSammelmeldungForm() {
           <button class="btn btn-primary" onclick="sammelRasterEinreichen()">📤 Alle einreichen</button>
         </div>
       </div>
+
+      <!-- Bilder für Sammelmeldung -->
+      <div class="card mb-3">
+        <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+          <h2>📷 Bilder <span class="text-muted text-sm">(optional – werden allen eingereichten Meldungen zugeordnet)</span></h2>
+          <button class="btn btn-ghost btn-sm" onclick="addBildRow()">+ Bild hinzufügen</button>
+        </div>
+        <div class="card-body">
+          <div class="alert alert-info"><span class="alert-icon">ℹ️</span>
+            <span>Bilder werden nach dem Einreichen automatisch allen Meldungen dieser Sammlung zugeordnet. Urheber und Quelle sind Pflichtfelder.</span></div>
+          <div id="bilder-liste"></div>
+        </div>
+      </div>
       <div id="sammel-vorschau"></div>
     </div>
 
@@ -989,7 +1002,7 @@ async function sammelRasterEinreichen() {
   const btn = document.querySelector('#sammel-raster-panel .btn-primary');
   if (btn) { btn.disabled=true; btn.textContent='Wird gespeichert...'; }
 
-  let ok=0, fehlgeschlagen=[];
+  let ok=0, fehlgeschlagen=[], _sammelEingereichtIds=[];
   for (const z of gueltig) {
     try {
       const sp = SLZB_DB.sportarten.find(s=>s.name.toLowerCase()===z.sportart.toLowerCase());
@@ -1011,7 +1024,7 @@ async function sammelRasterEinreichen() {
         rolle:'Athlet', einwilligungsstatus:'Nicht geprüft'
       }] : [];
       const result = await DB.erstelleErfolg(daten, beteiligte);
-      if (result.ok) ok++;
+      if (result.ok) { ok++; _sammelEingereichtIds.push(result.id); }
       else fehlgeschlagen.push(`${z.titel}: ${result.fehler}`);
     } catch(e) {
       fehlgeschlagen.push(`${z.titel}: ${e.message}`);
@@ -1027,6 +1040,14 @@ async function sammelRasterEinreichen() {
     eingereichtIds.forEach(id=>{ _sammelZeilen=_sammelZeilen.filter(z=>z.id!==id); document.getElementById(`sammel-zeile-${id}`)?.remove(); });
     sammelZaehlerAktualisieren();
     APP._erfolgeCache=null;
+    // Bilder aus bilderBlock hochladen – für alle eingereichten Meldungen
+    const bilderRows = document.querySelectorAll('[id^="bild-row-"]');
+    if (bilderRows.length > 0 && _sammelEingereichtIds.length > 0) {
+      toast('Bilder werden hochgeladen...','info');
+      for (const erfolgId of _sammelEingereichtIds) {
+        await uploadBilderAusFormular(erfolgId);
+      }
+    }
   }
   if (fehlgeschlagen.length) {
     const fehlerEl2 = document.getElementById('sammel-fehler');
