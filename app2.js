@@ -371,10 +371,17 @@ async function zeigeA3Vorschau(erfolgId) {
         <h3>📄 A3-Aushang – SLZB Poster-Stil</h3>
         <button class="btn btn-ghost btn-sm close-x">✕</button>
       </div>
-      <div class="modal-body text-center" style="background:#111;padding:20px">
-        <canvas id="a3-canvas" width="1080" height="1350"
-          style="max-width:100%;max-height:70vh;display:block;margin:0 auto;border-radius:8px"></canvas>
-        <p class="text-xs text-muted mt-2" style="color:#888">Vorschau · PNG-Export oder Drucken</p>
+      <div class="modal-body" style="background:#111;padding:16px">
+        <div class="tabs mb-3" style="background:rgba(255,255,255,.08);border-radius:8px;padding:4px;display:flex;gap:4px">
+          <button class="tab-btn active" style="color:#fff;flex:1" onclick="wechsleA3Variante(1)">1: Bild oben</button>
+          <button class="tab-btn" style="color:#aaa;flex:1" onclick="wechsleA3Variante(2)">2: Split</button>
+          <button class="tab-btn" style="color:#aaa;flex:1" onclick="wechsleA3Variante(3)">3: Vollbild</button>
+        </div>
+        <div style="text-align:center">
+          <canvas id="a3-canvas" width="1587" height="1123"
+            style="max-width:100%;max-height:55vh;display:block;margin:0 auto;border-radius:8px"></canvas>
+          <p class="text-xs mt-2" style="color:#888" id="a3-variante-info">Variante 1: Bild oben · A3 Querformat</p>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost close-btn">Schließen</button>
@@ -391,10 +398,9 @@ async function zeigeA3Vorschau(erfolgId) {
       const win = window.open('','_blank');
       if (win) {
         win.document.write(`<!DOCTYPE html><html><head><style>
-          body{margin:0;background:#000}
+          body{margin:0;background:#fff}
           img{width:100%;height:auto;display:block}
           @page{size:A3 landscape;margin:0}
-          @media print{body{background:#fff}}
         </style></head><body><img src="${url}"></body></html>`);
         win.document.close();
         setTimeout(()=>win.print(), 800);
@@ -404,7 +410,10 @@ async function zeigeA3Vorschau(erfolgId) {
     overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
     document.body.appendChild(overlay);
 
-    setTimeout(()=>zeichneA3Druckfreundlich('a3-canvas', e), 100);
+    // Variante 1 als Standard
+    window._a3Erfolg = e;
+    window._a3Variante = 1;
+    setTimeout(()=>zeichneA3Variante('a3-canvas', e, 1), 100);
     toast('A3-Aushang wird gezeichnet...','success');
   } catch(err) {
     toast('Fehler: '+err.message,'danger');
@@ -519,6 +528,30 @@ async function wechsleSocialFormat(format, erfolgId) {
   window._socialFormat = format;
   const e = window._socialErfolg;
   if (e) await zeichneSocialFormat('social-canvas', e, format);
+}
+
+
+async function wechsleA3Variante(nr) {
+  document.querySelectorAll('.tabs .tab-btn').forEach((b,i)=>{
+    b.classList.toggle('active', i===nr-1);
+    b.style.color = i===nr-1 ? '#fff' : '#aaa';
+  });
+  const labels = {
+    1: 'Variante 1: Bild oben · A3 Querformat',
+    2: 'Variante 2: Split (Bild links) · A3 Querformat',
+    3: 'Variante 3: Vollbild · A3 Querformat',
+  };
+  const info = document.getElementById('a3-variante-info');
+  if (info) info.textContent = labels[nr] || '';
+  window._a3Variante = nr;
+  const e = window._a3Erfolg;
+  if (e) await zeichneA3Variante('a3-canvas', e, nr);
+}
+
+async function zeichneA3Variante(canvasId, e, nr) {
+  if (nr===1) await zeichneA3Druckfreundlich(canvasId, e);
+  else if (nr===2) await zeichneA3Split(canvasId, e);
+  else await zeichneA3Vollbild(canvasId, e);
 }
 
 

@@ -93,20 +93,34 @@ function drawLogo(ctx, x, y, maxH) {
 
 async function ladeBild(url) {
   if (!url) return null;
-  // Erst mit CORS versuchen, dann ohne
-  return new Promise(resolve => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
-    img.onerror = () => {
-      // Fallback: ohne crossOrigin (kein PNG-Export möglich, aber Vorschau)
-      const img2 = new Image();
-      img2.onload = () => resolve(img2);
-      img2.onerror = () => resolve(null);
-      img2.src = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
-    };
-    img.src = url;
-  });
+  try {
+    // Bild über fetch laden (nutzt Supabase Auth-Session, umgeht CORS)
+    const response = await fetch(url, {
+      headers: Backend.client ? {
+        'Authorization': `Bearer ${(await Backend.session())?.access_token || ''}`,
+        'apikey': window.SLZB_CONFIG?.supabaseAnonKey || '',
+      } : {}
+    });
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => { resolve(img); }
+      img.onerror = () => resolve(null);
+      img.src = objectUrl;
+    });
+  } catch(e) {
+    console.warn('Bild laden fehlgeschlagen:', e.message);
+    // Fallback: direkt ohne Auth
+    return new Promise(resolve => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = url;
+    });
+  }
 }
 
 async function ladeMontserrat() {
@@ -701,4 +715,95 @@ async function zeichneSocialStory(ctx, e, bild, meta, W, H) {
 
   zeichneKopfzeile(ctx, e.wettbewerbText, e.disziplin);
   zeichneFusszeile(ctx, W, H);
+}
+
+// ── A3 VARIANTE 2: Split (Bild links, Text rechts) ───────────
+async function zeichneA3Split(canvasId, e) {
+  // Alias für Portrait-Layout
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  await ladeMontserrat(); await ladeLogo();
+  const hauptbild = (e.bilder||[]).find(b=>b.signedUrl) || null;
+  const bild = hauptbild ? await ladeBild(hauptbild.signedUrl) : null;
+  await zeichneA3Portrait(canvas, e, bild, hauptbild);
+}
+
+// ── A3 VARIANTE 3: Vollbild mit Overlay ──────────────────────
+async function zeichneA3Vollbild(canvasId, e) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const W=1587, H=1123;
+  canvas.width=W; canvas.height=H;
+  const ctx = canvas.getContext('2d');
+  await ladeMontserrat(); await ladeLogo();
+
+  const hauptbild = (e.bilder||[]).find(b=>b.signedUrl) || null;
+  const bild = hauptbild ? await ladeBild(hauptbild.signedUrl) : null;
+  const sportart = e.sportartText || SLZB_DB.getSportart(e.sportartId)?.name || '';
+  const platz = e.platzierung || '';
+  const medaille = e.medaille && e.medaille!=='keine' ? e.medaille : '';
+  const mColor = medailleColorDruck(medaille);
+  const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
+
+  // Hintergrund
+  ctx.fillStyle='#1B1C1F'; ctx.fillRect(0,0,W,H);
+
+  // Vollbild-Foto
+  if (bild) {
+    ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H); ctx.clip();
+    drawCover(ctx, bild, 0, 0, W, H); ctx.restore();
+    // Dunkles Overlay unten 40%
+    const fadeGrad = ctx.createLinearGradient(0, H*0.55, 0, H);
+    fadeGrad.addColorStop(0,'rgba(0,0,0,0)');
+    fadeGrad.addColorStop(0.4,'rgba(0,0,30,0.7)');
+    fadeGrad.addColorStop(1,'rgba(0,0,30,0.95)');
+    ctx.fillStyle=fadeGrad; ctx.fillRect(0, H*0.55, W, H*0.45);
+  }
+
+  // Blauer Header (halbtransparent)
+  ctx.fillStyle='rgba(0,51,102,0.88)'; ctx.fillRect(0,0,W,80);
+  const lw = drawLogo(ctx, 16, 6, 68);
+  ctx.fillStyle='rgba(226,0,26,1)'; ctx.fillRect(lw+26, 20, 3, 42);
+  ctx.font='bold 18px Montserrat, Arial, sans-serif';
+  ctx.fillStyle='#fff'; ctx.textAlign='left'; ctx.textBaseline='top';
+  ctx.fillText((e.wettbewerbText||'SLZB BERLIN').toUpperCase(), lw+38, 22);
+  ctx.font='bold 11px Montserrat, Arial, sans-serif';
+  ctx.fillStyle='#E2001A';
+  ctx.fillText((e.disziplin||'SCHUL- UND LEISTUNGSSPORTZENTRUM BERLIN').toUpperCase(), lw+40, 50);
+  ctx.font='bold italic 18px Montserrat, Arial, sans-serif';
+  ctx.fillStyle='#fff'; ctx.textAlign='right';
+  ctx.fillText('#SLZBerlin', W-20, 30);
+
+  // Text unten links
+  let y = H*0.60;
+  ctx.fillStyle='#E2001A'; ctx.font='bold 16px Montserrat, Arial, sans-serif';
+  ctx.textAlign='left'; ctx.textBaseline='top';
+  ctx.fillText(sportart.toUpperCase(), 60, y); y+=24;
+  ctx.fillStyle='rgba(226,0,26,0.8)'; ctx.fillRect(60, y, 60, 3); y+=14;
+
+  const woerter = titel.toUpperCase().split(' ');
+  const mid = Math.ceil(woerter.length/2);
+  ctx.font='bold italic 80px Montserrat, Arial, sans-serif';
+  ctx.fillStyle='#fff';
+  ctx.fillText(woerter.slice(0,mid).join(' '), 60, y, W-120); y+=90;
+  ctx.fillStyle='#E2001A';
+  if (woerter.slice(mid).length) { ctx.fillText(woerter.slice(mid).join(' '), 60, y, W-120); y+=90; }
+
+  if (platz) {
+    const ovalW=110, ovalH=56, ovalX=60, ovalY=y;
+    ctx.fillStyle=mColor; slzbRoundRect(ctx,ovalX,ovalY,ovalW,ovalH,28); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.font='bold italic 36px Montserrat, Arial, sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(String(platz), ovalX+ovalW/2, ovalY+ovalH/2);
+    const pt = platz===1?'1. PLATZ':platz===2?'2. PLATZ':platz===3?'3. PLATZ':`${platz}. PLATZ`;
+    ctx.fillStyle='#fff'; ctx.font='bold italic 28px Montserrat, Arial, sans-serif';
+    ctx.textAlign='left'; ctx.textBaseline='top';
+    ctx.fillText(pt, ovalX+ovalW+16, ovalY+10);
+  }
+
+  // Footer
+  ctx.fillStyle='rgba(0,51,102,0.85)'; ctx.fillRect(0, H-50, W, 50);
+  ctx.fillStyle='#fff'; ctx.font='13px Montserrat, Arial, sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('Schul- und Leistungssportzentrum Berlin · #SLZBerlin', W/2, H-25);
 }
