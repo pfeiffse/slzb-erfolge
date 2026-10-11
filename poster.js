@@ -364,7 +364,7 @@ async function zeichnePosterLandscape(ctx, e, bild, meta) {
   const medaille = e.medaille && e.medaille!=='keine' ? e.medaille : '';
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
   const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
-  zeichneSlzbHintergrund(ctx, W, H, bild);
+  zeichneSlzbHintergrundMitFallback(ctx, W, H, bild, 'rot', sportart);
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
   const teile = titel.trim().split(' ');
@@ -388,7 +388,7 @@ async function zeichnePosterPortrait(ctx, e, bild, meta) {
   const medaille = e.medaille && e.medaille!=='keine' ? e.medaille : '';
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
   const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
-  zeichneSlzbHintergrund(ctx, W, H, bild);
+  zeichneSlzbHintergrundMitFallback(ctx, W, H, bild, 'rot', sportart);
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
   const teile = titel.trim().split(' ');
@@ -413,7 +413,7 @@ async function zeichnePosterKeinBild(ctx, e) {
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
   const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
 
-  zeichneSlzbHintergrund(ctx, W, H, null); // kein Bild → nur Gradient
+  zeichneSlzbHintergrundMitFallback(ctx, W, H, null, 'rot', sportart); // kein Bild → Ersatzbild
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
 
@@ -819,7 +819,7 @@ async function zeichneSocialBeitragLandscape(ctx, e, bild, meta, W, H) {
   const teile = titel.trim().split(' ');
   const vorname = teile.length>1 ? teile.slice(0,-1).join(' ') : '';
   const nachname = teile.length>1 ? teile[teile.length-1] : titel;
-  zeichneSlzbHintergrund(ctx, W, H, bild);
+  zeichneSlzbHintergrundMitFallback(ctx, W, H, bild, 'rot', sportart);
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
   zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname, titel: teile.length===1?titel:null, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
@@ -836,7 +836,7 @@ async function zeichneSocialBeitragPortrait(ctx, e, bild, meta, W, H) {
   const teile = titel.trim().split(' ');
   const vorname = teile.length>1 ? teile.slice(0,-1).join(' ') : '';
   const nachname = teile.length>1 ? teile[teile.length-1] : titel;
-  zeichneSlzbHintergrund(ctx, W, H, bild);
+  zeichneSlzbHintergrundMitFallback(ctx, W, H, bild, 'rot', sportart);
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
   zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname, titel: teile.length===1?titel:null, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
@@ -870,7 +870,7 @@ async function zeichneSocialStory(ctx, e, bild, meta, W, H) {
   const teile = titel.trim().split(' ');
   const vorname = teile.length>1 ? teile.slice(0,-1).join(' ') : '';
   const nachname = teile.length>1 ? teile[teile.length-1] : titel;
-  zeichneSlzbHintergrund(ctx, W, H, bild);
+  zeichneSlzbHintergrundMitFallback(ctx, W, H, bild, 'rot', sportart);
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
   zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname, titel: teile.length===1?titel:null, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
@@ -895,8 +895,8 @@ async function zeichneA3Split(canvasId, e) {
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
   const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
 
-  // Hintergrund (Basis-Funktion)
-  zeichneSlzbHintergrund(ctx, W, H, bild);
+  // Hintergrund (Basis-Funktion mit Fallback)
+  zeichneSlzbHintergrundMitFallback(ctx, W, H, bild, 'rot', sportart);
 
   // Bild links 55%
   const FOTO_W = Math.round(W*0.55);
@@ -2425,3 +2425,179 @@ const SLZB_QR_URLS = {
   website:   'https://tinyurl.com/slzb-erfolge',
   instagram: 'https://www.instagram.com/slzb_berlin/',
 };
+
+// ══════════════════════════════════════════════════════════════
+// ERSATZBILD-SYSTEM: Sportart-Gradient + SVG-Silhouette
+// Wird verwendet wenn kein Foto hochgeladen wurde
+// ══════════════════════════════════════════════════════════════
+
+// Sportart-Farbkonfiguration
+const SLZB_SPORT_FARBEN = {
+  'Schwimmen':        { grad: ['#0a1a3a','#003366','#0066aa'], akzent: '#00aaff' },
+  'Para-Schwimmen':   { grad: ['#0a1a3a','#003366','#0066aa'], akzent: '#00aaff' },
+  'Wasserspringen':   { grad: ['#0a2a3a','#004466','#0088aa'], akzent: '#00ccff' },
+  'Eishockey':        { grad: ['#0a1a2a','#1a3a5a','#2a5a8a'], akzent: '#88ccff' },
+  'Eiskunstlaufen':   { grad: ['#1a0a3a','#3a1a6a','#6a3aaa'], akzent: '#cc88ff' },
+  'Eisschnelllauf':   { grad: ['#0a1a3a','#1a3a6a','#3a6aaa'], akzent: '#88aaff' },
+  'Leichtathletik':   { grad: ['#3a0a0a','#6a1a0a','#aa3a0a'], akzent: '#ff6600' },
+  'Judo':             { grad: ['#1a0a0a','#3a1a0a','#6a2a0a'], akzent: '#cc4400' },
+  'Boxen':            { grad: ['#2a0a0a','#5a0a0a','#8a1a0a'], akzent: '#ff2200' },
+  'Gewichtheben':     { grad: ['#1a1a0a','#3a3a0a','#6a5a0a'], akzent: '#ccaa00' },
+  'Basketball':       { grad: ['#2a1a0a','#5a2a0a','#aa5a0a'], akzent: '#ff8800' },
+  'Handball':         { grad: ['#0a2a0a','#1a5a1a','#2a8a2a'], akzent: '#44cc44' },
+  'Volleyball':       { grad: ['#0a1a3a','#1a3a6a','#2a5aaa'], akzent: '#4488ff' },
+  'Volleyball / Beachvolleyball': { grad: ['#2a1a0a','#5a3a0a','#aa7a0a'], akzent: '#ffaa00' },
+  'Bogenschießen':    { grad: ['#0a2a0a','#1a4a1a','#2a6a2a'], akzent: '#44aa44' },
+  'Radsport':         { grad: ['#1a2a0a','#3a5a0a','#6a8a0a'], akzent: '#aacc00' },
+  'Turnen':           { grad: ['#2a0a2a','#5a0a5a','#8a1a8a'], akzent: '#cc44cc' },
+  'Gerätturnen männlich': { grad: ['#2a0a2a','#5a0a5a','#8a1a8a'], akzent: '#cc44cc' },
+  'Gerätturnen weiblich': { grad: ['#3a0a2a','#6a0a4a','#aa1a7a'], akzent: '#ff44aa' },
+  'Fechten':          { grad: ['#1a1a2a','#2a2a5a','#3a3a8a'], akzent: '#8888ff' },
+  'default':          { grad: ['#1B1C1F','#2a2c31','#003366'], akzent: '#E2001A' },
+};
+
+// SVG-Silhouetten als Path-Daten (vereinfacht, skalierbar)
+const SLZB_SPORT_SILHOUETTEN = {
+  'schwimmen': `M 0.5 0.25 C 0.5 0.15 0.6 0.1 0.7 0.15 C 0.8 0.2 0.85 0.3 0.8 0.4
+    L 0.6 0.55 L 0.3 0.5 L 0.1 0.6 L 0.05 0.5 L 0.25 0.4 L 0.4 0.35 Z`,
+  'lauf': `M 0.55 0.1 C 0.55 0.05 0.6 0.02 0.65 0.05 C 0.7 0.08 0.7 0.15 0.65 0.18
+    L 0.6 0.3 L 0.7 0.5 L 0.8 0.7 L 0.7 0.72 L 0.6 0.55 L 0.5 0.7 L 0.35 0.95
+    L 0.25 0.92 L 0.4 0.65 L 0.3 0.45 L 0.2 0.6 L 0.1 0.55 L 0.15 0.45 L 0.3 0.35
+    L 0.45 0.25 Z`,
+  'kampf': `M 0.4 0.08 C 0.4 0.03 0.45 0 0.5 0.03 C 0.55 0.06 0.55 0.13 0.5 0.16
+    L 0.45 0.3 L 0.6 0.25 L 0.75 0.35 L 0.65 0.45 L 0.5 0.4 L 0.55 0.6 L 0.6 0.8
+    L 0.5 0.82 L 0.45 0.62 L 0.35 0.8 L 0.25 0.78 L 0.35 0.55 L 0.3 0.4 L 0.2 0.45
+    L 0.15 0.35 L 0.3 0.25 L 0.42 0.28 Z`,
+  'ball': `M 0.5 0.08 C 0.5 0.03 0.55 0 0.6 0.03 C 0.65 0.06 0.65 0.13 0.6 0.16
+    L 0.55 0.28 L 0.7 0.22 L 0.8 0.35 L 0.65 0.42 L 0.55 0.45 L 0.6 0.65 L 0.55 0.9
+    L 0.45 0.9 L 0.4 0.65 L 0.35 0.45 L 0.2 0.42 L 0.15 0.28 L 0.3 0.22 L 0.42 0.28 Z
+    M 0.72 0.55 C 0.78 0.5 0.85 0.52 0.85 0.58 C 0.85 0.64 0.78 0.66 0.72 0.62 Z`,
+  'eis': `M 0.5 0.06 C 0.5 0.01 0.56 -0.02 0.61 0.01 C 0.66 0.04 0.66 0.11 0.61 0.14
+    L 0.55 0.28 L 0.7 0.2 L 0.78 0.32 L 0.62 0.42 L 0.58 0.58 L 0.7 0.72 L 0.78 0.88
+    L 0.68 0.92 L 0.55 0.75 L 0.42 0.88 L 0.32 0.84 L 0.45 0.7 L 0.38 0.55 L 0.22 0.42
+    L 0.18 0.3 L 0.3 0.22 L 0.44 0.28 Z`,
+  'turnen': `M 0.5 0.06 C 0.5 0.01 0.56 -0.02 0.61 0.01 C 0.66 0.04 0.66 0.11 0.61 0.14
+    L 0.55 0.25 L 0.75 0.15 L 0.8 0.25 L 0.6 0.38 L 0.65 0.55 L 0.8 0.65 L 0.75 0.75
+    L 0.58 0.65 L 0.5 0.8 L 0.42 0.65 L 0.25 0.75 L 0.2 0.65 L 0.35 0.55 L 0.4 0.38
+    L 0.2 0.25 L 0.25 0.15 L 0.45 0.25 Z`,
+  'ziel': `M 0.3 0.45 L 0.1 0.42 L 0.1 0.38 L 0.3 0.35 L 0.55 0.25 L 0.6 0.1
+    C 0.62 0.05 0.68 0.03 0.72 0.06 C 0.76 0.09 0.76 0.15 0.72 0.18
+    L 0.65 0.3 L 0.55 0.4 L 0.55 0.6 L 0.65 0.8 L 0.55 0.85 L 0.45 0.65
+    L 0.35 0.85 L 0.25 0.8 L 0.35 0.6 Z`,
+  'wasser': `M 0.15 0.4 C 0.2 0.3 0.3 0.28 0.4 0.32 L 0.55 0.38 L 0.65 0.25
+    C 0.68 0.2 0.75 0.18 0.8 0.22 C 0.85 0.26 0.85 0.33 0.8 0.37
+    L 0.7 0.48 L 0.8 0.6 L 0.75 0.65 L 0.62 0.55 L 0.45 0.62 L 0.25 0.68
+    L 0.1 0.62 L 0.08 0.52 Z`,
+  'kraft': `M 0.5 0.08 C 0.5 0.03 0.56 0 0.61 0.03 C 0.66 0.06 0.66 0.13 0.61 0.16
+    L 0.55 0.28 L 0.75 0.22 L 0.85 0.3 L 0.85 0.38 L 0.75 0.38 L 0.6 0.42
+    L 0.6 0.62 L 0.65 0.85 L 0.55 0.88 L 0.5 0.65 L 0.45 0.88 L 0.35 0.85
+    L 0.4 0.62 L 0.4 0.42 L 0.25 0.38 L 0.15 0.38 L 0.15 0.3 L 0.25 0.22 L 0.45 0.28 Z
+    M 0.05 0.28 L 0.15 0.28 L 0.15 0.42 L 0.05 0.42 Z
+    M 0.85 0.28 L 0.95 0.28 L 0.95 0.42 L 0.85 0.42 Z`,
+  'ausdauer': `M 0.55 0.08 C 0.55 0.03 0.61 0 0.66 0.03 C 0.71 0.06 0.71 0.13 0.66 0.16
+    L 0.6 0.25 L 0.7 0.2 L 0.75 0.28 L 0.62 0.38 L 0.58 0.5 L 0.65 0.65
+    L 0.55 0.68 L 0.48 0.55 L 0.38 0.68 L 0.28 0.65 L 0.38 0.5 L 0.3 0.35
+    L 0.15 0.42 L 0.1 0.32 L 0.28 0.25 L 0.45 0.28
+    M 0.3 0.55 C 0.2 0.6 0.1 0.65 0.05 0.72 L 0.12 0.78 C 0.2 0.72 0.32 0.68 0.42 0.65 Z`,
+};
+
+// Kategorie-Zuordnung
+const SLZB_SPORT_KATEGORIE = {
+  'Schwimmen': 'wasser', 'Para-Schwimmen': 'wasser', 'Wasserspringen': 'wasser',
+  'Eishockey': 'eis', 'Eiskunstlaufen': 'eis', 'Eisschnelllauf': 'eis',
+  'Leichtathletik': 'lauf',
+  'Judo': 'kampf', 'Boxen': 'kampf', 'Fechten': 'kampf',
+  'Gewichtheben': 'kraft',
+  'Basketball': 'ball', 'Handball': 'ball', 'Volleyball': 'ball',
+  'Volleyball / Beachvolleyball': 'ball',
+  'Bogenschießen': 'ziel',
+  'Radsport': 'ausdauer',
+  'Turnen': 'turnen', 'Gerätturnen männlich': 'turnen', 'Gerätturnen weiblich': 'turnen',
+};
+
+// Hauptfunktion: Ersatzbild zeichnen
+function zeichneErsatzbild(ctx, W, H, sportartName) {
+  const config = SLZB_SPORT_FARBEN[sportartName] || SLZB_SPORT_FARBEN['default'];
+  const kategorie = SLZB_SPORT_KATEGORIE[sportartName] || 'lauf';
+  const silhouette = SLZB_SPORT_SILHOUETTEN[kategorie] || SLZB_SPORT_SILHOUETTEN['lauf'];
+
+  // 1. Hintergrund-Gradient (3 Farben, diagonal)
+  const grad = ctx.createLinearGradient(0, 0, W*0.3, H);
+  grad.addColorStop(0, config.grad[0]);
+  grad.addColorStop(0.5, config.grad[1]);
+  grad.addColorStop(1, config.grad[2]);
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+
+  // 2. Dezente geometrische Muster (Kreise)
+  ctx.save(); ctx.globalAlpha = 0.06;
+  ctx.fillStyle = config.akzent;
+  ctx.beginPath(); ctx.arc(W*0.85, H*0.15, W*0.35, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(W*0.1, H*0.8, W*0.25, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // 3. Akzentlinie diagonal
+  ctx.save(); ctx.globalAlpha = 0.12;
+  ctx.strokeStyle = config.akzent; ctx.lineWidth = W*0.015;
+  ctx.beginPath(); ctx.moveTo(0, H*0.6); ctx.lineTo(W*0.7, 0); ctx.stroke();
+  ctx.restore();
+
+  // 4. Silhouette zeichnen (zentriert, groß)
+  const silH = H * 0.55;
+  const silW = silH * 0.8;
+  const silX = (W - silW) / 2;
+  const silY = H * 0.18;
+
+  ctx.save();
+  ctx.globalAlpha = 0.18;
+  ctx.fillStyle = config.akzent;
+
+  // SVG-Path skalieren und zeichnen
+  const path2D = new Path2D();
+  const pathStr = silhouette.replace(/(\d+\.?\d*)/g, (match, num) => {
+    // Koordinaten sind 0-1, skalieren auf Canvas
+    return num; // Wird unten per transform skaliert
+  });
+
+  ctx.save();
+  ctx.translate(silX, silY);
+  ctx.scale(silW, silH);
+
+  // Path manuell zeichnen (Path2D mit SVG-Syntax)
+  try {
+    const p = new Path2D(silhouette);
+    ctx.fill(p);
+  } catch(e) {
+    // Fallback: einfacher Kreis
+    ctx.beginPath(); ctx.arc(0.5, 0.4, 0.3, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+  ctx.restore();
+
+  // 5. Sportart-Text als großes Wasserzeichen
+  ctx.save();
+  ctx.globalAlpha = 0.07;
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `bold italic ${Math.round(W*0.12)}px Montserrat, Arial, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(sportartName.toUpperCase(), W/2, H*0.5);
+  ctx.restore();
+}
+
+// Integration in zeichneSlzbHintergrund: Ersatzbild wenn kein Foto
+const _origZeichneSlzbHintergrund = zeichneSlzbHintergrund;
+// Überschreibe nicht – stattdessen neue Funktion für Poster-Layouts
+function zeichneSlzbHintergrundMitFallback(ctx, W, H, bild, akzent, sportartName) {
+  if (bild) {
+    zeichneSlzbHintergrund(ctx, W, H, bild, akzent);
+  } else {
+    // Kein Bild: Sportart-Gradient + Silhouette
+    zeichneErsatzbild(ctx, W, H, sportartName || '');
+    // Dann den Akzent-Gradient darüber (halbtransparent)
+    const config = SLZB_SPORT_FARBEN[sportartName] || SLZB_SPORT_FARBEN['default'];
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, 'rgba(0,0,0,0.15)');
+    grad.addColorStop(0.65, 'rgba(0,0,0,0.10)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.60)');
+    ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+  }
+}
