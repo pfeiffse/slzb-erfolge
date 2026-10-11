@@ -781,27 +781,16 @@ async function zeichneSocialBeitragLandscape(ctx, e, bild, meta, W, H) {
   const sportart = e.sportartText || SLZB_DB.getSportart(e.sportartId)?.name || '';
   const platz = e.platzierung || '';
   const medaille = e.medaille && e.medaille!=='keine' ? e.medaille : '';
-  const mColor = medailleColor(medaille);
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
-
-  ctx.fillStyle=SLZB_COLORS.bg; ctx.fillRect(0,0,W,H);
-
-  // Bild volle Breite, obere 55%
-  const fotoH = Math.round(H*0.55);
-  ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,fotoH); ctx.clip();
-  drawCover(ctx, bild, 0, 0, W, fotoH); ctx.restore();
-
-  // Fade: startet bei 70% der Bildhöhe, läuft bis Canvas-Ende (deckt Text ab)
-  // Fade: beginnt bei 65% der Bildhöhe, läuft ins Bild aus, endet bei H
-  const fadeStart_sl = Math.round(fotoH * 0.65);
-  const fadeGrad = ctx.createLinearGradient(0, fadeStart_sl, 0, H);
-  fadeGrad.addColorStop(0,'rgba(27,28,31,0)');
-  fadeGrad.addColorStop(1,'rgba(27,28,31,1)');
-  ctx.fillStyle=fadeGrad; ctx.fillRect(0, fadeStart_sl, W, H - fadeStart_sl);
-
-  zeichneTextbereich(ctx, e, W, H, fotoH, mColor, sportart, platz, medaille, titel);
-  zeichneKopfzeile(ctx, e.wettbewerbText, e.disziplin);
-  zeichneFusszeile(ctx, W, H);
+  const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  const teile = titel.trim().split(' ');
+  const vorname = teile.length>1 ? teile.slice(0,-1).join(' ') : '';
+  const nachname = teile.length>1 ? teile[teile.length-1] : titel;
+  zeichneSlzbHintergrund(ctx, W, H, bild);
+  zeichneSlzbDeko(ctx, W, H);
+  zeichneSlzbHeader(ctx, W, H, sportart, datum);
+  zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname, titel: teile.length===1?titel:null, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
+  zeichneSlzbFooterNeu(ctx, W, H);
 }
 
 // Social Beitrag: Hochformat-Bild (Vollhintergrund)
@@ -809,77 +798,50 @@ async function zeichneSocialBeitragPortrait(ctx, e, bild, meta, W, H) {
   const sportart = e.sportartText || SLZB_DB.getSportart(e.sportartId)?.name || '';
   const platz = e.platzierung || '';
   const medaille = e.medaille && e.medaille!=='keine' ? e.medaille : '';
-  const mColor = medailleColor(medaille);
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
-
-  ctx.fillStyle=SLZB_COLORS.bg; ctx.fillRect(0,0,W,H);
-
-  // Bild als Vollhintergrund (volle Canvas-Höhe)
-  ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H); ctx.clip();
-  drawCover(ctx, bild, 0, 0, W, H); ctx.restore();
-
-  // Fade: startet bei 40% der Canvas-Höhe, läuft bis Canvas-Ende (deckt Text ab)
-  // Fade: beginnt bei 55% der Canvas-Höhe, läuft ins Bild aus, endet bei H
-  const fadeGrad = ctx.createLinearGradient(0, H*0.55, 0, H);
-  fadeGrad.addColorStop(0,'rgba(27,28,31,0)');
-  fadeGrad.addColorStop(1,'rgba(27,28,31,1)');
-  ctx.fillStyle=fadeGrad; ctx.fillRect(0, H*0.55, W, H*0.45);
-
-  zeichneTextbereich(ctx, e, W, H, H*0.65, mColor, sportart, platz, medaille, titel);
-  zeichneKopfzeile(ctx, e.wettbewerbText, e.disziplin);
-  zeichneFusszeile(ctx, W, H);
+  const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  const teile = titel.trim().split(' ');
+  const vorname = teile.length>1 ? teile.slice(0,-1).join(' ') : '';
+  const nachname = teile.length>1 ? teile[teile.length-1] : titel;
+  zeichneSlzbHintergrund(ctx, W, H, bild);
+  zeichneSlzbDeko(ctx, W, H);
+  zeichneSlzbHeader(ctx, W, H, sportart, datum);
+  zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname, titel: teile.length===1?titel:null, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
+  zeichneSlzbFooterNeu(ctx, W, H);
 }
 
 // Social Beitrag: Kein Bild
 async function zeichneSocialBeitragKeinBild(ctx, e, W, H) {
-  const grad = ctx.createLinearGradient(0,0,0,H);
-  grad.addColorStop(0,'#0a0a1e'); grad.addColorStop(1,'#1B1C1F');
-  ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
   const sportart = e.sportartText || SLZB_DB.getSportart(e.sportartId)?.name || '';
   const platz = e.platzierung || '';
   const medaille = e.medaille && e.medaille!=='keine' ? e.medaille : '';
-  const mColor = medailleColor(medaille);
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
-  if (platz) {
-    ctx.save(); ctx.globalAlpha=0.06; ctx.fillStyle=mColor;
-    ctx.font=`bold italic 600px Montserrat, Arial, sans-serif`;
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(String(platz), W/2, H/2); ctx.restore();
-  }
-  zeichneTextbereich(ctx, e, W, H, H*0.30, mColor, sportart, platz, medaille, titel);
-  zeichneKopfzeile(ctx, e.wettbewerbText, e.disziplin);
-  zeichneFusszeile(ctx, W, H);
+  const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  const teile = titel.trim().split(' ');
+  const vorname = teile.length>1 ? teile.slice(0,-1).join(' ') : '';
+  const nachname = teile.length>1 ? teile[teile.length-1] : titel;
+  zeichneSlzbHintergrund(ctx, W, H, null);
+  zeichneSlzbDeko(ctx, W, H);
+  zeichneSlzbHeader(ctx, W, H, sportart, datum);
+  zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname, titel: teile.length===1?titel:null, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
+  zeichneSlzbFooterNeu(ctx, W, H);
 }
 
-// Social Story/Reel (1080×1920)
+// Social Story/Reel (1080×1920) – gleiches Design, höheres Format
 async function zeichneSocialStory(ctx, e, bild, meta, W, H) {
   const sportart = e.sportartText || SLZB_DB.getSportart(e.sportartId)?.name || '';
   const platz = e.platzierung || '';
   const medaille = e.medaille && e.medaille!=='keine' ? e.medaille : '';
-  const mColor = medailleColor(medaille);
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
-
-  ctx.fillStyle=SLZB_COLORS.bg; ctx.fillRect(0,0,W,H);
-
-  if (bild) {
-    // Bild obere 65% der Canvas-Höhe
-    const fotoH = Math.round(H*0.65);
-    ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,fotoH); ctx.clip();
-    drawCover(ctx, bild, 0, 0, W, fotoH); ctx.restore();
-    // Fade: startet bei 70% der Bildhöhe, läuft bis Canvas-Ende (deckt Text ab)
-    // Fade: beginnt bei 65% der Bildhöhe, läuft ins Bild aus, endet bei H
-    const fadeStart_st = Math.round(fotoH * 0.65);
-    const fadeGrad = ctx.createLinearGradient(0, fadeStart_st, 0, H);
-    fadeGrad.addColorStop(0,'rgba(27,28,31,0)');
-    fadeGrad.addColorStop(1,'rgba(27,28,31,1)');
-    ctx.fillStyle=fadeGrad; ctx.fillRect(0, fadeStart_st, W, H - fadeStart_st);
-    zeichneTextbereich(ctx, e, W, H, fotoH+10, mColor, sportart, platz, medaille, titel);
-  } else {
-    zeichneTextbereich(ctx, e, W, H, H*0.25, mColor, sportart, platz, medaille, titel);
-  }
-
-  zeichneKopfzeile(ctx, e.wettbewerbText, e.disziplin);
-  zeichneFusszeile(ctx, W, H);
+  const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  const teile = titel.trim().split(' ');
+  const vorname = teile.length>1 ? teile.slice(0,-1).join(' ') : '';
+  const nachname = teile.length>1 ? teile[teile.length-1] : titel;
+  zeichneSlzbHintergrund(ctx, W, H, bild);
+  zeichneSlzbDeko(ctx, W, H);
+  zeichneSlzbHeader(ctx, W, H, sportart, datum);
+  zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname, titel: teile.length===1?titel:null, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
+  zeichneSlzbFooterNeu(ctx, W, H);
 }
 
 // ── A3 VARIANTE 2: Split (Bild links, Text rechts) ───────────

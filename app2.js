@@ -1638,3 +1638,113 @@ function cdHerunterladen() {
   a.href = canvas.toDataURL('image/png');
   a.click();
 }
+
+// ══════════════════════════════════════════════════════════════
+// NAVIGIERBARE SEITEN für Highlights, Nachwuchswahl, Countdown
+// ══════════════════════════════════════════════════════════════
+
+function renderHighlightsSeite() {
+  return `<div class="page">
+    <div class="page-header">
+      <h1>🎠 Highlights-Karussell</h1>
+      <p>Monatliche Top-Erfolge als Social-Media-Karussell-Serie</p>
+    </div>
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="alert alert-info mb-3"><span class="alert-icon">ℹ️</span>
+          <span>Es werden automatisch alle <strong>freigegebenen Erfolge des Vormonats</strong> geladen und als einzelne 1080×1080px Karten im SLZB-Stil erstellt.</span></div>
+        <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+          <div style="flex:1;min-width:200px">
+            <p class="text-sm text-muted">Jede Karte zeigt: Foto, Sportart, Titel, Platzierung und Karussell-Nummer (z.B. „3 / 7"). Ideal für Instagram-Karussell-Posts.</p>
+          </div>
+          <button class="btn btn-primary" onclick="zeigeHighlightsKarussell()" style="white-space:nowrap">
+            🎠 Karussell erstellen
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h2>Hinweise</h2></div>
+      <div class="card-body">
+        <ul style="padding-left:20px;line-height:2">
+          <li>Nur Erfolge mit Status <strong>Freigegeben</strong> oder <strong>Veröffentlicht</strong> werden berücksichtigt</li>
+          <li>Bilder werden aus Supabase Storage geladen (Signed URLs)</li>
+          <li>Jede Karte kann einzeln oder alle auf einmal heruntergeladen werden</li>
+          <li>Kein automatisches Posting – Export als PNG</li>
+        </ul>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderNachwuchswahlSeite() {
+  return `<div class="page">
+    <div class="page-header">
+      <h1>🏆 Nachwuchssportler/in des Monats</h1>
+      <p>Abstimmungsaufruf für Social Media erstellen</p>
+    </div>
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="alert alert-info mb-3"><span class="alert-icon">ℹ️</span>
+          <span>Erstelle ein Abstimmungsposter mit bis zu <strong>3 Kandidaten</strong> im SLZB-Stil (1080×1350px).</span></div>
+        <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+          <div style="flex:1;min-width:200px">
+            <p class="text-sm text-muted">Kandidaten mit Name, Sportart und optionalem Foto-Link eingeben. Abstimmungslink optional. Export als PNG.</p>
+          </div>
+          <button class="btn btn-primary" onclick="zeigeNachwuchswahlModal()" style="white-space:nowrap">
+            🏆 Poster erstellen
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h2>Aufbau des Posters</h2></div>
+      <div class="card-body">
+        <ul style="padding-left:20px;line-height:2">
+          <li>Blauer SLZB-Header mit Logo</li>
+          <li>„JETZT ABSTIMMEN!" in weiß/blau</li>
+          <li>Kandidaten-Fotos als Kreise mit blauem Rahmen</li>
+          <li>Name und Sportart unter jedem Foto</li>
+          <li>„Jetzt abstimmen!"-Button mit optionalem Link</li>
+          <li>SLZB-Footer mit #SLZBerlin</li>
+        </ul>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderCountdownSeite() {
+  return `<div class="page">
+    <div class="page-header">
+      <h1>⏳ Countdown-Poster</h1>
+      <p>Countdown bis zu einem Event erstellen</p>
+    </div>
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="alert alert-info mb-3"><span class="alert-icon">ℹ️</span>
+          <span>Erstelle ein Countdown-Poster für ein bevorstehendes Event – in <strong>Hochformat (4:5)</strong> oder <strong>Querformat (16:9)</strong>.</span></div>
+        <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+          <div style="flex:1;min-width:200px">
+            <p class="text-sm text-muted">Event-Name, Datum/Uhrzeit und Ort eingeben. Optionales Hintergrundbild per URL. Der Countdown wird automatisch berechnet.</p>
+          </div>
+          <button class="btn btn-primary" onclick="zeigeCountdownModal()" style="white-space:nowrap">
+            ⏳ Countdown erstellen
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h2>Aufbau des Posters</h2></div>
+      <div class="card-body">
+        <ul style="padding-left:20px;line-height:2">
+          <li>Blauer SLZB-Header mit Logo</li>
+          <li>Große rote Countdown-Zahl (Tage / Stunden / Minuten)</li>
+          <li>Event-Name zweizeilig weiß/rot</li>
+          <li>Datum und Ort</li>
+          <li>Optionales Hintergrundbild mit dunklem Overlay</li>
+          <li>Am Event-Tag: „HEUTE!" statt Countdown</li>
+        </ul>
+      </div>
+    </div>
+  </div>`;
+}
