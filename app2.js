@@ -1332,6 +1332,70 @@ async function exportiereChronikCSV() {
   PDF.exportiereChronikCSV(gefiltert,schuljahr);
   toast('CSV-Export heruntergeladen','success');
 }
+
+// ══════════════════════════════════════════════════════════════
+// GENERISCHER POSTER-BILD-UPLOAD (Variante 1: nur Storage)
+// Kein achievement_media-Eintrag – nur Storage + Signed URL
+// ══════════════════════════════════════════════════════════════
+async function uploadPosterBild(dateiInput, kategorie='poster') {
+  if (!dateiInput?.files?.length) return null;
+  const datei = dateiInput.files[0];
+  if (datei.size > 10*1024*1024) { toast('Datei zu groß (max. 10 MB)','warning'); return null; }
+  const session = await Backend.session();
+  if (!session) { toast('Nicht angemeldet','danger'); return null; }
+  const userId = Auth.id();
+  const dateiname = `${Date.now()}_${datei.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+  const pfad = `${userId}/${kategorie}/${dateiname}`;
+  const { data: uploadData, error: uploadError } = await Backend.client.storage
+    .from('achievement-media')
+    .upload(pfad, datei, { cacheControl:'3600', upsert:false, contentType:datei.type });
+  if (uploadError) { toast('Upload-Fehler: '+uploadError.message,'danger'); return null; }
+  const { data: signed } = await Backend.client.storage
+    .from('achievement-media').createSignedUrl(uploadData.path||pfad, 3600);
+  return signed?.signedUrl || null;
+}
+
+// Hilfsfunktion: Datei-Input mit Vorschau-Thumbnail
+function posterBildInputHTML(inputId, labelText='Hintergrundbild') {
+  return `<div class="form-group" style="grid-column:1/-1">
+    <label style="color:#fff">${esc(labelText)} <span style="color:#888;font-size:.75rem">(Upload oder URL)</span></label>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <input type="file" id="${inputId}-file" accept="image/*"
+        style="flex:1;min-width:180px;background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:6px"
+        onchange="posterBildVorschau('${inputId}')">
+      <span style="color:#888;font-size:.8rem">oder</span>
+      <input type="text" id="${inputId}-url" placeholder="https://..."
+        style="flex:2;min-width:180px;background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+    </div>
+    <div id="${inputId}-thumb" style="margin-top:6px;display:none">
+      <img id="${inputId}-thumb-img" style="height:60px;border-radius:6px;object-fit:cover" alt="Vorschau">
+    </div>
+  </div>`;
+}
+
+function posterBildVorschau(inputId) {
+  const file = document.getElementById(`${inputId}-file`)?.files?.[0];
+  if (!file) return;
+  const thumb = document.getElementById(`${inputId}-thumb`);
+  const img = document.getElementById(`${inputId}-thumb-img`);
+  if (thumb && img) {
+    thumb.style.display='block';
+    img.src = URL.createObjectURL(file);
+  }
+}
+
+// Bild laden: erst File-Input, dann URL-Feld
+async function posterBildLaden(inputId, kategorie='poster') {
+  const fileInput = document.getElementById(`${inputId}-file`);
+  const urlInput = document.getElementById(`${inputId}-url`);
+  if (fileInput?.files?.length) {
+    // Upload zu Supabase Storage
+    const signedUrl = await uploadPosterBild(fileInput, kategorie);
+    return signedUrl;
+  }
+  return urlInput?.value?.trim() || null;
+}
+
 // ══════════════════════════════════════════════════════════════
 // FEATURE 1: HIGHLIGHTS-KARUSSELL MODAL
 // ══════════════════════════════════════════════════════════════
@@ -1489,10 +1553,7 @@ function zeigeNachwuchswahlModal() {
           <label style="color:#fff">Zeitraum (Monat/Jahr)</label>
           <input type="text" id="nw-sieger-zeitraum" placeholder="z.B. Oktober 2026" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px" value="${esc(aktMonat+' '+aktJahr)}">
         </div>
-        <div class="form-group">
-          <label style="color:#fff">Foto-URL (optional)</label>
-          <input type="text" id="nw-sieger-bild" placeholder="https://..." style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
-        </div>
+        ${posterBildInputHTML('nw-sieger-bild','Foto')}
         <div class="form-group" style="grid-column:1/-1">
           <label style="color:#fff">Erfolge (eine pro Zeile)</label>
           <textarea id="nw-sieger-erfolge" rows="4" placeholder="z.B.&#10;🥇 Berliner Meister 100m Sprint&#10;🥈 Deutsche Meisterschaft Staffel&#10;🏆 Schulrekord 200m" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px;width:100%"></textarea>
@@ -1602,10 +1663,10 @@ async function nwVorschau() {
     const name = document.getElementById('nw-sieger-name')?.value||'';
     const sport = document.getElementById('nw-sieger-sport')?.value||'';
     const zeitraum = document.getElementById('nw-sieger-zeitraum')?.value||'';
-    const bildUrl = document.getElementById('nw-sieger-bild')?.value||null;
     const erfolgeText = document.getElementById('nw-sieger-erfolge')?.value||'';
     const erfolge = erfolgeText.split('\n').map(s=>s.trim()).filter(Boolean);
     if (!name) { toast('Name ist Pflichtfeld','warning'); return; }
+    const bildUrl = await posterBildLaden('nw-sieger-bild','poster-nachwuchs');
     await zeichneNachwuchsSiegerPoster('nw-canvas', {name, sport, zeitraum, bildUrl, erfolge});
   } else {
     // Wahl-Poster
@@ -1669,14 +1730,12 @@ function zeigeCountdownModal() {
           <label style="color:#fff">Ort</label>
           <input type="text" id="cd-ort" placeholder="z.B. Schwimmhalle Landsberger Allee" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
         </div>
-        <div class="form-group">
-          <label style="color:#fff">Hintergrundbild-URL (optional)</label>
-          <input type="text" id="cd-bild" placeholder="https://..." style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
-        </div>
+        ${posterBildInputHTML('cd-bild','Hintergrundbild')}
       </div>
-      <div class="tabs mb-3" style="display:flex;gap:8px">
+      <div class="tabs mb-3" style="display:flex;gap:8px;flex-wrap:wrap">
         <button class="tab-btn active" onclick="cdFormatWechsel('hochformat')">📱 Hochformat (4:5)</button>
         <button class="tab-btn" onclick="cdFormatWechsel('querformat')">🖥️ Querformat (16:9)</button>
+        <button class="tab-btn" onclick="cdFormatWechsel('a3')">🖨️ A3 Druck (quer)</button>
       </div>
       <div style="text-align:center;background:#0a0a1e;padding:16px;border-radius:8px">
         <canvas id="cd-canvas" width="1080" height="1350"
@@ -1706,11 +1765,13 @@ function zeigeCountdownModal() {
 function cdFormatWechsel(format) {
   window._cdFormat = format;
   document.querySelectorAll('.modal .tab-btn').forEach(b=>{
-    b.classList.toggle('active', b.textContent.toLowerCase().includes(format==='hochformat'?'hochformat':'querformat'));
+    const t=b.textContent.toLowerCase();
+    b.classList.toggle('active',(format==='hochformat'&&t.includes('hochformat'))||(format==='querformat'&&t.includes('querformat'))||(format==='a3'&&t.includes('a3')));
   });
   const canvas = document.getElementById('cd-canvas');
   if (canvas) {
     if (format==='querformat') { canvas.width=1920; canvas.height=1080; canvas.style.maxHeight='45vh'; }
+    else if (format==='a3') { canvas.width=1587; canvas.height=1123; canvas.style.maxHeight='45vh'; }
     else { canvas.width=1080; canvas.height=1350; canvas.style.maxHeight='60vh'; }
   }
 }
@@ -1719,12 +1780,35 @@ async function cdVorschau() {
   const name = document.getElementById('cd-name')?.value||'';
   const datum = document.getElementById('cd-datum')?.value||'';
   const ort = document.getElementById('cd-ort')?.value||'';
-  const bild = document.getElementById('cd-bild')?.value||null;
   if (!name||!datum) { toast('Event-Name und Datum sind Pflichtfelder','warning'); return; }
   const format = window._cdFormat||'hochformat';
   cdFormatWechsel(format);
-  const opts = { eventName:name, eventDatum:datum, ort, format, hintergrundbild:bild };
-  await zeichneCountdownPoster('cd-canvas', opts);
+  const bildUrl = await posterBildLaden('cd-bild','poster-countdown');
+  const opts = { eventName:name, eventDatum:datum, ort, format: format==='a3'?'hochformat':format, hintergrundbild:bildUrl };
+  if (format==='a3') {
+    // A3-Druck: Countdown-Zahl + Event-Name im A3-Layout
+    const canvas = document.getElementById('cd-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    await ladeMontserrat(); await ladeLogo();
+    const W=canvas.width, H=canvas.height;
+    const bild = bildUrl ? await ladeBild(bildUrl) : null;
+    const eventDatum = datum ? new Date(datum) : null;
+    const diff = eventDatum ? eventDatum - new Date() : 0;
+    const tage = diff>0 ? Math.floor(diff/(1000*60*60*24)) : 0;
+    const datumStr = eventDatum ? eventDatum.toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}) : '';
+    const karteOpts = {
+      subtitle: 'COUNTDOWN',
+      vorname: tage>0 ? `NOCH ${tage}` : 'HEUTE',
+      nachname: tage===1?'TAG':'TAGE',
+      titel: null,
+      zusatz: [name, ort, datumStr].filter(Boolean).join(' · '),
+      wettbewerb: name,
+    };
+    await zeichnePosterA3Allgemein(ctx, W, H, bild, karteOpts, 'gruen', datumStr);
+  } else {
+    await zeichneCountdownPoster('cd-canvas', opts);
+  }
   // Countdown-Info
   const eventD = new Date(datum);
   const diff = eventD - new Date();
@@ -1912,14 +1996,12 @@ function zeigeJubilaeumModal() {
           <label style="color:#fff">Ort</label>
           <input type="text" id="jub-ort" placeholder="z.B. SLZB Berlin" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
         </div>
-        <div class="form-group" style="grid-column:1/-1">
-          <label style="color:#fff">Hintergrundbild-URL (optional)</label>
-          <input type="text" id="jub-bild" placeholder="https://..." style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
-        </div>
+        ${posterBildInputHTML('jub-bild','Hintergrundbild')}
       </div>
-      <div class="tabs mb-3" style="display:flex;gap:8px">
-        <button class="tab-btn active" onclick="jubFormatWechsel('hochformat')">📱 Hochformat</button>
-        <button class="tab-btn" onclick="jubFormatWechsel('querformat')">🖥️ Querformat</button>
+      <div class="tabs mb-3" style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="tab-btn active" onclick="jubFormatWechsel('hochformat')">📱 Hochformat (4:5)</button>
+        <button class="tab-btn" onclick="jubFormatWechsel('querformat')">🖥️ Querformat (16:9)</button>
+        <button class="tab-btn" onclick="jubFormatWechsel('a3')">🖨️ A3 Druck (quer)</button>
       </div>
       <div style="text-align:center;background:#0a0800;padding:16px;border-radius:8px">
         <canvas id="jub-canvas" width="1080" height="1350"
@@ -1944,11 +2026,13 @@ function zeigeJubilaeumModal() {
 function jubFormatWechsel(format) {
   window._jubFormat = format;
   document.querySelectorAll('.modal .tab-btn').forEach(b=>{
-    b.classList.toggle('active', b.textContent.toLowerCase().includes(format==='hochformat'?'hochformat':'querformat'));
+    const t=b.textContent.toLowerCase();
+    b.classList.toggle('active',(format==='hochformat'&&t.includes('hochformat'))||(format==='querformat'&&t.includes('querformat'))||(format==='a3'&&t.includes('a3')));
   });
   const canvas = document.getElementById('jub-canvas');
   if (canvas) {
     if (format==='querformat') { canvas.width=1920; canvas.height=1080; canvas.style.maxHeight='45vh'; }
+    else if (format==='a3') { canvas.width=1587; canvas.height=1123; canvas.style.maxHeight='45vh'; }
     else { canvas.width=1080; canvas.height=1350; canvas.style.maxHeight='60vh'; }
   }
 }
@@ -1958,7 +2042,6 @@ async function jubVorschau() {
   const untertitel = document.getElementById('jub-untertitel')?.value||'';
   const datum = document.getElementById('jub-datum')?.value||'';
   const ort = document.getElementById('jub-ort')?.value||'';
-  const bildUrl = document.getElementById('jub-bild')?.value||null;
   if (!titel) { toast('Titel ist Pflichtfeld','warning'); return; }
   const format = window._jubFormat||'hochformat';
   jubFormatWechsel(format);
@@ -1967,22 +2050,22 @@ async function jubVorschau() {
   const ctx = canvas.getContext('2d');
   await ladeMontserrat(); await ladeLogo();
   const W=canvas.width, H=canvas.height;
+  const bildUrl = await posterBildLaden('jub-bild','poster-jubilaeum');
   const bild = bildUrl ? await ladeBild(bildUrl) : null;
   const datumStr = datum ? new Date(datum).toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'}) : '';
-  zeichneSlzbHintergrund(ctx, W, H, bild, 'gold');
-  zeichneSlzbDeko(ctx, W, H);
-  zeichneSlzbHeader(ctx, W, H, untertitel||'Jubiläum', datumStr, 'gold');
   const teile = titel.trim().split(' ');
   const vorname = teile.length>1 ? teile.slice(0,-1).join(' ') : '';
   const nachname = teile.length>1 ? teile[teile.length-1] : titel;
-  zeichneSlzbKarte(ctx, W, H, {
-    subtitle: untertitel||'JUBILÄUM',
-    vorname: vorname||null, nachname,
-    titel: teile.length===1 ? titel : null,
-    zusatz: ort,
-    wettbewerb: datumStr,
-  }, 'gold');
-  zeichneSlzbFooterNeu(ctx, W, H, 'gold');
+  const karteOpts = { subtitle: untertitel||'JUBILÄUM', vorname: vorname||null, nachname, titel: teile.length===1?titel:null, zusatz:ort, wettbewerb:datumStr };
+  if (format==='a3') {
+    await zeichnePosterA3Allgemein(ctx, W, H, bild, karteOpts, 'gold', datumStr);
+  } else {
+    zeichneSlzbHintergrund(ctx, W, H, bild, 'gold');
+    zeichneSlzbDeko(ctx, W, H);
+    zeichneSlzbHeader(ctx, W, H, untertitel||'Jubiläum', datumStr, 'gold');
+    zeichneSlzbKarte(ctx, W, H, karteOpts, 'gold');
+    zeichneSlzbFooterNeu(ctx, W, H, 'gold');
+  }
 }
 
 function jubHerunterladen() {
@@ -2045,18 +2128,16 @@ function zeigeSchulnachrichtModal() {
           <label style="color:#fff">Datum</label>
           <input type="date" id="sn-datum" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
         </div>
-        <div class="form-group">
-          <label style="color:#fff">Hintergrundbild-URL (optional)</label>
-          <input type="text" id="sn-bild" placeholder="https://..." style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
-        </div>
+        ${posterBildInputHTML('sn-bild','Hintergrundbild')}
         <div class="form-group" style="grid-column:1/-1">
           <label style="color:#fff">Nachrichtentext (optional)</label>
           <textarea id="sn-text" rows="3" placeholder="Kurzer Informationstext..." style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px;width:100%"></textarea>
         </div>
       </div>
-      <div class="tabs mb-3" style="display:flex;gap:8px">
-        <button class="tab-btn active" onclick="snFormatWechsel('hochformat')">📱 Hochformat</button>
-        <button class="tab-btn" onclick="snFormatWechsel('querformat')">🖥️ Querformat</button>
+      <div class="tabs mb-3" style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="tab-btn active" onclick="snFormatWechsel('hochformat')">📱 Hochformat (4:5)</button>
+        <button class="tab-btn" onclick="snFormatWechsel('querformat')">🖥️ Querformat (16:9)</button>
+        <button class="tab-btn" onclick="snFormatWechsel('a3')">🖨️ A3 Druck (quer)</button>
       </div>
       <div style="text-align:center;background:#0a0c10;padding:16px;border-radius:8px">
         <canvas id="sn-canvas" width="1080" height="1350"
@@ -2081,11 +2162,13 @@ function zeigeSchulnachrichtModal() {
 function snFormatWechsel(format) {
   window._snFormat = format;
   document.querySelectorAll('.modal .tab-btn').forEach(b=>{
-    b.classList.toggle('active', b.textContent.toLowerCase().includes(format==='hochformat'?'hochformat':'querformat'));
+    const t=b.textContent.toLowerCase();
+    b.classList.toggle('active',(format==='hochformat'&&t.includes('hochformat'))||(format==='querformat'&&t.includes('querformat'))||(format==='a3'&&t.includes('a3')));
   });
   const canvas = document.getElementById('sn-canvas');
   if (canvas) {
     if (format==='querformat') { canvas.width=1920; canvas.height=1080; canvas.style.maxHeight='45vh'; }
+    else if (format==='a3') { canvas.width=1587; canvas.height=1123; canvas.style.maxHeight='45vh'; }
     else { canvas.width=1080; canvas.height=1350; canvas.style.maxHeight='60vh'; }
   }
 }
@@ -2095,7 +2178,6 @@ async function snVorschau() {
   const kategorie = document.getElementById('sn-kategorie')?.value||'';
   const datum = document.getElementById('sn-datum')?.value||'';
   const text = document.getElementById('sn-text')?.value||'';
-  const bildUrl = document.getElementById('sn-bild')?.value||null;
   if (!titel) { toast('Überschrift ist Pflichtfeld','warning'); return; }
   const format = window._snFormat||'hochformat';
   snFormatWechsel(format);
@@ -2104,22 +2186,22 @@ async function snVorschau() {
   const ctx = canvas.getContext('2d');
   await ladeMontserrat(); await ladeLogo();
   const W=canvas.width, H=canvas.height;
+  const bildUrl = await posterBildLaden('sn-bild','poster-schulnachricht');
   const bild = bildUrl ? await ladeBild(bildUrl) : null;
   const datumStr = datum ? new Date(datum).toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'}) : '';
-  zeichneSlzbHintergrund(ctx, W, H, bild, 'grau');
-  zeichneSlzbDeko(ctx, W, H);
-  zeichneSlzbHeader(ctx, W, H, kategorie||'Schulnachricht', datumStr, 'grau');
   const teile = titel.trim().split(' ');
   const vorname = teile.length>1 ? teile.slice(0,-1).join(' ') : '';
   const nachname = teile.length>1 ? teile[teile.length-1] : titel;
-  zeichneSlzbKarte(ctx, W, H, {
-    subtitle: kategorie||'INFORMATION',
-    vorname: vorname||null, nachname,
-    titel: teile.length===1 ? titel : null,
-    zusatz: text ? text.slice(0,80)+(text.length>80?'…':'') : datumStr,
-    wettbewerb: datumStr,
-  }, 'grau');
-  zeichneSlzbFooterNeu(ctx, W, H, 'grau');
+  const karteOpts = { subtitle:kategorie||'INFORMATION', vorname:vorname||null, nachname, titel:teile.length===1?titel:null, zusatz:text?text.slice(0,80)+(text.length>80?'…':''):datumStr, wettbewerb:datumStr };
+  if (format==='a3') {
+    await zeichnePosterA3Allgemein(ctx, W, H, bild, karteOpts, 'grau', datumStr);
+  } else {
+    zeichneSlzbHintergrund(ctx, W, H, bild, 'grau');
+    zeichneSlzbDeko(ctx, W, H);
+    zeichneSlzbHeader(ctx, W, H, kategorie||'Schulnachricht', datumStr, 'grau');
+    zeichneSlzbKarte(ctx, W, H, karteOpts, 'grau');
+    zeichneSlzbFooterNeu(ctx, W, H, 'grau');
+  }
 }
 
 function snHerunterladen() {

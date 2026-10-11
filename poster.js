@@ -2197,3 +2197,110 @@ async function zeichneNachwuchsSiegerPoster(canvasId, opts) {
   // Footer
   zeichneSlzbFooterNeu(ctx, W, H, 'blau');
 }
+
+// ══════════════════════════════════════════════════════════════
+// A3-DRUCK-LAYOUT FÜR NICHT-SPORT-POSTER (1587×1123, quer)
+// Gemeinsame Funktion für Jubiläum, Schulnachricht, Countdown
+// Druckfreundlich: weißer Hintergrund, blauer Header, wenig Farbe
+// ══════════════════════════════════════════════════════════════
+async function zeichnePosterA3Allgemein(ctx, W, H, bild, karteOpts, akzent='rot', datumStr='') {
+  await ladeMontserrat(); await ladeLogo();
+
+  const akzentFarbe = akzent==='blau' ? '#0B63CE' : akzent==='gruen' ? '#00a040' : akzent==='gold' ? '#C9A227' : akzent==='grau' ? '#8A9BB0' : '#E2001A';
+
+  // Weißer Hintergrund (druckfreundlich)
+  ctx.fillStyle = '#fff'; ctx.fillRect(0,0,W,H);
+
+  // Blauer Header (SLZB-Standard für Druck)
+  ctx.fillStyle = '#003366'; ctx.fillRect(0,0,W,90);
+  if (_slzbLogo) {
+    const logoH=70, logoW=_slzbLogo.width/(_slzbLogo.height/logoH);
+    ctx.drawImage(_slzbLogo, 20, 10, logoW, logoH);
+  }
+  ctx.fillStyle='#fff'; ctx.font='bold 20px Montserrat, Arial, sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('Schul- und Leistungssportzentrum Berlin', W/2, 45);
+  ctx.font='bold italic 18px Montserrat, Arial, sans-serif';
+  ctx.textAlign='right'; ctx.fillStyle=akzentFarbe;
+  ctx.fillText('#SLZBerlin', W-30, 45);
+
+  // Akzentlinie unter Header
+  ctx.fillStyle=akzentFarbe; ctx.fillRect(0, 90, W, 4);
+
+  // Bild (linke Hälfte, wenn vorhanden)
+  const FOTO_W = bild ? Math.round(W*0.45) : 0;
+  const FOTO_Y = 94;
+  const FOTO_H = H - 94 - 60;
+
+  if (bild) {
+    ctx.save(); ctx.beginPath(); ctx.rect(0, FOTO_Y, FOTO_W, FOTO_H); ctx.clip();
+    drawCover(ctx, bild, 0, FOTO_Y, FOTO_W, FOTO_H); ctx.restore();
+    // Trennlinie
+    ctx.fillStyle=akzentFarbe; ctx.fillRect(FOTO_W, FOTO_Y, 4, FOTO_H);
+  }
+
+  // Textbereich (rechts oder volle Breite)
+  const TX = bild ? FOTO_W + 40 : 60;
+  const TW = W - TX - 40;
+  let y = 130;
+
+  // Subtitle
+  if (karteOpts.subtitle) {
+    ctx.fillStyle=akzentFarbe; ctx.font=`800 16px Montserrat, Arial, sans-serif`;
+    ctx.textAlign='left'; ctx.textBaseline='top'; ctx.letterSpacing='4px';
+    ctx.fillText(karteOpts.subtitle.toUpperCase(), TX, y); y+=26;
+    ctx.letterSpacing='0px';
+    ctx.fillStyle=akzentFarbe; ctx.fillRect(TX, y, 80, 3); y+=14;
+  }
+
+  // Vorname (dunkel, groß)
+  if (karteOpts.vorname) {
+    const vSz = querTitelFontSize(karteOpts.vorname, TW, ctx);
+    ctx.fillStyle='#1a1a2e'; ctx.font=`800 italic ${vSz}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign='left'; ctx.textBaseline='top';
+    ctx.fillText(karteOpts.vorname.toUpperCase(), TX, y, TW); y+=vSz+8;
+  }
+
+  // Nachname (akzentfarbe, größer)
+  if (karteOpts.nachname) {
+    const nSz = Math.round(querTitelFontSize(karteOpts.nachname, TW, ctx)*1.1);
+    ctx.fillStyle=akzentFarbe; ctx.font=`900 italic ${nSz}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign='left'; ctx.textBaseline='top';
+    ctx.fillText(karteOpts.nachname.toUpperCase(), TX, y, TW); y+=nSz+16;
+  }
+
+  // Titel (wenn kein Vor/Nachname)
+  if (!karteOpts.vorname && !karteOpts.nachname && karteOpts.titel) {
+    const tSz = querTitelFontSize(karteOpts.titel, TW, ctx);
+    const woerter = karteOpts.titel.toUpperCase().split(' ');
+    const mid = woerter.length>3 ? Math.ceil(woerter.length/2) : woerter.length;
+    ctx.fillStyle='#1a1a2e'; ctx.font=`800 italic ${tSz}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign='left'; ctx.textBaseline='top';
+    ctx.fillText(woerter.slice(0,mid).join(' '), TX, y, TW); y+=tSz+8;
+    ctx.fillStyle=akzentFarbe;
+    if (woerter.slice(mid).length) { ctx.fillText(woerter.slice(mid).join(' '), TX, y, TW); y+=tSz+16; }
+  }
+
+  // Datum
+  if (datumStr) {
+    ctx.fillStyle='#444'; ctx.font='bold 16px Montserrat, Arial, sans-serif';
+    ctx.textAlign='left'; ctx.textBaseline='top';
+    ctx.fillText(datumStr, TX, y); y+=28;
+  }
+
+  // Zusatz-Info
+  if (karteOpts.zusatz) {
+    ctx.fillStyle='#666'; ctx.font='15px Montserrat, Arial, sans-serif';
+    ctx.textAlign='left'; ctx.textBaseline='top';
+    // Zeilenumbruch bei langen Texten
+    const zeilen = slzbWrapText(ctx, karteOpts.zusatz, TW);
+    zeilen.slice(0,3).forEach(z=>{ ctx.fillText(z, TX, y); y+=22; });
+  }
+
+  // Footer
+  ctx.fillStyle='#F0F0F0'; ctx.fillRect(0, H-60, W, 60);
+  ctx.fillStyle=akzentFarbe; ctx.fillRect(0, H-60, W, 3);
+  ctx.fillStyle='#333'; ctx.font='13px Montserrat, Arial, sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('Schul- und Leistungssportzentrum Berlin · #SLZBerlin', W/2, H-30);
+}
