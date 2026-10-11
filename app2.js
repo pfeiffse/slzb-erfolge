@@ -912,10 +912,7 @@ async function renderAusgaben() {
   const alle=await ladeErfolge();
   const freigegebene=alle.filter(e=>['Freigegeben','Veröffentlicht'].includes(e.status));
   return`<div class="page">
-    <div class="page-header"><h1>📤 Ausgaben & Freigaben</h1></div>
-    <div class="alert alert-warning mb-3"><span class="alert-icon">⚠️</span>
-      <span>Ausgaben nur für Status <strong>Freigegeben</strong> oder <strong>Veröffentlicht</strong>.</span></div>
-    <div class="card">
+    
       <div class="card-header"><h2>Freigegebene Meldungen</h2><span class="badge badge-success">${freigegebene.length}</span></div>
       <div class="table-wrap"><table>
         <thead><tr><th>Nr.</th><th>Titel</th><th>Sportart</th><th>Datum</th><th>Status</th><th>Ausgaben</th></tr></thead>
@@ -1334,4 +1331,310 @@ async function exportiereChronikCSV() {
   gefiltert.sort((a,b)=>new Date(b.datum)-new Date(a.datum));
   PDF.exportiereChronikCSV(gefiltert,schuljahr);
   toast('CSV-Export heruntergeladen','success');
+}
+// ══════════════════════════════════════════════════════════════
+// FEATURE 1: HIGHLIGHTS-KARUSSELL MODAL
+// ══════════════════════════════════════════════════════════════
+async function zeigeHighlightsKarussell() {
+  const alle = await ladeErfolge();
+  const jetzt = new Date();
+  const monat = jetzt.getMonth();
+  const jahr = jetzt.getFullYear();
+
+  // Vormonat berechnen
+  const vormonat = monat === 0 ? 11 : monat - 1;
+  const vormonatJahr = monat === 0 ? jahr - 1 : jahr;
+  const monatNamen = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+
+  // Erfolge des Vormonats (freigegeben/veröffentlicht)
+  const highlights = alle.filter(e => {
+    if (!['Freigegeben','Veröffentlicht'].includes(e.status)) return false;
+    const d = e.datum ? new Date(e.datum) : null;
+    if (!d) return false;
+    return d.getMonth() === vormonat && d.getFullYear() === vormonatJahr;
+  }).slice(0, 10);
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal modal-xl';
+
+  const monatLabel = `${monatNamen[vormonat]} ${vormonatJahr}`;
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>🎠 Highlights-Karussell – ${esc(monatLabel)}</h3>
+      <button class="btn btn-ghost btn-sm close-x">✕</button>
+    </div>
+    <div class="modal-body" style="background:#111;padding:16px">
+      ${highlights.length === 0 ? `<div class="alert alert-warning"><span class="alert-icon">⚠️</span><span>Keine freigegebenen Erfolge für ${esc(monatLabel)} gefunden.</span></div>` : `
+      <div class="alert alert-info mb-3"><span class="alert-icon">ℹ️</span>
+        <span>${highlights.length} Erfolge gefunden. Jede Karte einzeln herunterladen.</span></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        ${highlights.map((_,i)=>`<button class="tab-btn ${i===0?'active':''}" onclick="highlightKarteZeigen(${i})">${i+1}</button>`).join('')}
+      </div>
+      <div style="text-align:center">
+        <canvas id="highlight-canvas" width="1080" height="1080"
+          style="max-width:100%;max-height:55vh;display:block;margin:0 auto;border-radius:8px"></canvas>
+        <p class="text-xs mt-2" style="color:#888" id="highlight-info">Karte 1 von ${highlights.length}</p>
+      </div>`}
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost close-btn">Schließen</button>
+      ${highlights.length>0?`
+      <button class="btn btn-outline" onclick="highlightAlleHerunterladen()">⬇️ Alle herunterladen</button>
+      <button class="btn btn-primary" onclick="highlightKarteHerunterladen()">🖼️ Diese Karte</button>`:''}
+    </div>`;
+
+  modal.querySelector('.close-x').onclick = ()=>overlay.remove();
+  modal.querySelector('.close-btn').onclick = ()=>overlay.remove();
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+
+  if (highlights.length > 0) {
+    window._highlightErfolge = highlights;
+    window._highlightAktuell = 0;
+    window._highlightMonat = monatLabel;
+    setTimeout(()=>highlightKarteZeigen(0), 100);
+  }
+}
+
+async function highlightKarteZeigen(nr) {
+  const erfolge = window._highlightErfolge || [];
+  if (!erfolge[nr]) return;
+  window._highlightAktuell = nr;
+  const e = await DB.getErfolgById(erfolge[nr].id);
+  document.querySelectorAll('.modal .tabs .tab-btn, .modal .tab-btn').forEach((b,i)=>{
+    b.classList.toggle('active', i===nr);
+  });
+  const info = document.getElementById('highlight-info');
+  if (info) info.textContent = `Karte ${nr+1} von ${erfolge.length} · ${e.titel||''}`;
+  await zeichneHighlightKarte('highlight-canvas', e, nr+1, erfolge.length);
+}
+
+function highlightKarteHerunterladen() {
+  const canvas = document.getElementById('highlight-canvas');
+  if (!canvas) return;
+  const nr = (window._highlightAktuell||0)+1;
+  const monat = (window._highlightMonat||'highlights').replace(/\s/g,'-');
+  const a = document.createElement('a');
+  a.download = `SLZB_Highlight_${monat}_${nr}.png`;
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+}
+
+async function highlightAlleHerunterladen() {
+  const erfolge = window._highlightErfolge || [];
+  toast(`${erfolge.length} Karten werden generiert...`,'info');
+  for (let i=0; i<erfolge.length; i++) {
+    await highlightKarteZeigen(i);
+    await new Promise(r=>setTimeout(r,300));
+    highlightKarteHerunterladen();
+    await new Promise(r=>setTimeout(r,200));
+  }
+  toast('Alle Karten heruntergeladen!','success');
+}
+
+// ══════════════════════════════════════════════════════════════
+// FEATURE 2: NACHWUCHSSPORTLER-WAHL MODAL
+// ══════════════════════════════════════════════════════════════
+function zeigeNachwuchswahlModal() {
+  const monatNamen = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  const jetzt = new Date();
+  const aktMonat = monatNamen[jetzt.getMonth()];
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal modal-xl';
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>🏆 Nachwuchssportler/in des Monats</h3>
+      <button class="btn btn-ghost btn-sm close-x">✕</button>
+    </div>
+    <div class="modal-body" style="background:#111;padding:16px">
+      <div class="form-row cols-2 mb-3">
+        <div class="form-group">
+          <label style="color:#fff">Monat</label>
+          <input type="text" id="nw-monat" value="${esc(aktMonat)}" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+        </div>
+        <div class="form-group">
+          <label style="color:#fff">Abstimmungslink (optional)</label>
+          <input type="text" id="nw-link" placeholder="z.B. slzb.de/wahl" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+        </div>
+      </div>
+      <div id="nw-kandidaten">
+        <div class="alert alert-info mb-2"><span class="alert-icon">ℹ️</span><span>Bis zu 3 Kandidaten. Fotos werden aus den Erfolgen geladen.</span></div>
+      </div>
+      <button class="btn btn-ghost btn-sm mb-3" onclick="nwKandidatHinzu()">+ Kandidat/in hinzufügen</button>
+      <div style="text-align:center;background:#0a0a1e;padding:16px;border-radius:8px">
+        <canvas id="nw-canvas" width="1080" height="1350"
+          style="max-width:100%;max-height:60vh;display:block;margin:0 auto;border-radius:8px"></canvas>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost close-btn">Schließen</button>
+      <button class="btn btn-outline" onclick="nwVorschau()">👁️ Vorschau</button>
+      <button class="btn btn-primary" onclick="nwHerunterladen()">🖼️ PNG herunterladen</button>
+    </div>`;
+
+  modal.querySelector('.close-x').onclick = ()=>overlay.remove();
+  modal.querySelector('.close-btn').onclick = ()=>overlay.remove();
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+  window._nwKandidaten = [];
+  nwKandidatHinzu();
+}
+
+let _nwKandidatId = 0;
+function nwKandidatHinzu() {
+  const container = document.getElementById('nw-kandidaten');
+  if (!container) return;
+  const vorh = container.querySelectorAll('.nw-kandidat').length;
+  if (vorh >= 3) { toast('Maximal 3 Kandidaten','warning'); return; }
+  const id = ++_nwKandidatId;
+  const div = document.createElement('div');
+  div.className = 'nw-kandidat card mb-2';
+  div.style.padding = '12px';
+  div.innerHTML = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <input type="text" id="nw-name-${id}" placeholder="Name" style="flex:1;min-width:140px;background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+    <input type="text" id="nw-sport-${id}" placeholder="Sportart" style="flex:1;min-width:120px;background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+    <input type="text" id="nw-bild-${id}" placeholder="Bild-URL (optional)" style="flex:2;min-width:180px;background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+    <button class="btn btn-ghost btn-sm" onclick="this.closest('.nw-kandidat').remove()" style="color:#E2001A">✕</button>
+  </div>`;
+  container.appendChild(div);
+}
+
+async function nwVorschau() {
+  const monat = document.getElementById('nw-monat')?.value||'';
+  const link = document.getElementById('nw-link')?.value||'';
+  const kandidaten = [];
+  document.querySelectorAll('.nw-kandidat').forEach((div,i)=>{
+    const id = div.querySelector('[id^="nw-name-"]')?.id?.replace('nw-name-','');
+    if (!id) return;
+    kandidaten.push({
+      name: document.getElementById(`nw-name-${id}`)?.value||'',
+      sportart: document.getElementById(`nw-sport-${id}`)?.value||'',
+      bild: document.getElementById(`nw-bild-${id}`)?.value||null,
+    });
+  });
+  await zeichneNachwuchswahlPoster('nw-canvas', {monat, kandidaten, abstimmungslink: link});
+}
+
+function nwHerunterladen() {
+  const canvas = document.getElementById('nw-canvas');
+  if (!canvas) return;
+  const monat = (document.getElementById('nw-monat')?.value||'wahl').replace(/\s/g,'-');
+  const a = document.createElement('a');
+  a.download = `SLZB_Nachwuchswahl_${monat}.png`;
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+}
+
+// ══════════════════════════════════════════════════════════════
+// FEATURE 3: COUNTDOWN-POSTER MODAL
+// ══════════════════════════════════════════════════════════════
+function zeigeCountdownModal() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal modal-xl';
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>⏳ Countdown-Poster erstellen</h3>
+      <button class="btn btn-ghost btn-sm close-x">✕</button>
+    </div>
+    <div class="modal-body" style="background:#111;padding:16px">
+      <div class="form-row cols-2 mb-3">
+        <div class="form-group">
+          <label style="color:#fff">Event-Name <span class="required">*</span></label>
+          <input type="text" id="cd-name" placeholder="z.B. Berliner Meisterschaften" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+        </div>
+        <div class="form-group">
+          <label style="color:#fff">Datum & Uhrzeit <span class="required">*</span></label>
+          <input type="datetime-local" id="cd-datum" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+        </div>
+        <div class="form-group">
+          <label style="color:#fff">Ort</label>
+          <input type="text" id="cd-ort" placeholder="z.B. Schwimmhalle Landsberger Allee" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+        </div>
+        <div class="form-group">
+          <label style="color:#fff">Hintergrundbild-URL (optional)</label>
+          <input type="text" id="cd-bild" placeholder="https://..." style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+        </div>
+      </div>
+      <div class="tabs mb-3" style="display:flex;gap:8px">
+        <button class="tab-btn active" onclick="cdFormatWechsel('hochformat')">📱 Hochformat (4:5)</button>
+        <button class="tab-btn" onclick="cdFormatWechsel('querformat')">🖥️ Querformat (16:9)</button>
+      </div>
+      <div style="text-align:center;background:#0a0a1e;padding:16px;border-radius:8px">
+        <canvas id="cd-canvas" width="1080" height="1350"
+          style="max-width:100%;max-height:60vh;display:block;margin:0 auto;border-radius:8px"></canvas>
+        <p class="text-xs mt-2" style="color:#888" id="cd-info">Countdown wird berechnet...</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost close-btn">Schließen</button>
+      <button class="btn btn-outline" onclick="cdVorschau()">👁️ Vorschau aktualisieren</button>
+      <button class="btn btn-primary" onclick="cdHerunterladen()">🖼️ PNG herunterladen</button>
+    </div>`;
+
+  modal.querySelector('.close-x').onclick = ()=>overlay.remove();
+  modal.querySelector('.close-btn').onclick = ()=>overlay.remove();
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+  window._cdFormat = 'hochformat';
+  // Datum vorausfüllen (morgen)
+  const morgen = new Date(Date.now()+24*60*60*1000);
+  morgen.setHours(10,0,0,0);
+  const iso = morgen.toISOString().slice(0,16);
+  setTimeout(()=>{ const el=document.getElementById('cd-datum'); if(el) el.value=iso; },50);
+}
+
+function cdFormatWechsel(format) {
+  window._cdFormat = format;
+  document.querySelectorAll('.modal .tab-btn').forEach(b=>{
+    b.classList.toggle('active', b.textContent.toLowerCase().includes(format==='hochformat'?'hochformat':'querformat'));
+  });
+  const canvas = document.getElementById('cd-canvas');
+  if (canvas) {
+    if (format==='querformat') { canvas.width=1920; canvas.height=1080; canvas.style.maxHeight='45vh'; }
+    else { canvas.width=1080; canvas.height=1350; canvas.style.maxHeight='60vh'; }
+  }
+}
+
+async function cdVorschau() {
+  const name = document.getElementById('cd-name')?.value||'';
+  const datum = document.getElementById('cd-datum')?.value||'';
+  const ort = document.getElementById('cd-ort')?.value||'';
+  const bild = document.getElementById('cd-bild')?.value||null;
+  if (!name||!datum) { toast('Event-Name und Datum sind Pflichtfelder','warning'); return; }
+  const format = window._cdFormat||'hochformat';
+  cdFormatWechsel(format);
+  const opts = { eventName:name, eventDatum:datum, ort, format, hintergrundbild:bild };
+  await zeichneCountdownPoster('cd-canvas', opts);
+  // Countdown-Info
+  const eventD = new Date(datum);
+  const diff = eventD - new Date();
+  const info = document.getElementById('cd-info');
+  if (info) {
+    if (diff<=0) info.textContent='Event hat bereits stattgefunden';
+    else {
+      const t=Math.floor(diff/(1000*60*60*24)), h=Math.floor((diff%(1000*60*60*24))/(1000*60*60));
+      info.textContent=`Noch ${t} Tag(e) und ${h} Stunde(n) bis zum Event`;
+    }
+  }
+}
+
+function cdHerunterladen() {
+  const canvas = document.getElementById('cd-canvas');
+  if (!canvas) return;
+  const name = (document.getElementById('cd-name')?.value||'countdown').replace(/\s/g,'-');
+  const a = document.createElement('a');
+  a.download = `SLZB_Countdown_${name}.png`;
+  a.href = canvas.toDataURL('image/png');
+  a.click();
 }
