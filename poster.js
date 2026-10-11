@@ -2591,13 +2591,14 @@ function zeichneSlzbHintergrundMitFallback(ctx, W, H, bild, akzent, sportartName
     zeichneSlzbHintergrund(ctx, W, H, bild, akzent);
   } else {
     // Kein Bild: Sportart-Gradient + Silhouette
+    // Reihenfolge: 1. Hintergrund, 2. Silhouette, 3. Fade (Fade muss oben liegen!)
     zeichneErsatzbild(ctx, W, H, sportartName || '');
-    // Dann den Akzent-Gradient darüber (halbtransparent)
-    const config = SLZB_SPORT_FARBEN[sportartName] || SLZB_SPORT_FARBEN['default'];
-    const grad = ctx.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, 'rgba(0,0,0,0.15)');
-    grad.addColorStop(0.65, 'rgba(0,0,0,0.10)');
-    grad.addColorStop(1, 'rgba(0,0,0,0.60)');
-    ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+    // Fade NACH der Silhouette zeichnen – immer rot (SLZB-Sporterfolg-Stil)
+    const grad4 = ctx.createLinearGradient(0, 0, 0, H);
+    grad4.addColorStop(0,   'rgba(0,0,0,0.15)');
+    grad4.addColorStop(0.35,'rgba(0,0,0,0.20)');
+    grad4.addColorStop(0.65,'rgba(115,0,10,0.55)');
+    grad4.addColorStop(1,   'rgba(180,0,20,0.92)');
+    ctx.fillStyle = grad4; ctx.fillRect(0, 0, W, H);
   }
 }
