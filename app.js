@@ -146,7 +146,8 @@ function navigateTo(page, params={}) {
 }
 
 function updateBadges() {
-  const alle = SLZB_DB.erfolge;
+  // Immer aus dem aktuellen App-Cache lesen, nicht aus SLZB_DB
+  const alle = APP._erfolgeCache || SLZB_DB.erfolge || [];
   const offene = alle.filter(e=>['Eingereicht','Datenprüfung','Dublettenverdacht','Einwilligungsprüfung','Redaktion'].includes(e.status)).length;
   const rueck  = alle.filter(e=>e.status==='Rückfrage an Melder'&&e.melderId===Auth.id()).length;
   const frg    = alle.filter(e=>e.status==='Freigabe Öffentlichkeitsarbeit').length;

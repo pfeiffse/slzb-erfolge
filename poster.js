@@ -108,13 +108,33 @@ function zeichneSlzbHeader(ctx, W, H, sportart, datum, akzent='rot') {
 // Glasmorphismus-Karte mit Vorname/Nachname/Platz
 function zeichneSlzbKarte(ctx, W, H, opts, akzent='rot') {
   // opts: { subtitle, vorname, nachname, platz, medaille, zusatz, wettbewerb }
-  const cardTop = Math.round(H*0.42);
   const cardPad = Math.round(W*0.030);
   const cardX = Math.round(W*0.026);
   const cardW = W - 2*cardX;
-  const cardH = H - cardTop - Math.round(H*0.095);
+  const cardTop = Math.round(H*0.42);
+  const FOOTER_H = Math.round(H*0.095); // Platz für Footer
 
-  // Glasmorphismus-Hintergrund
+  // ── Inhaltshöhe vorab berechnen (für dynamische Kartenhöhe) ──
+  let _contentH = Math.round(H*0.045); // oberer Innenabstand
+  if (opts.subtitle) _contentH += Math.round(H*0.030);
+  if (opts.vorname)  _contentH += Math.round(H*0.062);
+  if (opts.nachname) _contentH += Math.round(H*0.078);
+  if (!opts.vorname && !opts.nachname && opts.titel) {
+    const _w = opts.titel.toUpperCase().split(' ');
+    const _zeilen = _w.length>3 ? 2 : 1;
+    _contentH += _zeilen * (Math.round(H*0.072) + 8);
+  }
+  _contentH += Math.round(H*0.012); // Abstand vor Oval
+  if (opts.platz || opts.wettbewerb) _contentH += Math.round(H*0.047) + Math.round(H*0.020);
+  if (opts.zusatz) _contentH += Math.round(H*0.020);
+  _contentH += Math.round(H*0.030); // unterer Innenabstand
+
+  // Kartenhöhe: Inhalt + Mindesthöhe, aber nie über Footer
+  const minCardH = Math.round(H*0.25);
+  const maxCardH = H - cardTop - FOOTER_H;
+  const cardH = Math.min(maxCardH, Math.max(minCardH, _contentH));
+
+  // Glasmorphismus-Hintergrund (dynamische Höhe)
   ctx.fillStyle = 'rgba(0,0,0,0.42)';
   slzbRoundRect(ctx, cardX, cardTop, cardW, cardH, Math.round(W*0.017)); ctx.fill();
   ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
@@ -598,6 +618,12 @@ async function zeichneA3Landscape(canvas, e, bild, meta) {
   ctx.fillText('Schul- und Leistungssportzentrum Berlin', W/2, 45);
   ctx.font='bold italic 20px Montserrat, Arial, sans-serif';
   ctx.textAlign='right'; ctx.fillText('#SLZBerlin', W-30, 45);
+  // Datum links im Header
+  const _datumA3L = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  if (_datumA3L) {
+    ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.font='13px Montserrat, Arial, sans-serif';
+    ctx.textAlign='left'; ctx.fillText(_datumA3L, 20+115+20, 45);
+  }
 
   // Bild oben (55%)
   const fotoH = Math.round((H-90-60)*0.55);
@@ -1307,13 +1333,15 @@ async function zeichneBildschirmQuerformat(canvasId, e) {
 
   // ── Kopfzeile (oben links, über dem Bild bei Bild-links-Layout) ──
   // Im Querformat: Kopfzeile in die Textspalte integrieren (oben)
+  const _datumQF = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
   ctx.fillStyle=SLZB_COLORS.white;
   ctx.font='bold 15px Montserrat, Arial, sans-serif';
   ctx.textAlign='left'; ctx.textBaseline='top';
   if (wettbewerb) ctx.fillText(wettbewerb.toUpperCase(), textX, HEADER_H - 50);
   ctx.fillStyle=SLZB_COLORS.red;
   ctx.font='bold 11px Montserrat, Arial, sans-serif';
-  if (disziplin) ctx.fillText(disziplin.toUpperCase(), textX, HEADER_H - 28);
+  const kopfZeile2 = [disziplin, _datumQF].filter(Boolean).join(' · ');
+  if (kopfZeile2) ctx.fillText(kopfZeile2.toUpperCase(), textX, HEADER_H - 28);
 
   // Logo oben links (immer sichtbar)
   drawLogo(ctx, 40, 24, 55);
@@ -1400,10 +1428,15 @@ async function zeichneTabellenLayout(canvasId, e) {
   const FOOTER_H = 70;
   let y = 80;
 
-  // Sportart + Trennlinie
+  // Sportart + Datum + Trennlinie
+  const _datumTL = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
   ctx.fillStyle=SLZB_COLORS.red; ctx.font='bold 20px Montserrat, Arial, sans-serif';
   ctx.textAlign='left'; ctx.textBaseline='top';
   ctx.fillText(sportart.toUpperCase(), TX, y); y+=28;
+  if (_datumTL) {
+    ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.font='14px Montserrat, Arial, sans-serif';
+    ctx.fillText(_datumTL, TX, y); y+=22;
+  }
   ctx.fillStyle=SLZB_COLORS.red; ctx.fillRect(TX, y, 80, 3); y+=12;
 
   // Titel (dynamische Größe)
@@ -1523,7 +1556,8 @@ async function zeichneMultiErfolgLayout(canvasId, e) {
   ctx.textAlign='left'; ctx.textBaseline='top';
   ctx.fillText((e.wettbewerbText||'').toUpperCase(), 206, 40);
   ctx.fillStyle=SLZB_COLORS.red; ctx.font='bold 11px Montserrat, Arial, sans-serif';
-  ctx.fillText(sportart.toUpperCase(), 206, 64);
+  const _datumML = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  ctx.fillText([sportart, _datumML].filter(Boolean).join(' · ').toUpperCase(), 206, 64);
 
   // Haupttitel
   let y = 130;
@@ -1631,7 +1665,8 @@ async function zeichneInfografikLayout(canvasId, e) {
   ctx.textAlign='left'; ctx.textBaseline='top';
   ctx.fillText((e.wettbewerbText||'JAHRESRÜCKBLICK').toUpperCase(), 194, 34);
   ctx.fillStyle=SLZB_COLORS.red; ctx.font='bold 11px Montserrat, Arial, sans-serif';
-  ctx.fillText(sportart.toUpperCase()||'SLZB BERLIN', 194, 58);
+  const _datumIL = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  ctx.fillText([sportart||'SLZB BERLIN', _datumIL].filter(Boolean).join(' · ').toUpperCase(), 194, 58);
 
   // Haupttitel
   ctx.fillStyle=SLZB_COLORS.white; ctx.font='bold italic 72px Montserrat, Arial, sans-serif';
@@ -1753,11 +1788,12 @@ async function zeichnePortraitLayout(canvasId, e) {
   // Kopfzeile über dem Foto
   drawLogo(ctx, 40, 28, 55);
   ctx.fillStyle=SLZB_COLORS.red; ctx.fillRect(170, 36, 3, 44);
+  const _datumPL = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
   ctx.fillStyle=SLZB_COLORS.white; ctx.font='bold 15px Montserrat, Arial, sans-serif';
   ctx.textAlign='left'; ctx.textBaseline='top';
   ctx.fillText(wettbewerb.toUpperCase()||sportart.toUpperCase(), 182, 32);
   ctx.fillStyle=SLZB_COLORS.red; ctx.font='bold 10px Montserrat, Arial, sans-serif';
-  ctx.fillText('EHRUNG', 182, 56);
+  ctx.fillText(['EHRUNG', _datumPL].filter(Boolean).join(' · '), 182, 56);
 
   // Textbereich unter dem Foto
   let y = FOTO_H + 20;
@@ -1845,10 +1881,11 @@ async function zeichneHighlightKarte(canvasId, e, nr, gesamt) {
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText(`${nr} / ${gesamt}`, W-53, 34);
 
-  // Sportart
+  // Sportart + Datum
+  const _datumHL = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
   ctx.fillStyle=SLZB_COLORS.red; ctx.font='bold 18px Montserrat, Arial, sans-serif';
   ctx.textAlign='center'; ctx.textBaseline='top';
-  ctx.fillText(sportart.toUpperCase(), W/2, 620);
+  ctx.fillText([sportart, _datumHL].filter(Boolean).join(' · ').toUpperCase(), W/2, 620);
 
   // Titel
   const tSz = querTitelFontSize(titel, W-80, ctx);
