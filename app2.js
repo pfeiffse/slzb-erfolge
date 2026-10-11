@@ -2307,7 +2307,7 @@ async function renderKalender() {
     <div class="card">
       <div class="card-header"><h2>⏭️ Nächste 30 Tage (${naechste.length} Termine)</h2></div>
       <div class="table-wrap"><table>
-        <thead><tr><th>Datum</th><th>Sportart</th><th>Veranstaltung</th><th>Ort</th><th>Klasse</th><th>Priorität</th></tr></thead>
+        <thead><tr><th>Datum</th><th>Sportart</th><th>Veranstaltung</th><th>Ort</th><th>Klasse</th><th>Priorität</th><th></th></tr></thead>
         <tbody>${naechste.length===0?'<tr><td colspan="6" class="text-center text-muted" style="padding:30px">Keine Termine in den nächsten 30 Tagen.</td></tr>':
           naechste.map(t=>`<tr>
             <td class="text-sm"><strong>${esc(t.datumAnzeige)}</strong></td>
@@ -2316,6 +2316,7 @@ async function renderKalender() {
             <td class="text-sm text-muted">${esc(t.ort||'–')}</td>
             <td class="text-sm text-muted">${esc(t.klasse||'–')}</td>
             <td><span style="color:${prioFarbe(t.prioritaet)};font-size:.75rem;font-weight:700">${prioLabel(t.prioritaet)}</span></td>
+            <td><button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:2px 8px" onclick="kalenderCountdown(${JSON.stringify(t).replace(/"/g,'&quot;')})">⏳</button></td>
           </tr>`).join('')}
         </tbody>
       </table></div>
@@ -2324,7 +2325,7 @@ async function renderKalender() {
     <div class="card">
       <div class="card-header"><h2>📋 Alle Termine (${gefiltertAlle.length})</h2></div>
       <div class="table-wrap" style="max-height:600px;overflow-y:auto"><table>
-        <thead><tr><th>Datum</th><th>Sportart</th><th>Veranstaltung</th><th>Ort</th><th>Klasse</th><th>Priorität</th></tr></thead>
+        <thead><tr><th>Datum</th><th>Sportart</th><th>Veranstaltung</th><th>Ort</th><th>Klasse</th><th>Priorität</th><th></th></tr></thead>
         <tbody>${gefiltertAlle.map(t=>`<tr>
           <td class="text-sm">${esc(t.datumAnzeige)}</td>
           <td class="text-sm">${esc(t.sportart)}</td>
@@ -2332,6 +2333,7 @@ async function renderKalender() {
           <td class="text-sm text-muted">${esc(t.ort||'–')}</td>
           <td class="text-sm text-muted">${esc(t.klasse||'–')}</td>
           <td><span style="color:${prioFarbe(t.prioritaet)};font-size:.75rem;font-weight:700">${prioLabel(t.prioritaet)}</span></td>
+          <td><button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:2px 8px" onclick="kalenderCountdown(${JSON.stringify(t).replace(/"/g,'&quot;')})">⏳</button></td>
         </tr>`).join('')}
         </tbody>
       </table></div>
@@ -2344,7 +2346,7 @@ async function renderKalender() {
         <button class="btn btn-ghost btn-sm" onclick="kalenderMonatNav(1)">Nächster →</button>
       </div>
       <div class="table-wrap"><table>
-        <thead><tr><th>Datum</th><th>Sportart</th><th>Veranstaltung</th><th>Ort</th><th>Klasse</th><th>Priorität</th></tr></thead>
+        <thead><tr><th>Datum</th><th>Sportart</th><th>Veranstaltung</th><th>Ort</th><th>Klasse</th><th>Priorität</th><th></th></tr></thead>
         <tbody>${monatsTermine.length===0?`<tr><td colspan="6" class="text-center text-muted" style="padding:30px">Keine Termine im ${monatNamen[state.monat]} ${state.jahr}.</td></tr>`:
           monatsTermine.map(t=>`<tr style="border-left:3px solid ${prioFarbe(t.prioritaet)}">
             <td class="text-sm"><strong>${esc(t.datumAnzeige)}</strong></td>
@@ -2353,6 +2355,7 @@ async function renderKalender() {
             <td class="text-sm text-muted">${esc(t.ort||'–')}</td>
             <td class="text-sm text-muted">${esc(t.klasse||'–')}</td>
             <td><span style="color:${prioFarbe(t.prioritaet)};font-size:.75rem;font-weight:700">${prioLabel(t.prioritaet)}</span></td>
+            <td><button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:2px 8px" onclick="kalenderCountdown(${JSON.stringify(t).replace(/"/g,'&quot;')})">⏳</button></td>
           </tr>`).join('')}
         </tbody>
       </table></div>
@@ -2385,3 +2388,30 @@ function kalenderMonatNav(delta) {
   navigateTo('kalender');
 }
 
+
+// ══════════════════════════════════════════════════════════════
+// KALENDER → COUNTDOWN: Direkt aus Kalendereintrag erstellen
+// ══════════════════════════════════════════════════════════════
+function kalenderCountdown(termin) {
+  // Countdown-Modal öffnen
+  zeigeCountdownModal();
+
+  // Felder mit Kalender-Daten vorausfüllen
+  setTimeout(() => {
+    const nameEl = document.getElementById('cd-name');
+    const datumEl = document.getElementById('cd-datum');
+    const ortEl = document.getElementById('cd-ort');
+
+    if (nameEl) nameEl.value = termin.veranstaltung || '';
+    if (ortEl) ortEl.value = termin.ort || '';
+
+    // Datum: aus "07.11.2026" oder "3.-11.11.2026" → datetime-local Format
+    if (datumEl && termin.datum) {
+      // termin.datum ist bereits ISO: "2026-11-07"
+      datumEl.value = termin.datum + 'T10:00'; // Standard: 10:00 Uhr
+    }
+
+    // Vorschau automatisch generieren
+    cdVorschau();
+  }, 200);
+}
