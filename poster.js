@@ -2073,6 +2073,15 @@ async function zeichneCountdownPoster(canvasId, opts) {
   const labelSz = Math.round(H*0.013);
   const evtSz = querTitelFontSize((opts.eventName||'EVENT'), W-80, ctx);
 
+  // Sportart-Label über dem Event-Namen (wie beim Erfolgsposter)
+  if (sportart) {
+    ctx.fillStyle='#00cc55'; ctx.font=`bold ${Math.round(H*0.016)}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='top'; ctx.letterSpacing='2px';
+    ctx.fillText(sportart.toUpperCase(), CX, textY - Math.round(H*0.040));
+    ctx.letterSpacing='0px';
+    ctx.fillStyle='#00cc55'; ctx.fillRect(CX-40, textY - Math.round(H*0.016), 80, 2);
+  }
+
   ctx.fillStyle='#00cc55'; ctx.font=`bold ${labelSz}px Montserrat, Arial, sans-serif`;
   ctx.textAlign='center'; ctx.textBaseline='top'; ctx.letterSpacing='4px';
   ctx.fillText('BIS ZUM', CX, textY);
