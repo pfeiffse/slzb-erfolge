@@ -27,6 +27,7 @@ async function renderErfolgDetail() {
       <button class="tab-btn active" onclick="switchTab('kerndaten')">Kerndaten</button>
       <button class="tab-btn" onclick="switchTab('beteiligte')">Beteiligte (${e.beteiligte?.length||0})</button>
       <button class="tab-btn" onclick="switchTab('medien')">📷 Medien (${e.bilder?.length||0})</button>
+      <button class="tab-btn" onclick="switchTab('video')">🎬 Video${e.videoUrl?` ✓`:''}</button>
       <button class="tab-btn" onclick="switchTab('texte')">Texte</button>
       <button class="tab-btn" onclick="switchTab('datenschutz')">Datenschutz</button>
       <button class="tab-btn" onclick="switchTab('ausgaben')">Ausgaben</button>
@@ -110,6 +111,31 @@ async function renderErfolgDetail() {
                   ${b.signedUrl?`<a href="${esc(b.signedUrl)}" target="_blank" class="btn btn-ghost btn-sm mt-2" style="font-size:.75rem">🔍 Vollbild</a>`:''}
                 </div>
               </div>`).join('')}</div>`}
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-video" class="tab-panel">
+      <div class="card">
+        <div class="card-header">
+          <h2>🎬 Video</h2>
+          ${Auth.canDo('erfassen')?`<button class="btn btn-outline btn-sm" onclick="zeigeVideoModal('${e.id}','${esc(e.videoUrl||'')}')">
+            ${e.videoUrl?'✏️ Video ändern':'+ Video hinzufügen'}
+          </button>`:''}
+        </div>
+        <div class="card-body">
+          ${e.videoUrl ? renderVideoPlayer(e.videoUrl) :
+            '<p class="text-muted">Kein Video verknüpft. YouTube- oder Vimeo-Link hinzufügen.</p>'}
+          ${e.videoUrl ? `
+            <div class="mt-3" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <span class="text-xs text-muted">🔗 ${esc(e.videoUrl)}</span>
+              ${Auth.canDo('erfassen')?`<button class="btn btn-ghost btn-sm" style="color:#E2001A"
+                onclick="loescheVideoUrl('${e.id}')">✕ Entfernen</button>`:''}
+            </div>
+            <div class="alert alert-warning mt-3">
+              <span class="alert-icon">⚠️</span>
+              <span>Das Video liegt auf einer externen Plattform (YouTube/Vimeo). Einwilligung der abgebildeten Personen prüfen.</span>
+            </div>` : ''}
         </div>
       </div>
     </div>
@@ -2588,5 +2614,185 @@ async function dubletteZusammenfuehren(hauptId, duplikatId, modus) {
   } catch(err) {
     toast('Fehler: '+err.message, 'danger');
     console.error(err);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// VIDEO-INTEGRATION (YouTube / Vimeo)
+// ══════════════════════════════════════════════════════════════
+
+// URL validieren und Embed-ID extrahieren
+function parseVideoUrl(url) {
+  if (!url) return null;
+  url = url.trim();
+
+  // YouTube: verschiedene Formate
+  // https://www.youtube.com/watch?v=ID
+  // https://youtu.be/ID
+  // https://www.youtube.com/embed/ID
+  // https://youtube.com/shorts/ID
+  let m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if (m) return { platform: 'youtube', id: m[1], embedUrl: `https://www.youtube-nocookie.com/embed/${m[1]}?rel=0&modestbranding=1` };
+
+  // Vimeo: https://vimeo.com/ID oder https://player.vimeo.com/video/ID
+  m = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if (m) return { platform: 'vimeo', id: m[1], embedUrl: `https://player.vimeo.com/video/${m[1]}?dnt=1` };
+
+  return null; // Unbekanntes Format
+}
+
+// Video-Player HTML rendern
+function renderVideoPlayer(url) {
+  const info = parseVideoUrl(url);
+  if (!info) return `<div class="alert alert-danger"><span class="alert-icon">❌</span><span>Ungültige Video-URL: ${esc(url)}</span></div>`;
+
+  const plattformLabel = info.platform === 'youtube' ? '▶️ YouTube' : '🎬 Vimeo';
+  const datenschutzHinweis = info.platform === 'youtube'
+    ? 'YouTube (datenschutzfreundlicher Modus: youtube-nocookie.com)'
+    : 'Vimeo (DNT=1 aktiviert)';
+
+  return `
+    <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:8px;background:#000">
+      <iframe
+        src="${esc(info.embedUrl)}"
+        style="position:absolute;top:0;left:0;width:100%;height:100%;border:0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen
+        loading="lazy"
+        title="SLZB Video">
+      </iframe>
+    </div>
+    <p class="text-xs text-muted mt-2">${plattformLabel} · ${datenschutzHinweis}</p>`;
+}
+
+// Video-URL Modal
+function zeigeVideoModal(erfolgId, aktuelleUrl='') {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.maxWidth = '520px';
+
+  const info = aktuelleUrl ? parseVideoUrl(aktuelleUrl) : null;
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>🎬 Video verknüpfen</h3>
+      <button class="btn btn-ghost btn-sm close-x">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-info mb-3">
+        <span class="alert-icon">ℹ️</span>
+        <span>Unterstützt: <strong>YouTube</strong> und <strong>Vimeo</strong>. Das Video wird eingebettet, aber nicht auf SLZB-Servern gespeichert.</span>
+      </div>
+      <div class="form-group">
+        <label>Video-URL <span class="required">*</span></label>
+        <input type="url" id="video-url-input"
+          value="${esc(aktuelleUrl)}"
+          placeholder="https://www.youtube.com/watch?v=... oder https://vimeo.com/..."
+          style="width:100%"
+          oninput="videoUrlVorschau()">
+        <div id="video-url-status" class="text-xs mt-1" style="min-height:20px"></div>
+      </div>
+      <div id="video-vorschau" style="margin-top:12px">
+        ${info ? renderVideoPlayer(aktuelleUrl) : ''}
+      </div>
+      <div class="alert alert-warning mt-3">
+        <span class="alert-icon">⚠️</span>
+        <span><strong>Datenschutz:</strong> Nur Videos mit Einwilligung aller abgebildeten Personen verknüpfen. Bei YouTube: „Nicht gelistet" empfohlen.</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost close-btn">Abbrechen</button>
+      <button class="btn btn-primary" id="video-speichern-btn" onclick="speichereVideoUrl('${erfolgId}')">
+        🎬 Video speichern
+      </button>
+    </div>`;
+
+  modal.querySelector('.close-x').onclick = ()=>overlay.remove();
+  modal.querySelector('.close-btn').onclick = ()=>overlay.remove();
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+
+  // Vorschau sofort aktualisieren wenn URL vorhanden
+  if (aktuelleUrl) setTimeout(videoUrlVorschau, 100);
+}
+
+function videoUrlVorschau() {
+  const input = document.getElementById('video-url-input');
+  const status = document.getElementById('video-url-status');
+  const vorschau = document.getElementById('video-vorschau');
+  const btn = document.getElementById('video-speichern-btn');
+  if (!input || !status || !vorschau) return;
+
+  const url = input.value.trim();
+  if (!url) {
+    status.innerHTML = '';
+    vorschau.innerHTML = '';
+    if (btn) btn.disabled = false;
+    return;
+  }
+
+  const info = parseVideoUrl(url);
+  if (info) {
+    status.innerHTML = `<span style="color:#00a040">✅ ${info.platform === 'youtube' ? 'YouTube' : 'Vimeo'}-Video erkannt (ID: ${info.id})</span>`;
+    vorschau.innerHTML = renderVideoPlayer(url);
+    if (btn) btn.disabled = false;
+  } else {
+    status.innerHTML = `<span style="color:#E2001A">❌ Ungültige URL. Bitte YouTube- oder Vimeo-Link eingeben.</span>`;
+    vorschau.innerHTML = '';
+    if (btn) btn.disabled = true;
+  }
+}
+
+async function speichereVideoUrl(erfolgId) {
+  const input = document.getElementById('video-url-input');
+  const url = input?.value?.trim() || '';
+
+  if (url && !parseVideoUrl(url)) {
+    toast('Ungültige Video-URL. Bitte YouTube- oder Vimeo-Link eingeben.', 'warning');
+    return;
+  }
+
+  const btn = document.getElementById('video-speichern-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Wird gespeichert...'; }
+
+  try {
+    const { error } = await Backend.client
+      .from('achievements')
+      .update({ video_url: url || null, updated_at: new Date().toISOString() })
+      .eq('id', erfolgId);
+
+    if (error) throw new Error(error.message);
+
+    // Protokoll
+    await DB.protokolliere(erfolgId, null, null, url ? `Video verknüpft: ${url}` : 'Video entfernt');
+
+    APP._erfolgeCache = null;
+    document.querySelector('.modal-overlay')?.remove();
+    toast(url ? '🎬 Video erfolgreich verknüpft!' : 'Video entfernt', 'success');
+    navigateTo('erfolg-detail', { currentErfolgId: erfolgId });
+
+  } catch(err) {
+    toast('Fehler: ' + err.message, 'danger');
+    if (btn) { btn.disabled = false; btn.textContent = '🎬 Video speichern'; }
+  }
+}
+
+async function loescheVideoUrl(erfolgId) {
+  if (!confirm('Video-Verknüpfung entfernen?')) return;
+  try {
+    const { error } = await Backend.client
+      .from('achievements')
+      .update({ video_url: null, updated_at: new Date().toISOString() })
+      .eq('id', erfolgId);
+    if (error) throw new Error(error.message);
+    await DB.protokolliere(erfolgId, null, null, 'Video-Verknüpfung entfernt');
+    APP._erfolgeCache = null;
+    toast('Video entfernt', 'success');
+    navigateTo('erfolg-detail', { currentErfolgId: erfolgId });
+  } catch(err) {
+    toast('Fehler: ' + err.message, 'danger');
   }
 }

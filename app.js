@@ -510,7 +510,7 @@ function renderEinzelerfolgForm() {
             placeholder="z.B. Max M., Klasse 10a – oder leer lassen" autocomplete="off">
         </div>
         <div class="form-group"><label>Quell-URL</label>
-          <input type="url" id="f-quelle" placeholder="https://..."></div>`)}
+          <input type="url" id="f-quelle" placeholder="https://..."></div>\n          <div class=\"form-group\"><label>Video-URL <span class=\"text-muted text-xs\">(YouTube/Vimeo, optional)</span></label>\n          <input type=\"url\" id=\"f-video-url\" placeholder=\"https://www.youtube.com/watch?v=...\" oninput=\"videoUrlVorschauInline(this)\">\n          <div id=\"f-video-status\" class=\"text-xs mt-1\" style=\"color:#888\"></div></div>`)}
       </div>
     </div>
     ${bilderBlock()}
@@ -1301,6 +1301,7 @@ function leseDatenAusFormular(meldungsart) {
     ergebnisText:    document.getElementById('f-ergebnis-text')?.value||'',
     kurzinfo:        document.getElementById('f-kurzinfo')?.value||'',
     quelleUrl:       document.getElementById('f-quelle')?.value||'',
+    videoUrl:        document.getElementById('f-video-url')?.value?.trim()||null,
     meldungsart,
   };
 }
@@ -1404,4 +1405,17 @@ async function importDateiGewaehlt(input) {
   } catch(e) {
     preview.innerHTML=`<div class="alert alert-danger mt-3"><span class="alert-icon">❌</span><span>Fehler: ${esc(e.message)}</span></div>`;
   }
+}
+// Video-URL Inline-Validierung im Formular
+function videoUrlVorschauInline(input) {
+  const status = document.getElementById('f-video-status');
+  if (!status) return;
+  const url = input.value.trim();
+  if (!url) { status.textContent = ''; return; }
+  // Einfache Prüfung ohne parseVideoUrl (die ist in app2.js)
+  const isYT = /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)[a-zA-Z0-9_-]{11}/.test(url);
+  const isVimeo = /vimeo\.com\/(?:video\/)?\d+/.test(url);
+  if (isYT) { status.textContent = '✅ YouTube-Video erkannt'; status.style.color='#00a040'; }
+  else if (isVimeo) { status.textContent = '✅ Vimeo-Video erkannt'; status.style.color='#00a040'; }
+  else { status.textContent = '❌ Ungültige URL (YouTube oder Vimeo erwartet)'; status.style.color='#E2001A'; }
 }

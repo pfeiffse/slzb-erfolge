@@ -416,6 +416,7 @@ const DB = {
       einwilligungGeprueft: e.consent_checked,
       dublettenhinweis:     e.duplicate_flag,
       dublettenhinweisText: e.duplicate_note,
+      videoUrl:             e.video_url || null,
       beteiligte:           [],
       protokoll:            [],
       medien:               [],
