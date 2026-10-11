@@ -1730,6 +1730,10 @@ function zeigeCountdownModal() {
           <label style="color:#fff">Ort</label>
           <input type="text" id="cd-ort" placeholder="z.B. Schwimmhalle Landsberger Allee" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
         </div>
+        <div class="form-group">
+          <label style="color:#fff">Sportart (optional)</label>
+          <input type="text" id="cd-sportart" placeholder="z.B. Schwimmen" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+        </div>
         ${posterBildInputHTML('cd-bild','Hintergrundbild')}
       </div>
       <div class="tabs mb-3" style="display:flex;gap:8px;flex-wrap:wrap">
@@ -1784,7 +1788,8 @@ async function cdVorschau() {
   const format = window._cdFormat||'hochformat';
   cdFormatWechsel(format);
   const bildUrl = await posterBildLaden('cd-bild','poster-countdown');
-  const opts = { eventName:name, eventDatum:datum, ort, format: format==='a3'?'hochformat':format, hintergrundbild:bildUrl };
+  const sportartCd = document.getElementById('cd-sportart')?.value||'';
+  const opts = { eventName:name, eventDatum:datum, ort, sportart:sportartCd, format: format==='a3'?'hochformat':format, hintergrundbild:bildUrl };
   if (format==='a3') {
     // A3-Druck: Countdown-Zahl + Event-Name im A3-Layout
     const canvas = document.getElementById('cd-canvas');
@@ -2404,6 +2409,8 @@ function kalenderCountdown(termin) {
 
     if (nameEl) nameEl.value = termin.veranstaltung || '';
     if (ortEl) ortEl.value = termin.ort || '';
+    const sportartEl = document.getElementById('cd-sportart');
+    if (sportartEl) sportartEl.value = termin.sportart || '';
 
     // Datum: aus "07.11.2026" oder "3.-11.11.2026" → datetime-local Format
     if (datumEl && termin.datum) {
