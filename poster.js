@@ -430,7 +430,7 @@ async function zeichnePosterKeinBild(ctx, e) {
     zusatz: [e.disziplin, e.ebene].filter(Boolean).join(' · '),
     wettbewerb: e.wettbewerbText,
   });
-  zeichneFusszeile(ctx, W, H);
+  zeichneSlzbFooterNeu(ctx, W, H);
 }
 
 // Gemeinsamer Textbereich
@@ -881,9 +881,10 @@ async function zeichneA3Split(canvasId, e) {
   const medaille = e.medaille && e.medaille!=='keine' ? e.medaille : '';
   const mColor = medailleColor(medaille);
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
+  const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
 
-  // Dunkler Hintergrund
-  ctx.fillStyle = SLZB_COLORS.bg; ctx.fillRect(0,0,W,H);
+  // Hintergrund (Basis-Funktion)
+  zeichneSlzbHintergrund(ctx, W, H, bild);
 
   // Bild links 55%
   const FOTO_W = Math.round(W*0.55);
@@ -904,15 +905,9 @@ async function zeichneA3Split(canvasId, e) {
     ctx.fillStyle=fgB; ctx.fillRect(0,H-100,FOTO_W,100);
   }
 
-  // Blauer Header
-  ctx.fillStyle='rgba(0,51,102,0.92)'; ctx.fillRect(0,0,W,80);
-  const lw = drawLogo(ctx, 16, 6, 68);
-  ctx.fillStyle='#fff'; ctx.font='bold 18px Montserrat, Arial, sans-serif';
-  ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText('Schul- und Leistungssportzentrum Berlin', W/2, 40);
-  ctx.font='bold italic 18px Montserrat, Arial, sans-serif';
-  ctx.textAlign='right'; ctx.fillStyle=SLZB_COLORS.pinkLight;
-  ctx.fillText('#SLZBerlin', W-20, 40);
+  // Header + Deko (Basis-Funktionen)
+  zeichneSlzbDeko(ctx, W, H);
+  zeichneSlzbHeader(ctx, W, H, sportart, datum);
 
   // Text rechts
   const TX = FOTO_W + 50;
@@ -949,11 +944,8 @@ async function zeichneA3Split(canvasId, e) {
     ctx.fillText(pt, TX+ow+16, y+oh/2);
   }
 
-  // Footer
-  ctx.fillStyle='rgba(0,51,102,0.88)'; ctx.fillRect(0, H-FOOTER_H, W, FOOTER_H);
-  ctx.fillStyle='#fff'; ctx.font='13px Montserrat, Arial, sans-serif';
-  ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText('Schul- und Leistungssportzentrum Berlin · #SLZBerlin', W/2, H-FOOTER_H/2);
+  // Footer (Basis-Funktion)
+  zeichneSlzbFooterNeu(ctx, W, H);
 }
 
 // ── A3 VARIANTE 3: Vollbild mit Overlay ──────────────────────
@@ -1071,14 +1063,15 @@ async function zeichnePoster2Bilder(canvasId, e) {
   // Trennlinie
   ctx.fillStyle=SLZB_COLORS.bg; ctx.fillRect(Math.round(W*0.6),0,4,fotoH);
 
-  // Fade
-  const fadeGrad = ctx.createLinearGradient(0, fotoH-100, 0, fotoH);
+  // Fade: startet bei 65% der Bildhöhe, läuft bis Canvas-Ende
+  const fadeStart2 = Math.round(fotoH * 0.65);
+  const fadeGrad = ctx.createLinearGradient(0, fadeStart2, 0, H);
   fadeGrad.addColorStop(0,'rgba(27,28,31,0)'); fadeGrad.addColorStop(1,'rgba(27,28,31,1)');
-  ctx.fillStyle=fadeGrad; ctx.fillRect(0, fotoH-100, W, 100);
+  ctx.fillStyle=fadeGrad; ctx.fillRect(0, fadeStart2, W, H - fadeStart2);
 
   zeichneTextbereich(ctx, e, W, H, fotoH, mColor, sportart, platz, medaille, titel);
   zeichneKopfzeile(ctx, e.wettbewerbText, e.disziplin);
-  zeichneFusszeile(ctx, W, H);
+  zeichneSlzbFooterNeu(ctx, W, H);
 }
 
 // 4 Bilder: 2×2 Grid oben, Text unten
@@ -1110,14 +1103,15 @@ async function zeichnePoster4Bilder(canvasId, e) {
     drawCover(ctx, img, gx, gy, cellW, cellH); ctx.restore();
   });
 
-  // Fade
-  const fadeGrad = ctx.createLinearGradient(0, gridH-80, 0, gridH);
+  // Fade: startet bei 65% der Grid-Höhe, läuft bis Canvas-Ende
+  const fadeStart4 = Math.round(gridH * 0.65);
+  const fadeGrad = ctx.createLinearGradient(0, fadeStart4, 0, H);
   fadeGrad.addColorStop(0,'rgba(27,28,31,0)'); fadeGrad.addColorStop(1,'rgba(27,28,31,1)');
-  ctx.fillStyle=fadeGrad; ctx.fillRect(0, gridH-80, W, 80);
+  ctx.fillStyle=fadeGrad; ctx.fillRect(0, fadeStart4, W, H - fadeStart4);
 
   zeichneTextbereich(ctx, e, W, H, gridH, mColor, sportart, platz, medaille, titel);
   zeichneKopfzeile(ctx, e.wettbewerbText, e.disziplin);
-  zeichneFusszeile(ctx, W, H);
+  zeichneSlzbFooterNeu(ctx, W, H);
 }
 
 // Bildschirm Querformat (1920×1080)
@@ -2007,7 +2001,7 @@ async function zeichneNachwuchswahlPoster(canvasId, opts) {
 // 1080×1350 oder 1920×1080 mit Tagen/Stunden bis Event
 // ══════════════════════════════════════════════════════════════
 async function zeichneCountdownPoster(canvasId, opts) {
-  // opts: { eventName, eventDatum, ort, format:'hochformat'|'querformat', hintergrundbild }
+  // opts: { eventName, eventDatum, ort, sportart, format:'hochformat'|'querformat', hintergrundbild }
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
   const querformat = opts.format === 'querformat';
@@ -2027,85 +2021,87 @@ async function zeichneCountdownPoster(canvasId, opts) {
     minuten = Math.floor((diff % (1000*60*60)) / (1000*60));
   }
   const vorbei = eventDatum && eventDatum <= jetzt;
+  const sportart = opts.sportart || '';
+  const datumStr = eventDatum ? eventDatum.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
 
-  // Hintergrundbild
+  // 1. Hintergrund: zeichneSlzbHintergrund (grün, Foto oben sichtbar)
   const bild = opts.hintergrundbild ? await ladeBild(opts.hintergrundbild) : null;
-  const grad = ctx.createLinearGradient(0,0,0,H);
-  grad.addColorStop(0,'#0a1a0c'); grad.addColorStop(1,'#0d2010');
-  ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
-  if (bild) {
-    ctx.save(); ctx.globalAlpha=0.35;
-    drawCover(ctx, bild, 0, 0, W, H); ctx.restore();
-    ctx.fillStyle='rgba(0,30,10,0.65)'; ctx.fillRect(0,0,W,H);
-  }
+  zeichneSlzbHintergrund(ctx, W, H, bild, 'gruen');
 
-  // Header
-  // Grüner Header für Events
-  ctx.fillStyle='rgba(0,100,40,0.92)'; ctx.fillRect(0,0,W,querformat?70:90);
-  drawLogo(ctx, 20, querformat?8:14, querformat?54:68);
-  ctx.fillStyle=SLZB_COLORS.white; ctx.font=`bold ${querformat?15:18}px Montserrat, Arial, sans-serif`;
-  ctx.textAlign='right'; ctx.textBaseline='middle';
-  ctx.fillText('SLZB BERLIN', W-24, querformat?35:45);
+  // 2. Deko: schräges Rechteck + Kreise (wie Erfolgsposter)
+  zeichneSlzbDeko(ctx, W, H);
 
-  // Countdown-Zahlen
-  const CX = querformat ? W/2 : W/2;
-  const CY = querformat ? H/2-60 : H*0.42;
+  // 3. Header: zeichneSlzbHeader (kein opaker Balken, liegt auf Bild)
+  zeichneSlzbHeader(ctx, W, H, sportart || 'Event', datumStr, 'gruen');
 
-  // Hintergrund-Kreis
-  ctx.save(); ctx.globalAlpha=0.08; ctx.fillStyle=SLZB_COLORS.red;
-  ctx.beginPath(); ctx.arc(CX, CY, querformat?200:260, 0, Math.PI*2); ctx.fill();
+  // 4. Grüner Fade unten (startet bei 55% der Canvas-Höhe)
+  const fadeStart = H * 0.55;
+  const fadeGrad = ctx.createLinearGradient(0, fadeStart, 0, H);
+  fadeGrad.addColorStop(0, 'rgba(0,30,10,0)');
+  fadeGrad.addColorStop(1, 'rgba(0,30,10,1)');
+  ctx.fillStyle = fadeGrad; ctx.fillRect(0, fadeStart, W, H - fadeStart);
+
+  // 5. Countdown-Zahlen (proportionale Schriftgrößen)
+  const CX = W/2;
+  const CY = querformat ? H*0.38 : H*0.38;
+  const zahlSz = Math.round(H * (querformat ? 0.11 : 0.12));
+  const subSz  = Math.round(H * (querformat ? 0.022 : 0.022));
+
+  // Hintergrund-Kreis (grün, dezent)
+  ctx.save(); ctx.globalAlpha=0.10; ctx.fillStyle='#00cc55';
+  ctx.beginPath(); ctx.arc(CX, CY, Math.round(H*0.20), 0, Math.PI*2); ctx.fill();
   ctx.restore();
 
+  ctx.textAlign='center';
   if (vorbei) {
-    ctx.fillStyle='#00cc55'; ctx.font=`bold italic ${querformat?80:96}px Montserrat, Arial, sans-serif`;
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('HEUTE!', CX, CY);
+    ctx.fillStyle='#00cc55'; ctx.font=`bold italic ${Math.round(H*0.072)}px Montserrat, Arial, sans-serif`;
+    ctx.textBaseline='middle'; ctx.fillText('HEUTE!', CX, CY);
   } else if (tage > 0) {
-    ctx.fillStyle='#00cc55'; ctx.font=`bold italic ${querformat?120:160}px Montserrat, Arial, sans-serif`;
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(String(tage), CX, CY-20);
-    ctx.fillStyle=SLZB_COLORS.white; ctx.font=`bold ${querformat?24:30}px Montserrat, Arial, sans-serif`;
-    ctx.textBaseline='top';
-    ctx.fillText(tage===1?'TAG NOCH':'TAGE NOCH', CX, CY+(querformat?70:90));
+    ctx.fillStyle='#00cc55'; ctx.font=`bold italic ${zahlSz}px Montserrat, Arial, sans-serif`;
+    ctx.textBaseline='middle'; ctx.fillText(String(tage), CX, CY - Math.round(H*0.015));
+    ctx.fillStyle=SLZB_COLORS.white; ctx.font=`bold ${subSz}px Montserrat, Arial, sans-serif`;
+    ctx.textBaseline='top'; ctx.fillText(tage===1?'TAG NOCH':'TAGE NOCH', CX, CY + Math.round(H*0.068));
   } else {
-    ctx.fillStyle='#00cc55'; ctx.font=`bold italic ${querformat?80:100}px Montserrat, Arial, sans-serif`;
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(`${stunden}h ${minuten}m`, CX, CY);
-    ctx.fillStyle=SLZB_COLORS.white; ctx.font=`bold ${querformat?20:24}px Montserrat, Arial, sans-serif`;
-    ctx.textBaseline='top'; ctx.fillText('NOCH', CX, CY+(querformat?50:65));
+    ctx.fillStyle='#00cc55'; ctx.font=`bold italic ${Math.round(H*0.075)}px Montserrat, Arial, sans-serif`;
+    ctx.textBaseline='middle'; ctx.fillText(`${stunden}h ${minuten}m`, CX, CY);
+    ctx.fillStyle=SLZB_COLORS.white; ctx.font=`bold ${subSz}px Montserrat, Arial, sans-serif`;
+    ctx.textBaseline='top'; ctx.fillText('NOCH', CX, CY + Math.round(H*0.050));
   }
 
-  // Event-Name
-  const textY = querformat ? H/2+100 : H*0.62;
-  ctx.fillStyle=SLZB_COLORS.red; ctx.font=`bold 18px Montserrat, Arial, sans-serif`;
-  ctx.textAlign='center'; ctx.textBaseline='top';
+  // 6. Event-Name (im Fade-Bereich, proportionale Schriften)
+  const textY = H * 0.62;
+  const labelSz = Math.round(H*0.013);
+  const evtSz = querTitelFontSize((opts.eventName||'EVENT'), W-80, ctx);
+
+  ctx.fillStyle='#00cc55'; ctx.font=`bold ${labelSz}px Montserrat, Arial, sans-serif`;
+  ctx.textAlign='center'; ctx.textBaseline='top'; ctx.letterSpacing='4px';
   ctx.fillText('BIS ZUM', CX, textY);
-  const evtSz = querformat ? 56 : 68;
-  ctx.fillStyle=SLZB_COLORS.white; ctx.font=`bold italic ${evtSz}px Montserrat, Arial, sans-serif`;
-  const evtW = querformat ? W*0.6 : W-80;
+  ctx.letterSpacing='0px';
+
   const evtWoerter = (opts.eventName||'EVENT').toUpperCase().split(' ');
   const evtMid = evtWoerter.length>2 ? Math.ceil(evtWoerter.length/2) : evtWoerter.length;
-  ctx.fillText(evtWoerter.slice(0,evtMid).join(' '), CX, textY+28, evtW);
+  ctx.font=`bold italic ${evtSz}px Montserrat, Arial, sans-serif`;
+  ctx.fillStyle=SLZB_COLORS.white;
+  ctx.fillText(evtWoerter.slice(0,evtMid).join(' '), CX, textY+labelSz+10, W-80);
   ctx.fillStyle='#00cc55';
-  if (evtWoerter.slice(evtMid).length) ctx.fillText(evtWoerter.slice(evtMid).join(' '), CX, textY+28+evtSz+8, evtW);
-
-  // Datum + Ort
-  if (eventDatum) {
-    const datStr = eventDatum.toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
-    ctx.fillStyle=SLZB_COLORS.gray1; ctx.font=`${querformat?16:18}px Montserrat, Arial, sans-serif`;
-    ctx.textAlign='center'; ctx.textBaseline='top';
-    const ortY = textY + 28 + evtSz*2 + 30;
-    ctx.fillText(datStr, CX, ortY, evtW);
-    if (opts.ort) ctx.fillText(opts.ort, CX, ortY+26, evtW);
+  if (evtWoerter.slice(evtMid).length) {
+    ctx.fillText(evtWoerter.slice(evtMid).join(' '), CX, textY+labelSz+10+evtSz+8, W-80);
   }
 
-  // Footer
-  ctx.fillStyle=SLZB_COLORS.white; ctx.font='bold 14px Montserrat, Arial, sans-serif';
-  ctx.textAlign='center'; ctx.textBaseline='bottom';
-  ctx.fillText('Schul- und Leistungssportzentrum Berlin', W/2, H-28);
-  ctx.fillStyle=SLZB_COLORS.red; ctx.fillRect((W-200)/2, H-22, 200, 2);
-  ctx.fillStyle=SLZB_COLORS.pinkLight; ctx.font='bold italic 18px Montserrat, Arial, sans-serif';
-  ctx.fillText('#SLZBerlin', W/2, H-4);
+  // 7. Datum + Ort (proportional)
+  if (eventDatum) {
+    const datLang = eventDatum.toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+    const infoSz = Math.round(H*0.016);
+    ctx.fillStyle='rgba(255,255,255,0.75)'; ctx.font=`${infoSz}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    const zeilen = evtWoerter.slice(evtMid).length ? 2 : 1;
+    const ortY = textY + labelSz + 10 + evtSz*zeilen + 8 + 20;
+    ctx.fillText(datLang, CX, ortY, W-80);
+    if (opts.ort) { ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.fillText(opts.ort, CX, ortY+infoSz+6, W-80); }
+  }
+
+  // 8. Footer: zeichneSlzbFooterNeu (grün)
+  zeichneSlzbFooterNeu(ctx, W, H, 'gruen');
 }
 
 // ══════════════════════════════════════════════════════════════
