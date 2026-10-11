@@ -1443,6 +1443,7 @@ function zeigeNachwuchswahlModal() {
   const monatNamen = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
   const jetzt = new Date();
   const aktMonat = monatNamen[jetzt.getMonth()];
+  const aktJahr = jetzt.getFullYear();
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
@@ -1450,24 +1451,62 @@ function zeigeNachwuchswahlModal() {
   modal.className = 'modal modal-xl';
   modal.innerHTML = `
     <div class="modal-header">
-      <h3>🏆 Nachwuchssportler/in des Monats</h3>
+      <h3>🏆 Nachwuchssportler-Wahl</h3>
       <button class="btn btn-ghost btn-sm close-x">✕</button>
     </div>
     <div class="modal-body" style="background:#111;padding:16px">
-      <div class="form-row cols-2 mb-3">
+
+      <!-- Modus-Auswahl -->
+      <div class="tabs mb-3" style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="tab-btn active" id="nw-tab-monat" onclick="nwModusWechsel('monat')">📅 Monat</button>
+        <button class="tab-btn" id="nw-tab-jahr" onclick="nwModusWechsel('jahr')">🏆 Jahr</button>
+        <button class="tab-btn" id="nw-tab-sieger" onclick="nwModusWechsel('sieger')">🥇 Sieger melden</button>
+      </div>
+
+      <!-- Monat/Jahr-Felder -->
+      <div id="nw-felder-wahl" class="form-row cols-2 mb-3">
         <div class="form-group">
-          <label style="color:#fff">Monat</label>
+          <label style="color:#fff" id="nw-zeitraum-label">Monat</label>
           <input type="text" id="nw-monat" value="${esc(aktMonat)}" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
         </div>
-        <div class="form-group">
+        <div class="form-group" id="nw-link-gruppe">
           <label style="color:#fff">Abstimmungslink (optional)</label>
           <input type="text" id="nw-link" placeholder="z.B. slzb.de/wahl" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
         </div>
       </div>
-      <div id="nw-kandidaten">
-        <div class="alert alert-info mb-2"><span class="alert-icon">ℹ️</span><span>Bis zu 3 Kandidaten. Fotos werden aus den Erfolgen geladen.</span></div>
+
+      <!-- Sieger-Felder (nur bei Modus sieger) -->
+      <div id="nw-felder-sieger" style="display:none" class="form-row cols-2 mb-3">
+        <div class="form-group">
+          <label style="color:#fff">Sieger/in Name <span class="required">*</span></label>
+          <input type="text" id="nw-sieger-name" placeholder="Vorname Nachname" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+        </div>
+        <div class="form-group">
+          <label style="color:#fff">Sportart</label>
+          <input type="text" id="nw-sieger-sport" placeholder="z.B. Leichtathletik" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+        </div>
+        <div class="form-group">
+          <label style="color:#fff">Zeitraum (Monat/Jahr)</label>
+          <input type="text" id="nw-sieger-zeitraum" placeholder="z.B. Oktober 2026" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px" value="${esc(aktMonat+' '+aktJahr)}">
+        </div>
+        <div class="form-group">
+          <label style="color:#fff">Foto-URL (optional)</label>
+          <input type="text" id="nw-sieger-bild" placeholder="https://..." style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label style="color:#fff">Erfolge (eine pro Zeile)</label>
+          <textarea id="nw-sieger-erfolge" rows="4" placeholder="z.B.&#10;🥇 Berliner Meister 100m Sprint&#10;🥈 Deutsche Meisterschaft Staffel&#10;🏆 Schulrekord 200m" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px;width:100%"></textarea>
+        </div>
       </div>
-      <button class="btn btn-ghost btn-sm mb-3" onclick="nwKandidatHinzu()">+ Kandidat/in hinzufügen</button>
+
+      <!-- Kandidaten (Wahl-Modus) -->
+      <div id="nw-kandidaten-bereich">
+        <div id="nw-kandidaten">
+          <div class="alert alert-info mb-2"><span class="alert-icon">ℹ️</span><span>Bis zu 3 Kandidaten. Fotos optional per URL.</span></div>
+        </div>
+        <button class="btn btn-ghost btn-sm mb-3" onclick="nwKandidatHinzu()">+ Kandidat/in hinzufügen</button>
+      </div>
+
       <div style="text-align:center;background:#0a0a1e;padding:16px;border-radius:8px">
         <canvas id="nw-canvas" width="1080" height="1350"
           style="max-width:100%;max-height:60vh;display:block;margin:0 auto;border-radius:8px"></canvas>
@@ -1484,8 +1523,42 @@ function zeigeNachwuchswahlModal() {
   overlay.appendChild(modal);
   overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
   document.body.appendChild(overlay);
+  window._nwModus = 'monat';
   window._nwKandidaten = [];
   nwKandidatHinzu();
+}
+
+function nwModusWechsel(modus) {
+  window._nwModus = modus;
+  ['monat','jahr','sieger'].forEach(m=>{
+    const btn = document.getElementById(`nw-tab-${m}`);
+    if (btn) btn.classList.toggle('active', m===modus);
+  });
+  const felder = document.getElementById('nw-felder-wahl');
+  const sieger = document.getElementById('nw-felder-sieger');
+  const kandidaten = document.getElementById('nw-kandidaten-bereich');
+  const label = document.getElementById('nw-zeitraum-label');
+  const linkGruppe = document.getElementById('nw-link-gruppe');
+  const monatInput = document.getElementById('nw-monat');
+
+  if (modus === 'sieger') {
+    if (felder) felder.style.display = 'none';
+    if (sieger) sieger.style.display = '';
+    if (kandidaten) kandidaten.style.display = 'none';
+  } else {
+    if (felder) felder.style.display = '';
+    if (sieger) sieger.style.display = 'none';
+    if (kandidaten) kandidaten.style.display = '';
+    if (modus === 'jahr') {
+      if (label) label.textContent = 'Jahr';
+      if (monatInput) monatInput.placeholder = 'z.B. 2026';
+      if (linkGruppe) linkGruppe.style.display = '';
+    } else {
+      if (label) label.textContent = 'Monat';
+      if (monatInput) monatInput.placeholder = '';
+      if (linkGruppe) linkGruppe.style.display = '';
+    }
+  }
 }
 
 let _nwKandidatId = 0;
@@ -1498,37 +1571,73 @@ function nwKandidatHinzu() {
   const div = document.createElement('div');
   div.className = 'nw-kandidat card mb-2';
   div.style.padding = '12px';
-  div.innerHTML = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-    <input type="text" id="nw-name-${id}" placeholder="Name" style="flex:1;min-width:140px;background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
-    <input type="text" id="nw-sport-${id}" placeholder="Sportart" style="flex:1;min-width:120px;background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
-    <input type="text" id="nw-bild-${id}" placeholder="Bild-URL (optional)" style="flex:2;min-width:180px;background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
-    <button class="btn btn-ghost btn-sm" onclick="this.closest('.nw-kandidat').remove()" style="color:#E2001A">✕</button>
-  </div>`;
+  div.innerHTML = `
+    <div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap">
+      <div style="flex:1;min-width:140px">
+        <label style="color:#aaa;font-size:.75rem">Name</label>
+        <input type="text" id="nw-name-${id}" placeholder="Vorname Nachname" style="width:100%;background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+      </div>
+      <div style="flex:1;min-width:120px">
+        <label style="color:#aaa;font-size:.75rem">Sportart</label>
+        <input type="text" id="nw-sport-${id}" placeholder="z.B. Judo" style="width:100%;background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+      </div>
+      <div style="flex:2;min-width:180px">
+        <label style="color:#aaa;font-size:.75rem">Foto-URL (optional)</label>
+        <input type="text" id="nw-bild-${id}" placeholder="https://..." style="width:100%;background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+      </div>
+      <div style="flex:2;min-width:200px">
+        <label style="color:#aaa;font-size:.75rem">Erfolge (eine pro Zeile)</label>
+        <textarea id="nw-erfolge-${id}" rows="2" placeholder="🥇 Berliner Meister&#10;🥈 Deutsche Meisterschaft" style="width:100%;background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px"></textarea>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.nw-kandidat').remove()" style="color:#E2001A;margin-top:20px">✕</button>
+    </div>`;
   container.appendChild(div);
 }
 
 async function nwVorschau() {
-  const monat = document.getElementById('nw-monat')?.value||'';
-  const link = document.getElementById('nw-link')?.value||'';
-  const kandidaten = [];
-  document.querySelectorAll('.nw-kandidat').forEach((div,i)=>{
-    const id = div.querySelector('[id^="nw-name-"]')?.id?.replace('nw-name-','');
-    if (!id) return;
-    kandidaten.push({
-      name: document.getElementById(`nw-name-${id}`)?.value||'',
-      sportart: document.getElementById(`nw-sport-${id}`)?.value||'',
-      bild: document.getElementById(`nw-bild-${id}`)?.value||null,
+  const modus = window._nwModus || 'monat';
+
+  if (modus === 'sieger') {
+    // Sieger-Poster
+    const name = document.getElementById('nw-sieger-name')?.value||'';
+    const sport = document.getElementById('nw-sieger-sport')?.value||'';
+    const zeitraum = document.getElementById('nw-sieger-zeitraum')?.value||'';
+    const bildUrl = document.getElementById('nw-sieger-bild')?.value||null;
+    const erfolgeText = document.getElementById('nw-sieger-erfolge')?.value||'';
+    const erfolge = erfolgeText.split('\n').map(s=>s.trim()).filter(Boolean);
+    if (!name) { toast('Name ist Pflichtfeld','warning'); return; }
+    await zeichneNachwuchsSiegerPoster('nw-canvas', {name, sport, zeitraum, bildUrl, erfolge});
+  } else {
+    // Wahl-Poster
+    const monat = document.getElementById('nw-monat')?.value||'';
+    const link = document.getElementById('nw-link')?.value||'';
+    const kandidaten = [];
+    document.querySelectorAll('.nw-kandidat').forEach((div)=>{
+      const id = div.querySelector('[id^="nw-name-"]')?.id?.replace('nw-name-','');
+      if (!id) return;
+      const erfolgeRaw = document.getElementById(`nw-erfolge-${id}`)?.value||'';
+      kandidaten.push({
+        name: document.getElementById(`nw-name-${id}`)?.value||'',
+        sportart: document.getElementById(`nw-sport-${id}`)?.value||'',
+        bild: document.getElementById(`nw-bild-${id}`)?.value||null,
+        erfolge: erfolgeRaw.split('\n').map(s=>s.trim()).filter(Boolean),
+      });
     });
-  });
-  await zeichneNachwuchswahlPoster('nw-canvas', {monat, kandidaten, abstimmungslink: link});
+    const titel = modus==='jahr' ? `Nachwuchssportler/in des Jahres ${monat}` : null;
+    await zeichneNachwuchswahlPoster('nw-canvas', {monat, kandidaten, abstimmungslink: link, titelOverride: titel});
+  }
 }
 
 function nwHerunterladen() {
   const canvas = document.getElementById('nw-canvas');
   if (!canvas) return;
-  const monat = (document.getElementById('nw-monat')?.value||'wahl').replace(/\s/g,'-');
+  const modus = window._nwModus||'monat';
+  const zeitraum = modus==='sieger'
+    ? (document.getElementById('nw-sieger-zeitraum')?.value||'sieger').replace(/\s/g,'-')
+    : (document.getElementById('nw-monat')?.value||'wahl').replace(/\s/g,'-');
+  const prefix = modus==='sieger' ? 'Sieger' : modus==='jahr' ? 'JahresSieger' : 'Wahl';
   const a = document.createElement('a');
-  a.download = `SLZB_Nachwuchswahl_${monat}.png`;
+  a.download = `SLZB_Nachwuchs${prefix}_${zeitraum}.png`;
   a.href = canvas.toDataURL('image/png');
   a.click();
 }
@@ -1747,4 +1856,278 @@ function renderCountdownSeite() {
       </div>
     </div>
   </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// JUBILÄUMS-POSTER (Gold)
+// ══════════════════════════════════════════════════════════════
+function renderJubilaeumSeite() {
+  return `<div class="page">
+    <div class="page-header">
+      <h1>🏅 Jubiläums-Poster</h1>
+      <p>Festliche Poster für Jubiläen, Ehrungen und besondere Anlässe</p>
+    </div>
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="alert alert-info mb-3"><span class="alert-icon">ℹ️</span>
+          <span>Goldener Akzent für Jubiläen, runde Geburtstage, Schuljubiläen und Festveranstaltungen.</span></div>
+        <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+          <div style="flex:1;min-width:200px">
+            <p class="text-sm text-muted">Titel, Untertitel, Datum und optionales Hintergrundbild. Export als PNG in Hoch- oder Querformat.</p>
+          </div>
+          <button class="btn btn-primary" onclick="zeigeJubilaeumModal()" style="white-space:nowrap;background:#C9A227;border-color:#C9A227">
+            🏅 Poster erstellen
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function zeigeJubilaeumModal() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal modal-xl';
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>🏅 Jubiläums-Poster erstellen</h3>
+      <button class="btn btn-ghost btn-sm close-x">✕</button>
+    </div>
+    <div class="modal-body" style="background:#111;padding:16px">
+      <div class="form-row cols-2 mb-3">
+        <div class="form-group">
+          <label style="color:#fff">Titel / Anlass <span class="required">*</span></label>
+          <input type="text" id="jub-titel" placeholder="z.B. 25 Jahre SLZB Berlin" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+        </div>
+        <div class="form-group">
+          <label style="color:#fff">Untertitel</label>
+          <input type="text" id="jub-untertitel" placeholder="z.B. Festveranstaltung" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+        </div>
+        <div class="form-group">
+          <label style="color:#fff">Datum</label>
+          <input type="date" id="jub-datum" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+        </div>
+        <div class="form-group">
+          <label style="color:#fff">Ort</label>
+          <input type="text" id="jub-ort" placeholder="z.B. SLZB Berlin" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label style="color:#fff">Hintergrundbild-URL (optional)</label>
+          <input type="text" id="jub-bild" placeholder="https://..." style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+        </div>
+      </div>
+      <div class="tabs mb-3" style="display:flex;gap:8px">
+        <button class="tab-btn active" onclick="jubFormatWechsel('hochformat')">📱 Hochformat</button>
+        <button class="tab-btn" onclick="jubFormatWechsel('querformat')">🖥️ Querformat</button>
+      </div>
+      <div style="text-align:center;background:#0a0800;padding:16px;border-radius:8px">
+        <canvas id="jub-canvas" width="1080" height="1350"
+          style="max-width:100%;max-height:60vh;display:block;margin:0 auto;border-radius:8px"></canvas>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost close-btn">Schließen</button>
+      <button class="btn btn-outline" onclick="jubVorschau()">👁️ Vorschau</button>
+      <button class="btn btn-primary" onclick="jubHerunterladen()" style="background:#C9A227;border-color:#C9A227">🖼️ PNG herunterladen</button>
+    </div>`;
+  modal.querySelector('.close-x').onclick = ()=>overlay.remove();
+  modal.querySelector('.close-btn').onclick = ()=>overlay.remove();
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+  window._jubFormat = 'hochformat';
+  const morgen = new Date(); morgen.setHours(0,0,0,0);
+  setTimeout(()=>{ const el=document.getElementById('jub-datum'); if(el) el.value=morgen.toISOString().slice(0,10); },50);
+}
+
+function jubFormatWechsel(format) {
+  window._jubFormat = format;
+  document.querySelectorAll('.modal .tab-btn').forEach(b=>{
+    b.classList.toggle('active', b.textContent.toLowerCase().includes(format==='hochformat'?'hochformat':'querformat'));
+  });
+  const canvas = document.getElementById('jub-canvas');
+  if (canvas) {
+    if (format==='querformat') { canvas.width=1920; canvas.height=1080; canvas.style.maxHeight='45vh'; }
+    else { canvas.width=1080; canvas.height=1350; canvas.style.maxHeight='60vh'; }
+  }
+}
+
+async function jubVorschau() {
+  const titel = document.getElementById('jub-titel')?.value||'';
+  const untertitel = document.getElementById('jub-untertitel')?.value||'';
+  const datum = document.getElementById('jub-datum')?.value||'';
+  const ort = document.getElementById('jub-ort')?.value||'';
+  const bildUrl = document.getElementById('jub-bild')?.value||null;
+  if (!titel) { toast('Titel ist Pflichtfeld','warning'); return; }
+  const format = window._jubFormat||'hochformat';
+  jubFormatWechsel(format);
+  const canvas = document.getElementById('jub-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  await ladeMontserrat(); await ladeLogo();
+  const W=canvas.width, H=canvas.height;
+  const bild = bildUrl ? await ladeBild(bildUrl) : null;
+  const datumStr = datum ? new Date(datum).toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'}) : '';
+  zeichneSlzbHintergrund(ctx, W, H, bild, 'gold');
+  zeichneSlzbDeko(ctx, W, H);
+  zeichneSlzbHeader(ctx, W, H, untertitel||'Jubiläum', datumStr, 'gold');
+  const teile = titel.trim().split(' ');
+  const vorname = teile.length>1 ? teile.slice(0,-1).join(' ') : '';
+  const nachname = teile.length>1 ? teile[teile.length-1] : titel;
+  zeichneSlzbKarte(ctx, W, H, {
+    subtitle: untertitel||'JUBILÄUM',
+    vorname: vorname||null, nachname,
+    titel: teile.length===1 ? titel : null,
+    zusatz: ort,
+    wettbewerb: datumStr,
+  }, 'gold');
+  zeichneSlzbFooterNeu(ctx, W, H, 'gold');
+}
+
+function jubHerunterladen() {
+  const canvas = document.getElementById('jub-canvas');
+  if (!canvas) return;
+  const titel = (document.getElementById('jub-titel')?.value||'jubilaeum').replace(/\s/g,'-');
+  const a = document.createElement('a');
+  a.download = `SLZB_Jubilaeum_${titel}.png`;
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+}
+
+// ══════════════════════════════════════════════════════════════
+// SCHULNACHRICHTEN-POSTER (Grau/Stahlblau)
+// ══════════════════════════════════════════════════════════════
+function renderSchulnachrichtenSeite() {
+  return `<div class="page">
+    <div class="page-header">
+      <h1>📰 Schulnachrichten-Poster</h1>
+      <p>Informationsplakate für schulinterne Mitteilungen und Ankündigungen</p>
+    </div>
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="alert alert-info mb-3"><span class="alert-icon">ℹ️</span>
+          <span>Neutraler Stahlblau-Grau-Akzent für allgemeine Schulnachrichten, Ankündigungen und Informationen.</span></div>
+        <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+          <div style="flex:1;min-width:200px">
+            <p class="text-sm text-muted">Überschrift, Nachrichtentext, Datum und optionales Bild. Ideal für Digital Signage und Aushänge.</p>
+          </div>
+          <button class="btn btn-primary" onclick="zeigeSchulnachrichtModal()" style="white-space:nowrap;background:#8A9BB0;border-color:#8A9BB0">
+            📰 Poster erstellen
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function zeigeSchulnachrichtModal() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal modal-xl';
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>📰 Schulnachrichten-Poster erstellen</h3>
+      <button class="btn btn-ghost btn-sm close-x">✕</button>
+    </div>
+    <div class="modal-body" style="background:#111;padding:16px">
+      <div class="form-row cols-2 mb-3">
+        <div class="form-group">
+          <label style="color:#fff">Überschrift <span class="required">*</span></label>
+          <input type="text" id="sn-titel" placeholder="z.B. Wichtige Mitteilung" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+        </div>
+        <div class="form-group">
+          <label style="color:#fff">Kategorie</label>
+          <input type="text" id="sn-kategorie" placeholder="z.B. Schulleitung · Information" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+        </div>
+        <div class="form-group">
+          <label style="color:#fff">Datum</label>
+          <input type="date" id="sn-datum" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+        </div>
+        <div class="form-group">
+          <label style="color:#fff">Hintergrundbild-URL (optional)</label>
+          <input type="text" id="sn-bild" placeholder="https://..." style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label style="color:#fff">Nachrichtentext (optional)</label>
+          <textarea id="sn-text" rows="3" placeholder="Kurzer Informationstext..." style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px;width:100%"></textarea>
+        </div>
+      </div>
+      <div class="tabs mb-3" style="display:flex;gap:8px">
+        <button class="tab-btn active" onclick="snFormatWechsel('hochformat')">📱 Hochformat</button>
+        <button class="tab-btn" onclick="snFormatWechsel('querformat')">🖥️ Querformat</button>
+      </div>
+      <div style="text-align:center;background:#0a0c10;padding:16px;border-radius:8px">
+        <canvas id="sn-canvas" width="1080" height="1350"
+          style="max-width:100%;max-height:60vh;display:block;margin:0 auto;border-radius:8px"></canvas>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost close-btn">Schließen</button>
+      <button class="btn btn-outline" onclick="snVorschau()">👁️ Vorschau</button>
+      <button class="btn btn-primary" onclick="snHerunterladen()" style="background:#8A9BB0;border-color:#8A9BB0">🖼️ PNG herunterladen</button>
+    </div>`;
+  modal.querySelector('.close-x').onclick = ()=>overlay.remove();
+  modal.querySelector('.close-btn').onclick = ()=>overlay.remove();
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+  window._snFormat = 'hochformat';
+  const heute = new Date();
+  setTimeout(()=>{ const el=document.getElementById('sn-datum'); if(el) el.value=heute.toISOString().slice(0,10); },50);
+}
+
+function snFormatWechsel(format) {
+  window._snFormat = format;
+  document.querySelectorAll('.modal .tab-btn').forEach(b=>{
+    b.classList.toggle('active', b.textContent.toLowerCase().includes(format==='hochformat'?'hochformat':'querformat'));
+  });
+  const canvas = document.getElementById('sn-canvas');
+  if (canvas) {
+    if (format==='querformat') { canvas.width=1920; canvas.height=1080; canvas.style.maxHeight='45vh'; }
+    else { canvas.width=1080; canvas.height=1350; canvas.style.maxHeight='60vh'; }
+  }
+}
+
+async function snVorschau() {
+  const titel = document.getElementById('sn-titel')?.value||'';
+  const kategorie = document.getElementById('sn-kategorie')?.value||'';
+  const datum = document.getElementById('sn-datum')?.value||'';
+  const text = document.getElementById('sn-text')?.value||'';
+  const bildUrl = document.getElementById('sn-bild')?.value||null;
+  if (!titel) { toast('Überschrift ist Pflichtfeld','warning'); return; }
+  const format = window._snFormat||'hochformat';
+  snFormatWechsel(format);
+  const canvas = document.getElementById('sn-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  await ladeMontserrat(); await ladeLogo();
+  const W=canvas.width, H=canvas.height;
+  const bild = bildUrl ? await ladeBild(bildUrl) : null;
+  const datumStr = datum ? new Date(datum).toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'}) : '';
+  zeichneSlzbHintergrund(ctx, W, H, bild, 'grau');
+  zeichneSlzbDeko(ctx, W, H);
+  zeichneSlzbHeader(ctx, W, H, kategorie||'Schulnachricht', datumStr, 'grau');
+  const teile = titel.trim().split(' ');
+  const vorname = teile.length>1 ? teile.slice(0,-1).join(' ') : '';
+  const nachname = teile.length>1 ? teile[teile.length-1] : titel;
+  zeichneSlzbKarte(ctx, W, H, {
+    subtitle: kategorie||'INFORMATION',
+    vorname: vorname||null, nachname,
+    titel: teile.length===1 ? titel : null,
+    zusatz: text ? text.slice(0,80)+(text.length>80?'…':'') : datumStr,
+    wettbewerb: datumStr,
+  }, 'grau');
+  zeichneSlzbFooterNeu(ctx, W, H, 'grau');
+}
+
+function snHerunterladen() {
+  const canvas = document.getElementById('sn-canvas');
+  if (!canvas) return;
+  const titel = (document.getElementById('sn-titel')?.value||'schulnachricht').replace(/\s/g,'-');
+  const a = document.createElement('a');
+  a.download = `SLZB_Nachricht_${titel}.png`;
+  a.href = canvas.toDataURL('image/png');
+  a.click();
 }

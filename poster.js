@@ -25,21 +25,43 @@ const SLZB_COLORS = {
 // ══════════════════════════════════════════════════════════════
 
 // Gemeinsamer Hintergrund-Gradient (wie HTML: schwarz → dunkelrot)
-function zeichneSlzbHintergrund(ctx, W, H, bild) {
+// akzent: 'rot' (Standard), 'blau', 'gruen'
+function zeichneSlzbHintergrund(ctx, W, H, bild, akzent='rot') {
   ctx.fillStyle = '#000'; ctx.fillRect(0,0,W,H);
   if (bild) {
-    // Bild: cover, center top
     const scale = Math.max(W/bild.width, H/bild.height);
     const bW = bild.width*scale, bH = bild.height*scale;
-    const bX = (W-bW)/2, bY = 0; // center top
+    const bX = (W-bW)/2, bY = 0;
     ctx.drawImage(bild, bX, bY, bW, bH);
   }
-  // Gradient: rgba(0,0,0,.15) → rgba(0,0,0,.20) → rgba(115,0,10,.55) → rgba(180,0,20,.92)
   const grad = ctx.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0,   'rgba(0,0,0,0.15)');
-  grad.addColorStop(0.35,'rgba(0,0,0,0.20)');
-  grad.addColorStop(0.65,'rgba(115,0,10,0.55)');
-  grad.addColorStop(1,   'rgba(180,0,20,0.92)');
+  if (akzent === 'blau') {
+    grad.addColorStop(0,   'rgba(0,0,0,0.15)');
+    grad.addColorStop(0.35,'rgba(0,0,0,0.20)');
+    grad.addColorStop(0.65,'rgba(0,30,90,0.60)');
+    grad.addColorStop(1,   'rgba(0,51,153,0.93)');
+  } else if (akzent === 'gruen') {
+    grad.addColorStop(0,   'rgba(0,0,0,0.15)');
+    grad.addColorStop(0.35,'rgba(0,0,0,0.20)');
+    grad.addColorStop(0.65,'rgba(0,80,30,0.60)');
+    grad.addColorStop(1,   'rgba(0,120,50,0.93)');
+  } else if (akzent === 'gold') {
+    grad.addColorStop(0,   'rgba(0,0,0,0.15)');
+    grad.addColorStop(0.35,'rgba(0,0,0,0.20)');
+    grad.addColorStop(0.65,'rgba(80,55,0,0.60)');
+    grad.addColorStop(1,   'rgba(130,85,0,0.93)');
+  } else if (akzent === 'grau') {
+    grad.addColorStop(0,   'rgba(0,0,0,0.15)');
+    grad.addColorStop(0.35,'rgba(0,0,0,0.20)');
+    grad.addColorStop(0.65,'rgba(40,50,65,0.60)');
+    grad.addColorStop(1,   'rgba(20,30,50,0.93)');
+  } else {
+    // rot (Standard)
+    grad.addColorStop(0,   'rgba(0,0,0,0.15)');
+    grad.addColorStop(0.35,'rgba(0,0,0,0.20)');
+    grad.addColorStop(0.65,'rgba(115,0,10,0.55)');
+    grad.addColorStop(1,   'rgba(180,0,20,0.92)');
+  }
   ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
 }
 
@@ -64,29 +86,27 @@ function zeichneSlzbDeko(ctx, W, H) {
 }
 
 // Header: Logo + rote Linie + Sportart + Datum
-function zeichneSlzbHeader(ctx, W, H, sportart, datum) {
+function zeichneSlzbHeader(ctx, W, H, sportart, datum, akzent='rot') {
   const pad = Math.round(W*0.026);
   const top = Math.round(H*0.021);
   const logoH = Math.round(H*0.076);
   const logoW = drawLogo(ctx, pad, top, logoH);
-  // Rote Linie
   const lineX = pad + logoW + Math.round(W*0.013);
-  ctx.fillStyle = '#ff002f';
+  const akzentFarbe = akzent==='blau' ? '#0B63CE' : akzent==='gruen' ? '#00a040' : akzent==='gold' ? '#C9A227' : akzent==='grau' ? '#8A9BB0' : '#ff002f';
+  ctx.fillStyle = akzentFarbe;
   ctx.fillRect(lineX, top+Math.round(H*0.002), 2, Math.round(H*0.038));
-  // Sportart
   ctx.fillStyle = '#fff';
   ctx.font = `800 ${Math.round(H*0.026)}px Montserrat, Arial, sans-serif`;
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
   ctx.letterSpacing = '2px';
   ctx.fillText((sportart||'SLZB').toUpperCase(), lineX+Math.round(W*0.013), top+Math.round(H*0.002));
-  // Datum
   ctx.font = `700 ${Math.round(H*0.015)}px Montserrat, Arial, sans-serif`;
   ctx.fillText((datum||'').toUpperCase(), lineX+Math.round(W*0.013), top+Math.round(H*0.002)+Math.round(H*0.030));
   ctx.letterSpacing = '0px';
 }
 
 // Glasmorphismus-Karte mit Vorname/Nachname/Platz
-function zeichneSlzbKarte(ctx, W, H, opts) {
+function zeichneSlzbKarte(ctx, W, H, opts, akzent='rot') {
   // opts: { subtitle, vorname, nachname, platz, medaille, zusatz, wettbewerb }
   const cardTop = Math.round(H*0.42);
   const cardPad = Math.round(W*0.030);
@@ -103,9 +123,10 @@ function zeichneSlzbKarte(ctx, W, H, opts) {
   let y = cardTop + Math.round(H*0.045);
   const cx = W/2;
 
-  // Subtitle (rot, gesperrt)
+  // Subtitle (akzentfarbe, gesperrt)
+  const _akzentFarbe = akzent==='blau' ? '#0B63CE' : akzent==='gruen' ? '#00a040' : akzent==='gold' ? '#C9A227' : akzent==='grau' ? '#8A9BB0' : '#ff163d';
   if (opts.subtitle) {
-    ctx.fillStyle = '#ff163d';
+    ctx.fillStyle = _akzentFarbe;
     ctx.font = `800 ${Math.round(H*0.017)}px Montserrat, Arial, sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     ctx.letterSpacing = '6px';
@@ -123,9 +144,9 @@ function zeichneSlzbKarte(ctx, W, H, opts) {
     y += Math.round(H*0.062);
   }
 
-  // Nachname (rot, größer, italic)
+  // Nachname (akzentfarbe, größer, italic)
   if (opts.nachname) {
-    ctx.fillStyle = '#ff0027';
+    ctx.fillStyle = akzent==='blau' ? '#1a7fff' : akzent==='gruen' ? '#00cc55' : akzent==='gold' ? '#e8b830' : akzent==='grau' ? '#a0b4cc' : '#ff0027';
     ctx.font = `900 italic ${Math.round(H*0.086)}px Montserrat, Arial, sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     ctx.fillText(opts.nachname.toUpperCase(), cx, y, cardW-cardPad*2);
@@ -140,7 +161,7 @@ function zeichneSlzbKarte(ctx, W, H, opts) {
     ctx.font = `800 italic ${tSz}px Montserrat, Arial, sans-serif`;
     ctx.fillStyle = '#fff'; ctx.textAlign='center'; ctx.textBaseline='top';
     ctx.fillText(woerter.slice(0,mid).join(' '), cx, y, cardW-cardPad*2); y+=tSz+8;
-    ctx.fillStyle='#ff0027';
+    ctx.fillStyle = akzent==='blau' ? '#1a7fff' : akzent==='gruen' ? '#00cc55' : akzent==='gold' ? '#e8b830' : akzent==='grau' ? '#a0b4cc' : '#ff0027';
     if (woerter.slice(mid).length) { ctx.fillText(woerter.slice(mid).join(' '), cx, y, cardW-cardPad*2); y+=tSz+8; }
   }
 
@@ -174,7 +195,7 @@ function zeichneSlzbKarte(ctx, W, H, opts) {
 }
 
 // Footer: Schulname + Hashtag
-function zeichneSlzbFooterNeu(ctx, W, H) {
+function zeichneSlzbFooterNeu(ctx, W, H, akzent='rot') {
   const bot = Math.round(H*0.042);
   ctx.fillStyle='#fff'; ctx.font=`700 ${Math.round(H*0.021)}px Montserrat, Arial, sans-serif`;
   ctx.textAlign='center'; ctx.textBaseline='bottom';
@@ -1874,9 +1895,9 @@ async function zeichneNachwuchswahlPoster(canvasId, opts) {
   const monat = opts.monat || '';
   const link = opts.abstimmungslink || '';
 
-  // Hintergrund
+  // Hintergrund: blau (Personen-Stil)
   const grad = ctx.createLinearGradient(0,0,0,H);
-  grad.addColorStop(0,'#0a0c1a'); grad.addColorStop(1,'#1B1C1F');
+  grad.addColorStop(0,'#0a0c1a'); grad.addColorStop(0.5,'#0a1535'); grad.addColorStop(1,'#001a66');
   ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
 
   // Blauer Header
@@ -1894,7 +1915,8 @@ async function zeichneNachwuchswahlPoster(canvasId, opts) {
   ctx.fillStyle='#0B63CE'; ctx.font='bold italic 52px Montserrat, Arial, sans-serif';
   ctx.fillText('ABSTIMMEN!', W/2, y); y+=68;
   ctx.fillStyle=SLZB_COLORS.white; ctx.font='bold 20px Montserrat, Arial, sans-serif';
-  ctx.fillText(`Nachwuchssportler/in des Monats ${monat}`, W/2, y); y+=36;
+  const nwTitelText = opts.titelOverride || `Nachwuchssportler/in des Monats ${monat}`;
+  ctx.fillText(nwTitelText, W/2, y, W-80); y+=36;
   ctx.fillStyle='#0B63CE'; ctx.fillRect((W-120)/2, y, 120, 3); y+=20;
 
   // Kandidaten-Fotos
@@ -1949,6 +1971,13 @@ async function zeichneNachwuchswahlPoster(canvasId, opts) {
       ctx.fillText(k.name||'', bX+bW/2, y+bH+10, bW+20);
       ctx.fillStyle='#0B63CE'; ctx.font=`bold ${Math.round(bW*0.07)}px Montserrat, Arial, sans-serif`;
       ctx.fillText((k.sportart||'').toUpperCase(), bX+bW/2, y+bH+10+Math.round(bW*0.12), bW+20);
+      // Erfolge unter Sportart
+      if (k.erfolge?.length) {
+        ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.font=`${Math.round(bW*0.055)}px Montserrat, Arial, sans-serif`;
+        k.erfolge.slice(0,2).forEach((erf,ei)=>{
+          ctx.fillText(erf, bX+bW/2, y+bH+10+Math.round(bW*0.12)+Math.round(bW*0.10)*(ei+1), bW+20);
+        });
+      }
     });
     y += bH + 80;
   }
@@ -2002,17 +2031,17 @@ async function zeichneCountdownPoster(canvasId, opts) {
   // Hintergrundbild
   const bild = opts.hintergrundbild ? await ladeBild(opts.hintergrundbild) : null;
   const grad = ctx.createLinearGradient(0,0,0,H);
-  grad.addColorStop(0,'#0a0c1a'); grad.addColorStop(1,'#1B1C1F');
+  grad.addColorStop(0,'#0a1a0c'); grad.addColorStop(1,'#0d2010');
   ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
   if (bild) {
     ctx.save(); ctx.globalAlpha=0.35;
     drawCover(ctx, bild, 0, 0, W, H); ctx.restore();
-    // Dunkles Overlay
-    ctx.fillStyle='rgba(10,12,26,0.65)'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='rgba(0,30,10,0.65)'; ctx.fillRect(0,0,W,H);
   }
 
   // Header
-  ctx.fillStyle='rgba(0,51,102,0.92)'; ctx.fillRect(0,0,W,querformat?70:90);
+  // Grüner Header für Events
+  ctx.fillStyle='rgba(0,100,40,0.92)'; ctx.fillRect(0,0,W,querformat?70:90);
   drawLogo(ctx, 20, querformat?8:14, querformat?54:68);
   ctx.fillStyle=SLZB_COLORS.white; ctx.font=`bold ${querformat?15:18}px Montserrat, Arial, sans-serif`;
   ctx.textAlign='right'; ctx.textBaseline='middle';
@@ -2028,18 +2057,18 @@ async function zeichneCountdownPoster(canvasId, opts) {
   ctx.restore();
 
   if (vorbei) {
-    ctx.fillStyle=SLZB_COLORS.red; ctx.font=`bold italic ${querformat?80:96}px Montserrat, Arial, sans-serif`;
+    ctx.fillStyle='#00cc55'; ctx.font=`bold italic ${querformat?80:96}px Montserrat, Arial, sans-serif`;
     ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText('HEUTE!', CX, CY);
   } else if (tage > 0) {
-    ctx.fillStyle=SLZB_COLORS.red; ctx.font=`bold italic ${querformat?120:160}px Montserrat, Arial, sans-serif`;
+    ctx.fillStyle='#00cc55'; ctx.font=`bold italic ${querformat?120:160}px Montserrat, Arial, sans-serif`;
     ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText(String(tage), CX, CY-20);
     ctx.fillStyle=SLZB_COLORS.white; ctx.font=`bold ${querformat?24:30}px Montserrat, Arial, sans-serif`;
     ctx.textBaseline='top';
     ctx.fillText(tage===1?'TAG NOCH':'TAGE NOCH', CX, CY+(querformat?70:90));
   } else {
-    ctx.fillStyle=SLZB_COLORS.red; ctx.font=`bold italic ${querformat?80:100}px Montserrat, Arial, sans-serif`;
+    ctx.fillStyle='#00cc55'; ctx.font=`bold italic ${querformat?80:100}px Montserrat, Arial, sans-serif`;
     ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText(`${stunden}h ${minuten}m`, CX, CY);
     ctx.fillStyle=SLZB_COLORS.white; ctx.font=`bold ${querformat?20:24}px Montserrat, Arial, sans-serif`;
@@ -2057,7 +2086,7 @@ async function zeichneCountdownPoster(canvasId, opts) {
   const evtWoerter = (opts.eventName||'EVENT').toUpperCase().split(' ');
   const evtMid = evtWoerter.length>2 ? Math.ceil(evtWoerter.length/2) : evtWoerter.length;
   ctx.fillText(evtWoerter.slice(0,evtMid).join(' '), CX, textY+28, evtW);
-  ctx.fillStyle=SLZB_COLORS.red;
+  ctx.fillStyle='#00cc55';
   if (evtWoerter.slice(evtMid).length) ctx.fillText(evtWoerter.slice(evtMid).join(' '), CX, textY+28+evtSz+8, evtW);
 
   // Datum + Ort
@@ -2077,4 +2106,94 @@ async function zeichneCountdownPoster(canvasId, opts) {
   ctx.fillStyle=SLZB_COLORS.red; ctx.fillRect((W-200)/2, H-22, 200, 2);
   ctx.fillStyle=SLZB_COLORS.pinkLight; ctx.font='bold italic 18px Montserrat, Arial, sans-serif';
   ctx.fillText('#SLZBerlin', W/2, H-4);
+}
+
+// ══════════════════════════════════════════════════════════════
+// NACHWUCHS-SIEGER-POSTER (Blau, Einzelperson mit Erfolgen)
+// ══════════════════════════════════════════════════════════════
+async function zeichneNachwuchsSiegerPoster(canvasId, opts) {
+  // opts: { name, sport, zeitraum, bildUrl, erfolge[] }
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const W=1080, H=1350;
+  canvas.width=W; canvas.height=H;
+  const ctx = canvas.getContext('2d');
+  await ladeMontserrat(); await ladeLogo();
+
+  const bild = opts.bildUrl ? await ladeBild(opts.bildUrl) : null;
+  const nameParts = (opts.name||'').trim().split(' ');
+  const vorname = nameParts.length>1 ? nameParts.slice(0,-1).join(' ') : opts.name;
+  const nachname = nameParts.length>1 ? nameParts[nameParts.length-1] : '';
+  const erfolge = (opts.erfolge||[]).slice(0,6);
+
+  // Hintergrund blau
+  zeichneSlzbHintergrund(ctx, W, H, bild, 'blau');
+  zeichneSlzbDeko(ctx, W, H);
+  zeichneSlzbHeader(ctx, W, H, opts.sport||'SLZB', opts.zeitraum||'', 'blau');
+
+  // Glasmorphismus-Karte (etwas höher für Erfolge)
+  const cardTop = Math.round(H*0.40);
+  const cardX = Math.round(W*0.026);
+  const cardW = W - 2*cardX;
+  const cardH = H - cardTop - Math.round(H*0.06);
+  ctx.fillStyle='rgba(0,0,0,0.50)';
+  slzbRoundRect(ctx, cardX, cardTop, cardW, cardH, Math.round(W*0.017)); ctx.fill();
+  ctx.strokeStyle='rgba(11,99,206,0.35)'; ctx.lineWidth=2;
+  slzbRoundRect(ctx, cardX, cardTop, cardW, cardH, Math.round(W*0.017)); ctx.stroke();
+
+  let y = cardTop + Math.round(H*0.030);
+  const cx = W/2;
+
+  // Subtitle
+  ctx.fillStyle='#0B63CE'; ctx.font=`800 ${Math.round(H*0.016)}px Montserrat, Arial, sans-serif`;
+  ctx.textAlign='center'; ctx.textBaseline='top'; ctx.letterSpacing='5px';
+  ctx.fillText('NACHWUCHSSPORTLER/IN DES ' + (opts.zeitraum?.match(/^\d{4}$/) ? 'JAHRES' : 'MONATS'), cx, y);
+  ctx.letterSpacing='0px'; y+=Math.round(H*0.028);
+
+  // Vorname weiß
+  ctx.fillStyle='#fff'; ctx.font=`800 italic ${Math.round(H*0.065)}px Montserrat, Arial, sans-serif`;
+  ctx.fillText(vorname.toUpperCase(), cx, y, cardW-40); y+=Math.round(H*0.058);
+
+  // Nachname blau
+  if (nachname) {
+    ctx.fillStyle='#1a7fff'; ctx.font=`900 italic ${Math.round(H*0.080)}px Montserrat, Arial, sans-serif`;
+    ctx.fillText(nachname.toUpperCase(), cx, y, cardW-40); y+=Math.round(H*0.072);
+  }
+
+  // Sportart
+  ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.font=`700 ${Math.round(H*0.018)}px Montserrat, Arial, sans-serif`;
+  ctx.letterSpacing='3px';
+  ctx.fillText((opts.sport||'').toUpperCase(), cx, y); y+=Math.round(H*0.030);
+  ctx.letterSpacing='0px';
+
+  // Trennlinie
+  ctx.fillStyle='#0B63CE'; ctx.fillRect(cx-60, y, 120, 2); y+=Math.round(H*0.022);
+
+  // Erfolge-Liste
+  if (erfolge.length > 0) {
+    ctx.textAlign='left'; ctx.textBaseline='top';
+    const listX = cardX + Math.round(W*0.05);
+    const listW = cardW - Math.round(W*0.10);
+    erfolge.forEach((erf, i) => {
+      const rowY = y + i*Math.round(H*0.052);
+      // Hintergrund-Zeile
+      ctx.fillStyle = i%2===0 ? 'rgba(11,99,206,0.12)' : 'rgba(0,0,0,0.15)';
+      slzbRoundRect(ctx, listX-8, rowY-4, listW+16, Math.round(H*0.044), 8); ctx.fill();
+      ctx.fillStyle='#fff'; ctx.font=`600 ${Math.round(H*0.022)}px Montserrat, Arial, sans-serif`;
+      ctx.fillText(erf, listX, rowY+Math.round(H*0.010), listW);
+    });
+    y += erfolge.length * Math.round(H*0.052) + Math.round(H*0.010);
+  }
+
+  // Zeitraum-Badge
+  if (opts.zeitraum) {
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillStyle='rgba(11,99,206,0.25)';
+    slzbRoundRect(ctx, cx-100, y, 200, Math.round(H*0.038), Math.round(H*0.019)); ctx.fill();
+    ctx.fillStyle='#a0c4ff'; ctx.font=`700 ${Math.round(H*0.018)}px Montserrat, Arial, sans-serif`;
+    ctx.fillText(opts.zeitraum, cx, y+Math.round(H*0.010));
+  }
+
+  // Footer
+  zeichneSlzbFooterNeu(ctx, W, H, 'blau');
 }
