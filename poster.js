@@ -2000,6 +2000,57 @@ async function zeichneNachwuchswahlPoster(canvasId, opts) {
 // FEATURE 3: COUNTDOWN-POSTER
 // 1080×1350 oder 1920×1080 mit Tagen/Stunden bis Event
 // ══════════════════════════════════════════════════════════════
+
+// Hilfsfunktion: "BIS ZUM" / "BIS ZUR" / "BIS ZU DEN" automatisch bestimmen
+function bisZumLabel(eventName) {
+  if (!eventName) return 'BIS ZUM';
+  const name = eventName.trim().toLowerCase();
+  const woerter = name.split(/\s+/);
+  const erstesWort = woerter[0];
+
+  // Femininum → "BIS ZUR"
+  const femininum = [
+    'deutschen','deutsche','berliner','landesmeisterschaft','bundesmeisterschaft',
+    'stadtmeisterschaft','kreismeisterschaft','schulmeisterschaft','vereinsmeisterschaft',
+    'europameisterschaft','weltmeisterschaft','em','wm','dm','lm','bm',
+    'qualifikation','sichtung','rangliste','bundesliga','regionalliga',
+    'meisterschaft','championship','open','cup','trophy','challenge',
+    'gala','veranstaltung','feier','ehrung','auszeichnung','verleihung',
+  ];
+  // Plural → "BIS ZU DEN"
+  const plural = [
+    'deutschen meisterschaften','berliner meisterschaften','landesmeisterschaften',
+    'bundesmeisterschaften','stadtmeisterschaften','kreismeisterschaften',
+    'schulmeisterschaften','europameisterschaften','weltmeisterschaften',
+    'meisterschaften','championships','games','spielen','wettkämpfen',
+    'olympischen','youth olympic','olympic',
+  ];
+
+  // Prüfe Plural zuerst (längere Matches)
+  for (const p of plural) {
+    if (name.includes(p)) return 'BIS ZU DEN';
+  }
+
+  // Prüfe Femininum
+  for (const f of femininum) {
+    if (erstesWort === f || name.startsWith(f + ' ') || name.includes(' ' + f)) {
+      // Ausnahmen: "Cup", "Open", "Trophy" sind maskulin/neutral
+      if (['cup','open','trophy','challenge','grand prix'].some(m => name.includes(m))) break;
+      return 'BIS ZUR';
+    }
+  }
+
+  // Spezifische Endungen
+  if (name.endsWith('meisterschaft') || name.includes('meisterschaft ')) return 'BIS ZUR';
+  if (name.endsWith('meisterschaften')) return 'BIS ZU DEN';
+  if (name.endsWith('liga') || name.endsWith('runde')) return 'BIS ZUR';
+  if (name.endsWith('cup') || name.endsWith('open') || name.endsWith('grand prix')) return 'BIS ZUM';
+  if (name.endsWith('turnier') || name.endsWith('wettkampf') || name.endsWith('lehrgang')) return 'BIS ZUM';
+  if (name.endsWith('games') || name.endsWith('spielen')) return 'BIS ZU DEN';
+
+  // Standard: "BIS ZUM"
+  return 'BIS ZUM';
+}
 async function zeichneCountdownPoster(canvasId, opts) {
   // opts: { eventName, eventDatum, ort, sportart, format:'hochformat'|'querformat', hintergrundbild }
   const canvas = document.getElementById(canvasId);
@@ -2084,7 +2135,7 @@ async function zeichneCountdownPoster(canvasId, opts) {
 
   ctx.fillStyle='#00cc55'; ctx.font=`bold ${labelSz}px Montserrat, Arial, sans-serif`;
   ctx.textAlign='center'; ctx.textBaseline='top'; ctx.letterSpacing='4px';
-  ctx.fillText('BIS ZUM', CX, textY);
+  ctx.fillText(bisZumLabel(opts.eventName||''), CX, textY);
   ctx.letterSpacing='0px';
 
   const evtWoerter = (opts.eventName||'EVENT').toUpperCase().split(' ');
