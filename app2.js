@@ -20,7 +20,8 @@ async function renderErfolgDetail() {
       </div>
       ${statusBadge(e.status)}
     </div>
-    ${e.dublettenhinweis?`<div class="datenschutz-warning"><h4>🔁 Dublettenverdacht</h4><p>${esc(e.dublettenhinweisText)}</p></div>`:''}
+    ${e.dublettenhinweis?`<div class=\"datenschutz-warning\"><h4>🔄 Dublettenverdacht</h4><p>${esc(e.dublettenhinweisText)}</p><button class=\"btn btn-primary btn-sm mt-2\" onclick=\"zeigeDublettenModal('${e.id}')\">Dubletten verwalten</button></div>`:''}
+    ${e.status==='Dublettenverdacht'&&!e.dublettenhinweis?`<div class=\"alert alert-warning mt-2\" style=\"display:flex;align-items:center;gap:12px;flex-wrap:wrap\"><span>🔄 Dublettenverdacht</span><button class=\"btn btn-primary btn-sm ml-2\" onclick=\"zeigeDublettenModal('${e.id}')\">Verwalten</button></div>`:''}
 
     <div class="tabs">
       <button class="tab-btn active" onclick="switchTab('kerndaten')">Kerndaten</button>
@@ -388,6 +389,15 @@ async function zeigeA3Vorschau(erfolgId) {
           <canvas id="a3-canvas" width="1587" height="1123"
             style="max-width:100%;max-height:55vh;display:block;margin:0 auto;border-radius:8px"></canvas>
           <p class="text-xs mt-2" style="color:#888" id="a3-variante-info">Variante 1: Bild oben · A3 Querformat</p>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
+            <span style="color:#888;font-size:.75rem">QR-Code:</span>
+            <select id="a3-qr-select" onchange="wechsleA3Variante(window._a3Variante||1)"
+              style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:4px 8px;font-size:.75rem">
+              <option value="">Kein QR-Code</option>
+              <option value="website">🌐 Website (tinyurl.com/slzb-erfolge)</option>
+              <option value="instagram">📸 Instagram (@slzb_berlin)</option>
+            </select>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
@@ -653,13 +663,20 @@ async function wechsleA3Variante(nr) {
 }
 
 async function zeichneA3Variante(canvasId, e, nr) {
-  if (nr===1) await zeichneA3Druckfreundlich(canvasId, e);
-  else if (nr===2) await zeichneA3Split(canvasId, e);
-  else if (nr===3) await zeichneA3Vollbild(canvasId, e);
-  else if (nr===4) await zeichnePoster2Bilder(canvasId, e);
-  else if (nr===5) await zeichnePoster4Bilder(canvasId, e);
-  else if (nr===6) await zeichneTabellenLayout(canvasId, e);
-  else if (nr===7) await zeichnePortraitLayout(canvasId, e);
+  // QR-Code URL aus Select lesen
+  const qrSelect = document.getElementById('a3-qr-select');
+  const qrKey = qrSelect?.value || '';
+  const qrUrl = qrKey === 'website' ? SLZB_QR_URLS?.website :
+                qrKey === 'instagram' ? SLZB_QR_URLS?.instagram : null;
+  // QR-URL an e anhängen für A3-Layouts
+  const eQR = {...e, _qrUrl: qrUrl};
+  if (nr===1) await zeichneA3Druckfreundlich(canvasId, eQR);
+  else if (nr===2) await zeichneA3Split(canvasId, eQR);
+  else if (nr===3) await zeichneA3Vollbild(canvasId, eQR);
+  else if (nr===4) await zeichnePoster2Bilder(canvasId, eQR);
+  else if (nr===5) await zeichnePoster4Bilder(canvasId, eQR);
+  else if (nr===6) await zeichneTabellenLayout(canvasId, eQR);
+  else if (nr===7) await zeichnePortraitLayout(canvasId, eQR);
 }
 
 
@@ -2421,4 +2438,155 @@ function kalenderCountdown(termin) {
     // Vorschau automatisch generieren
     cdVorschau();
   }, 200);
+}
+
+// ══════════════════════════════════════════════════════════════
+// DUBLETTEN-ZUSAMMENFÜHRUNG (Option A)
+// Hauptmeldung behalten, Duplikat archivieren
+// ══════════════════════════════════════════════════════════════
+async function zeigeDublettenModal(erfolgId) {
+  toast('Lade Dubletten-Vergleich...', 'info');
+  try {
+    const e = await DB.getErfolgById(erfolgId);
+    if (!e) { toast('Meldung nicht gefunden', 'danger'); return; }
+
+    // Alle anderen Meldungen mit Dublettenverdacht laden
+    const alle = await ladeErfolge();
+    const kandidaten = alle.filter(k =>
+      k.id !== erfolgId &&
+      (k.status === 'Dublettenverdacht' || k.dublettenhinweis) &&
+      k.sportartText === e.sportartText
+    );
+
+    // Auch ähnliche Meldungen (gleiche Sportart + ähnliches Datum)
+    const aehnliche = alle.filter(k => {
+      if (k.id === erfolgId) return false;
+      if (kandidaten.find(c => c.id === k.id)) return false;
+      if (k.sportartText !== e.sportartText) return false;
+      if (!k.datum || !e.datum) return false;
+      const diff = Math.abs(new Date(k.datum) - new Date(e.datum));
+      return diff < 7 * 24 * 60 * 60 * 1000; // ±7 Tage
+    });
+
+    const vergleichsKandidaten = [...kandidaten, ...aehnliche].slice(0, 10);
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const modal = document.createElement('div');
+    modal.className = 'modal modal-xl';
+
+    const renderKarte = (m, istHaupt) => `
+      <div class="card mb-2" style="border:2px solid ${istHaupt?'#E2001A':'#444'};position:relative">
+        ${istHaupt?'<div style="position:absolute;top:-10px;left:12px;background:#E2001A;color:#fff;font-size:.7rem;font-weight:700;padding:2px 10px;border-radius:10px">DIESE MELDUNG</div>':''}
+        <div class="card-body" style="padding:12px">
+          <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap">
+            <div style="flex:1;min-width:200px">
+              <div class="text-xs text-muted">${esc(m.erfolgNr||'–')}</div>
+              <strong>${esc(m.titel)}</strong>
+              <div class="text-sm text-muted mt-1">${esc(m.sportartText||'–')} · ${m.datum?new Date(m.datum).toLocaleDateString('de-DE'):''} · ${esc(m.ort||'–')}</div>
+              <div class="text-sm mt-1">${esc(m.wettbewerbText||'–')} · Platz: ${m.platzierung||'–'}</div>
+              <div class="mt-1">${statusBadge(m.status)}</div>
+              <div class="text-xs text-muted mt-1">Melder: ${esc(m.melderName||'–')} · ${m.eingangsdatum?new Date(m.eingangsdatum).toLocaleDateString('de-DE'):''}</div>
+            </div>
+            ${!istHaupt?`<div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+              <button class="btn btn-primary btn-sm" onclick="dubletteZusammenfuehren('${erfolgId}','${m.id}','haupt')">
+                ⭐ Diese als Hauptmeldung
+              </button>
+              <button class="btn btn-outline btn-sm" onclick="dubletteZusammenfuehren('${m.id}','${erfolgId}','haupt')">
+                🗄️ Aktuelle als Duplikat
+              </button>
+            </div>`:''}
+          </div>
+        </div>
+      </div>`;
+
+    modal.innerHTML = `
+      <div class="modal-header">
+        <h3>🔄 Dubletten-Verwaltung</h3>
+        <button class="btn btn-ghost btn-sm close-x">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info mb-3">
+          <span class="alert-icon">ℹ️</span>
+          <span><strong>Option A:</strong> Hauptmeldung behalten, Duplikat wird als „Archiviert" markiert und mit Hinweis versehen. Keine Daten werden gelöscht.</span>
+        </div>
+
+        <h3 style="margin-bottom:8px">Aktuelle Meldung</h3>
+        ${renderKarte(e, true)}
+
+        <h3 style="margin:16px 0 8px">Mögliche Dubletten (${vergleichsKandidaten.length})</h3>
+        ${vergleichsKandidaten.length === 0
+          ? '<div class="alert alert-success"><span class="alert-icon">✅</span><span>Keine ähnlichen Meldungen gefunden.</span></div>'
+          : vergleichsKandidaten.map(k => renderKarte(k, false)).join('')}
+
+        <div class="alert alert-warning mt-3">
+          <span class="alert-icon">⚠️</span>
+          <span>Die als Duplikat markierte Meldung wird <strong>nicht gelöscht</strong>, sondern auf Status „Archiviert" gesetzt und mit einem Duplikat-Hinweis versehen. Sie bleibt im System nachvollziehbar.</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost close-btn">Schließen</button>
+      </div>`;
+
+    modal.querySelector('.close-x').onclick = ()=>overlay.remove();
+    modal.querySelector('.close-btn').onclick = ()=>overlay.remove();
+    overlay.appendChild(modal);
+    overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+
+  } catch(err) {
+    toast('Fehler: '+err.message, 'danger');
+    console.error(err);
+  }
+}
+
+async function dubletteZusammenfuehren(hauptId, duplikatId, modus) {
+  const msg = `Meldung als Duplikat archivieren?\n\nHauptmeldung: wird behalten (Status unverändert)\nDuplikat: wird auf "Archiviert" gesetzt + Duplikat-Hinweis`;
+  if (!confirm(msg)) return;
+
+  try {
+    // 1. Duplikat auf "Archiviert" setzen + duplicate_flag + Hinweis
+    const haupt = await DB.getErfolgById(hauptId);
+    const hinweis = `Duplikat von ${haupt?.erfolgNr||hauptId} (${haupt?.titel||''}). Zusammengeführt am ${new Date().toLocaleDateString('de-DE')} durch ${Auth.name()}.`;
+
+    const { error: updateErr } = await Backend.client
+      .from('achievements')
+      .update({
+        status: 'Archiviert',
+        duplicate_flag: true,
+        duplicate_note: hinweis,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', duplikatId);
+
+    if (updateErr) throw new Error(updateErr.message);
+
+    // 2. Statuswechsel protokollieren
+    await DB.protokolliere(duplikatId, 'Dublettenverdacht', 'Archiviert',
+      `Als Duplikat von ${haupt?.erfolgNr||hauptId} archiviert.`);
+
+    // 3. Hauptmeldung: duplicate_flag entfernen, Status auf Redaktion
+    const { error: hauptErr } = await Backend.client
+      .from('achievements')
+      .update({
+        duplicate_flag: false,
+        duplicate_note: '',
+        status: haupt?.status === 'Dublettenverdacht' ? 'Redaktion' : haupt?.status,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', hauptId);
+
+    if (hauptErr) throw new Error(hauptErr.message);
+
+    // Cache leeren
+    APP._erfolgeCache = null;
+
+    toast('✅ Zusammenführung abgeschlossen. Duplikat archiviert.', 'success');
+    document.querySelector('.modal-overlay')?.remove();
+    navigateTo('redaktion');
+
+  } catch(err) {
+    toast('Fehler: '+err.message, 'danger');
+    console.error(err);
+  }
 }

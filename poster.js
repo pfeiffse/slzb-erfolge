@@ -631,7 +631,7 @@ async function zeichneA3Landscape(canvas, e, bild, meta) {
     ctx.fillText(pt, ovalX+ovalW+16, ovalY+8);
   }
 
-  zeichneA3Footer(ctx, W, H, meta);
+  zeichneA3Footer(ctx, W, H, meta, e._qrUrl||null);
 }
 
 // A3 Layout B: Hochformat-Bild → Bild links, Text rechts
@@ -698,7 +698,7 @@ async function zeichneA3Portrait(canvas, e, bild, meta) {
     zeilen.slice(0,4).forEach(z => { ctx.fillText(z, tx, y); y+=22; });
   }
 
-  zeichneA3Footer(ctx, W, H, meta);
+  zeichneA3Footer(ctx, W, H, meta, e._qrUrl||null);
 }
 
 // A3 Layout C: Kein Bild → Volltext
@@ -755,17 +755,29 @@ async function zeichneA3KeinBild(canvas, e) {
     ctx.fillText(pt, ovalX+ovalW+20, ovalY+12);
   }
 
-  zeichneA3Footer(ctx, W, H, null);
+  zeichneA3Footer(ctx, W, H, null, e._qrUrl||null);
 }
 
-function zeichneA3Footer(ctx, W, H, meta) {
+function zeichneA3Footer(ctx, W, H, meta, qrUrl=null) {
   ctx.fillStyle='#F0F0F0'; ctx.fillRect(0, H-60, W, 60);
   ctx.fillStyle=SLZB_COLORS.blue; ctx.fillRect(0, H-60, W, 3);
   ctx.fillStyle='#333'; ctx.font='13px Montserrat, Arial, sans-serif';
   ctx.textAlign='center'; ctx.textBaseline='middle';
   let footer = 'Schul- und Leistungssportzentrum Berlin · #SLZBerlin';
   if (meta?.creator) footer += ` · Foto: ${meta.creator}`;
-  ctx.fillText(footer, W/2, H-30);
+  // QR-Code rechts im Footer
+  const qrSize = 52;
+  const qrX = W - qrSize - 8;
+  const qrY = H - qrSize - 4;
+  if (qrUrl) {
+    zeichneQRCode(ctx, qrX, qrY, qrSize, qrUrl, '#F0F0F0', '#003366');
+    ctx.fillStyle='#666'; ctx.font='9px Montserrat, Arial, sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillText(qrUrl.includes('instagram')?'Instagram':'Website', qrX+qrSize/2, qrY+qrSize+2);
+    ctx.fillText(footer, (W-qrSize-16)/2, H-30);
+  } else {
+    ctx.fillText(footer, W/2, H-30);
+  }
 }
 
 // ── SOCIAL MEDIA MULTI-FORMAT ─────────────────────────────────
@@ -2360,3 +2372,56 @@ async function zeichnePosterA3Allgemein(ctx, W, H, bild, karteOpts, akzent='rot'
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText('Schul- und Leistungssportzentrum Berlin · #SLZBerlin', W/2, H-30);
 }
+
+// ══════════════════════════════════════════════════════════════
+// QR-CODE GENERATOR (Canvas-basiert, kein externes CDN)
+// Erzeugt einen einfachen QR-Code als Canvas-Zeichnung
+// Für komplexe URLs wird qrcode.js verwendet (via CDN-Fallback)
+// ══════════════════════════════════════════════════════════════
+
+// QR-Code auf Canvas zeichnen (nutzt qrcode-generator wenn verfügbar)
+async function zeichneQRCode(ctx, x, y, size, url, hintergrund='#fff', vordergrund='#000') {
+  // Versuche qrcode-generator zu laden (falls nicht vorhanden: Fallback-Box)
+  if (typeof qrcode === 'undefined') {
+    // Fallback: Weißes Quadrat mit URL-Text
+    ctx.fillStyle = hintergrund;
+    ctx.fillRect(x, y, size, size);
+    ctx.fillStyle = vordergrund;
+    ctx.font = `bold ${Math.round(size*0.08)}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('QR', x+size/2, y+size/2);
+    return;
+  }
+  try {
+    const qr = qrcode(0, 'M');
+    qr.addData(url);
+    qr.make();
+    const moduleCount = qr.getModuleCount();
+    const cellSize = size / moduleCount;
+    ctx.fillStyle = hintergrund;
+    ctx.fillRect(x, y, size, size);
+    ctx.fillStyle = vordergrund;
+    for (let row=0; row<moduleCount; row++) {
+      for (let col=0; col<moduleCount; col++) {
+        if (qr.isDark(row, col)) {
+          ctx.fillRect(
+            x + col*cellSize, y + row*cellSize,
+            cellSize, cellSize
+          );
+        }
+      }
+    }
+  } catch(e) {
+    // Fallback
+    ctx.fillStyle = hintergrund; ctx.fillRect(x,y,size,size);
+    ctx.fillStyle = '#888'; ctx.font=`${Math.round(size*0.1)}px Arial`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('QR', x+size/2, y+size/2);
+  }
+}
+
+// QR-Code-Konfiguration für SLZB
+const SLZB_QR_URLS = {
+  website:   'https://tinyurl.com/slzb-erfolge',
+  instagram: 'https://www.instagram.com/slzb_berlin/',
+};
