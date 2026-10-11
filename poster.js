@@ -598,6 +598,34 @@ async function zeichneA3Druckfreundlich(canvasId, e) {
 }
 
 // A3 Layout A: Querformat-Bild → Bild oben 55%, Text unten
+
+// ── A3-DRUCK: Wasserzeichen-Silhouette (sehr hell, druckfreundlich) ──
+function zeichneA3Wasserzeichen(ctx, W, H, sportartName, offsetX=0, offsetY=90) {
+  const kategorie = SLZB_SPORT_KATEGORIE[sportartName] || 'lauf';
+  const silhouette = SLZB_SPORT_SILHOUETTEN[kategorie] || SLZB_SPORT_SILHOUETTEN['lauf'];
+  if (!silhouette) return;
+
+  // Silhouette zentriert, 40% der verfügbaren Fläche
+  const verfH = H - offsetY - 60; // ohne Header und Footer
+  const silH = Math.round(verfH * 0.55);
+  const silW = Math.round(silH * 0.8);
+  const silX = offsetX + (W - offsetX - silW) / 2;
+  const silY = offsetY + Math.round(verfH * 0.15);
+
+  ctx.save();
+  ctx.globalAlpha = 0.07; // Sehr hell – Wasserzeichen-Effekt
+  ctx.fillStyle = '#003366'; // Dunkelblau (druckfreundlich)
+  ctx.translate(silX, silY);
+  ctx.scale(silW, silH);
+  try {
+    const p = new Path2D(silhouette);
+    ctx.fill(p);
+  } catch(e) {
+    ctx.beginPath(); ctx.arc(0.5, 0.4, 0.25, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+}
+
 async function zeichneA3Landscape(canvas, e, bild, meta) {
   const W=1587, H=1123;
   canvas.width=W; canvas.height=H;
@@ -625,10 +653,14 @@ async function zeichneA3Landscape(canvas, e, bild, meta) {
     ctx.textAlign='left'; ctx.fillText(_datumA3L, 20+115+20, 45);
   }
 
-  // Bild oben (55%)
+  // Bild oben (55%) oder Wasserzeichen-Silhouette
   const fotoH = Math.round((H-90-60)*0.55);
-  ctx.save(); ctx.beginPath(); ctx.rect(0,90,W,fotoH); ctx.clip();
-  drawCover(ctx, bild, 0, 90, W, fotoH); ctx.restore();
+  if (bild) {
+    ctx.save(); ctx.beginPath(); ctx.rect(0,90,W,fotoH); ctx.clip();
+    drawCover(ctx, bild, 0, 90, W, fotoH); ctx.restore();
+  } else {
+    zeichneA3Wasserzeichen(ctx, W, H, sportart, 0, 90);
+  }
 
   // Textbereich
   let y = 90+fotoH+20;
@@ -680,14 +712,19 @@ async function zeichneA3Portrait(canvas, e, bild, meta) {
   ctx.font='bold italic 20px Montserrat, Arial, sans-serif';
   ctx.textAlign='right'; ctx.fillText('#SLZBerlin', W-30, 45);
 
-  // Bild links (45%)
+  // Bild links (45%) oder Wasserzeichen-Silhouette
   const fotoW = Math.round(W*0.45);
   const fotoH = H-90-60;
-  ctx.save(); ctx.beginPath(); ctx.rect(0,90,fotoW,fotoH); ctx.clip();
-  drawCover(ctx, bild, 0, 90, fotoW, fotoH); ctx.restore();
-
-  // Blauer Streifen als Trenner
-  ctx.fillStyle=SLZB_COLORS.blue; ctx.fillRect(fotoW, 90, 6, fotoH);
+  if (bild) {
+    ctx.save(); ctx.beginPath(); ctx.rect(0,90,fotoW,fotoH); ctx.clip();
+    drawCover(ctx, bild, 0, 90, fotoW, fotoH); ctx.restore();
+    // Blauer Streifen als Trenner
+    ctx.fillStyle=SLZB_COLORS.blue; ctx.fillRect(fotoW, 90, 6, fotoH);
+  } else {
+    zeichneA3Wasserzeichen(ctx, W, H, sportart, 0, 90);
+    // Dezente Trennlinie auch ohne Bild
+    ctx.fillStyle='rgba(0,51,102,0.15)'; ctx.fillRect(fotoW, 90, 2, fotoH);
+  }
 
   // Text rechts
   const tx = fotoW+40, tw = W-tx-40;
@@ -739,6 +776,8 @@ async function zeichneA3KeinBild(canvas, e) {
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
 
   ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+  // Wasserzeichen-Silhouette (sehr hell, druckfreundlich)
+  zeichneA3Wasserzeichen(ctx, W, H, sportart, 0, 90);
   ctx.fillStyle=SLZB_COLORS.blue; ctx.fillRect(0,0,W,90);
   if (_slzbLogo) ctx.drawImage(_slzbLogo, 20, 8, 115, 74);
   ctx.fillStyle='#fff'; ctx.font='bold 20px Montserrat, Arial, sans-serif';
