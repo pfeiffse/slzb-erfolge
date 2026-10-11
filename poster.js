@@ -1193,8 +1193,18 @@ async function zeichneBildschirmQuerformat(canvasId, e) {
   const wettbewerb = e.wettbewerbText || '';
   const disziplin = e.disziplin || '';
 
-  // Hintergrund
-  ctx.fillStyle = SLZB_COLORS.bg; ctx.fillRect(0,0,W,H);
+  // Hintergrund (mit Silhouetten-Fallback)
+  if (bild) {
+    ctx.fillStyle = SLZB_COLORS.bg; ctx.fillRect(0,0,W,H);
+  } else {
+    zeichneErsatzbild(ctx, W, H, sportart || '');
+    const _gradQF = ctx.createLinearGradient(0, 0, 0, H);
+    _gradQF.addColorStop(0,   'rgba(0,0,0,0.15)');
+    _gradQF.addColorStop(0.35,'rgba(0,0,0,0.20)');
+    _gradQF.addColorStop(0.65,'rgba(115,0,10,0.55)');
+    _gradQF.addColorStop(1,   'rgba(180,0,20,0.92)');
+    ctx.fillStyle = _gradQF; ctx.fillRect(0, 0, W, H);
+  }
 
   // ── Bildaufteilung: adaptiv nach Bildformat ──────────────────
   let textX, textW;
@@ -1409,7 +1419,18 @@ async function zeichneTabellenLayout(canvasId, e) {
   const mColor = medailleColor(medaille);
 
   // Hintergrund
-  ctx.fillStyle = SLZB_COLORS.bg; ctx.fillRect(0,0,W,H);
+  if (bild) {
+    ctx.fillStyle = SLZB_COLORS.bg; ctx.fillRect(0,0,W,H);
+  } else {
+    // Kein Bild: Silhouette links, dunkler Hintergrund
+    zeichneErsatzbild(ctx, W, H, sportart || '');
+    const _gradTL = ctx.createLinearGradient(0, 0, 0, H);
+    _gradTL.addColorStop(0,   'rgba(0,0,0,0.15)');
+    _gradTL.addColorStop(0.35,'rgba(0,0,0,0.20)');
+    _gradTL.addColorStop(0.65,'rgba(115,0,10,0.55)');
+    _gradTL.addColorStop(1,   'rgba(180,0,20,0.92)');
+    ctx.fillStyle = _gradTL; ctx.fillRect(0, 0, W, H);
+  }
 
   // Bild links 45%
   const FOTO_W = Math.round(W*0.45);
@@ -1761,8 +1782,18 @@ async function zeichnePortraitLayout(canvasId, e) {
   const vorname = nameParts.slice(0,-1).join(' ') || name;
   const nachname = nameParts.slice(-1)[0] || '';
 
-  // Hintergrund
-  ctx.fillStyle = SLZB_COLORS.bg; ctx.fillRect(0,0,W,H);
+  // Hintergrund (mit Silhouetten-Fallback)
+  if (!bild) {
+    zeichneErsatzbild(ctx, W, H, sportart || '');
+    const _gradPL = ctx.createLinearGradient(0, 0, 0, H);
+    _gradPL.addColorStop(0,   'rgba(0,0,0,0.15)');
+    _gradPL.addColorStop(0.35,'rgba(0,0,0,0.20)');
+    _gradPL.addColorStop(0.65,'rgba(115,0,10,0.55)');
+    _gradPL.addColorStop(1,   'rgba(180,0,20,0.92)');
+    ctx.fillStyle = _gradPL; ctx.fillRect(0, 0, W, H);
+  } else {
+    ctx.fillStyle = SLZB_COLORS.bg; ctx.fillRect(0,0,W,H);
+  }
 
   // Foto oben 52% (Hochformat-Foto füllt gut)
   const FOTO_H = Math.round(H*0.52);
@@ -1861,7 +1892,17 @@ async function zeichneHighlightKarte(canvasId, e, nr, gesamt) {
   const mColor = medailleColor(medaille);
 
   // Hintergrund
-  ctx.fillStyle = SLZB_COLORS.bg; ctx.fillRect(0,0,W,H);
+  if (bild) {
+    ctx.fillStyle = SLZB_COLORS.bg; ctx.fillRect(0,0,W,H);
+  } else {
+    zeichneErsatzbild(ctx, W, H, sportart || '');
+    const _gradHL = ctx.createLinearGradient(0, 0, 0, H);
+    _gradHL.addColorStop(0,   'rgba(0,0,0,0.15)');
+    _gradHL.addColorStop(0.35,'rgba(0,0,0,0.20)');
+    _gradHL.addColorStop(0.65,'rgba(115,0,10,0.55)');
+    _gradHL.addColorStop(1,   'rgba(180,0,20,0.92)');
+    ctx.fillStyle = _gradHL; ctx.fillRect(0, 0, W, H);
+  }
 
   // Bild (obere 60%)
   if (bild) {
@@ -2124,9 +2165,21 @@ async function zeichneCountdownPoster(canvasId, opts) {
   const sportart = opts.sportart || '';
   const datumStr = eventDatum ? eventDatum.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
 
-  // 1. Hintergrund: zeichneSlzbHintergrund (grün, Foto oben sichtbar)
+  // 1. Hintergrund: mit Fallback-Silhouette wenn kein Foto
   const bild = opts.hintergrundbild ? await ladeBild(opts.hintergrundbild) : null;
-  zeichneSlzbHintergrund(ctx, W, H, bild, 'gruen');
+  if (bild) {
+    zeichneSlzbHintergrund(ctx, W, H, bild, 'gruen');
+  } else {
+    // Kein Foto: Sportart-Silhouette + grüner Gradient
+    zeichneErsatzbild(ctx, W, H, sportart || '');
+    // Grüner Fade über Silhouette
+    const _gradCD = ctx.createLinearGradient(0, 0, 0, H);
+    _gradCD.addColorStop(0,   'rgba(0,0,0,0.15)');
+    _gradCD.addColorStop(0.35,'rgba(0,0,0,0.20)');
+    _gradCD.addColorStop(0.65,'rgba(0,80,30,0.55)');
+    _gradCD.addColorStop(1,   'rgba(0,120,50,0.92)');
+    ctx.fillStyle = _gradCD; ctx.fillRect(0, 0, W, H);
+  }
 
   // 2. Deko: schräges Rechteck + Kreise (wie Erfolgsposter)
   zeichneSlzbDeko(ctx, W, H);
@@ -2493,63 +2546,54 @@ const SLZB_SPORT_FARBEN = {
   'default':          { grad: ['#1B1C1F','#2a2c31','#003366'], akzent: '#E2001A' },
 };
 
-// SVG-Silhouetten als Path-Daten (vereinfacht, skalierbar)
+// Sportart-Silhouetten (eine pro Sportart, SVG-Path 0-1 normiert)
 const SLZB_SPORT_SILHOUETTEN = {
-  'schwimmen': `M 0.5 0.25 C 0.5 0.15 0.6 0.1 0.7 0.15 C 0.8 0.2 0.85 0.3 0.8 0.4
-    L 0.6 0.55 L 0.3 0.5 L 0.1 0.6 L 0.05 0.5 L 0.25 0.4 L 0.4 0.35 Z`,
-  'lauf': `M 0.55 0.1 C 0.55 0.05 0.6 0.02 0.65 0.05 C 0.7 0.08 0.7 0.15 0.65 0.18
-    L 0.6 0.3 L 0.7 0.5 L 0.8 0.7 L 0.7 0.72 L 0.6 0.55 L 0.5 0.7 L 0.35 0.95
-    L 0.25 0.92 L 0.4 0.65 L 0.3 0.45 L 0.2 0.6 L 0.1 0.55 L 0.15 0.45 L 0.3 0.35
-    L 0.45 0.25 Z`,
-  'kampf': `M 0.4 0.08 C 0.4 0.03 0.45 0 0.5 0.03 C 0.55 0.06 0.55 0.13 0.5 0.16
-    L 0.45 0.3 L 0.6 0.25 L 0.75 0.35 L 0.65 0.45 L 0.5 0.4 L 0.55 0.6 L 0.6 0.8
-    L 0.5 0.82 L 0.45 0.62 L 0.35 0.8 L 0.25 0.78 L 0.35 0.55 L 0.3 0.4 L 0.2 0.45
-    L 0.15 0.35 L 0.3 0.25 L 0.42 0.28 Z`,
-  'ball': `M 0.5 0.08 C 0.5 0.03 0.55 0 0.6 0.03 C 0.65 0.06 0.65 0.13 0.6 0.16
-    L 0.55 0.28 L 0.7 0.22 L 0.8 0.35 L 0.65 0.42 L 0.55 0.45 L 0.6 0.65 L 0.55 0.9
-    L 0.45 0.9 L 0.4 0.65 L 0.35 0.45 L 0.2 0.42 L 0.15 0.28 L 0.3 0.22 L 0.42 0.28 Z
-    M 0.72 0.55 C 0.78 0.5 0.85 0.52 0.85 0.58 C 0.85 0.64 0.78 0.66 0.72 0.62 Z`,
-  'eis': `M 0.5 0.06 C 0.5 0.01 0.56 -0.02 0.61 0.01 C 0.66 0.04 0.66 0.11 0.61 0.14
-    L 0.55 0.28 L 0.7 0.2 L 0.78 0.32 L 0.62 0.42 L 0.58 0.58 L 0.7 0.72 L 0.78 0.88
-    L 0.68 0.92 L 0.55 0.75 L 0.42 0.88 L 0.32 0.84 L 0.45 0.7 L 0.38 0.55 L 0.22 0.42
-    L 0.18 0.3 L 0.3 0.22 L 0.44 0.28 Z`,
-  'turnen': `M 0.5 0.06 C 0.5 0.01 0.56 -0.02 0.61 0.01 C 0.66 0.04 0.66 0.11 0.61 0.14
-    L 0.55 0.25 L 0.75 0.15 L 0.8 0.25 L 0.6 0.38 L 0.65 0.55 L 0.8 0.65 L 0.75 0.75
-    L 0.58 0.65 L 0.5 0.8 L 0.42 0.65 L 0.25 0.75 L 0.2 0.65 L 0.35 0.55 L 0.4 0.38
-    L 0.2 0.25 L 0.25 0.15 L 0.45 0.25 Z`,
-  'ziel': `M 0.3 0.45 L 0.1 0.42 L 0.1 0.38 L 0.3 0.35 L 0.55 0.25 L 0.6 0.1
-    C 0.62 0.05 0.68 0.03 0.72 0.06 C 0.76 0.09 0.76 0.15 0.72 0.18
-    L 0.65 0.3 L 0.55 0.4 L 0.55 0.6 L 0.65 0.8 L 0.55 0.85 L 0.45 0.65
-    L 0.35 0.85 L 0.25 0.8 L 0.35 0.6 Z`,
-  'wasser': `M 0.15 0.4 C 0.2 0.3 0.3 0.28 0.4 0.32 L 0.55 0.38 L 0.65 0.25
-    C 0.68 0.2 0.75 0.18 0.8 0.22 C 0.85 0.26 0.85 0.33 0.8 0.37
-    L 0.7 0.48 L 0.8 0.6 L 0.75 0.65 L 0.62 0.55 L 0.45 0.62 L 0.25 0.68
-    L 0.1 0.62 L 0.08 0.52 Z`,
-  'kraft': `M 0.5 0.08 C 0.5 0.03 0.56 0 0.61 0.03 C 0.66 0.06 0.66 0.13 0.61 0.16
-    L 0.55 0.28 L 0.75 0.22 L 0.85 0.3 L 0.85 0.38 L 0.75 0.38 L 0.6 0.42
-    L 0.6 0.62 L 0.65 0.85 L 0.55 0.88 L 0.5 0.65 L 0.45 0.88 L 0.35 0.85
-    L 0.4 0.62 L 0.4 0.42 L 0.25 0.38 L 0.15 0.38 L 0.15 0.3 L 0.25 0.22 L 0.45 0.28 Z
-    M 0.05 0.28 L 0.15 0.28 L 0.15 0.42 L 0.05 0.42 Z
-    M 0.85 0.28 L 0.95 0.28 L 0.95 0.42 L 0.85 0.42 Z`,
-  'ausdauer': `M 0.55 0.08 C 0.55 0.03 0.61 0 0.66 0.03 C 0.71 0.06 0.71 0.13 0.66 0.16
-    L 0.6 0.25 L 0.7 0.2 L 0.75 0.28 L 0.62 0.38 L 0.58 0.5 L 0.65 0.65
-    L 0.55 0.68 L 0.48 0.55 L 0.38 0.68 L 0.28 0.65 L 0.38 0.5 L 0.3 0.35
-    L 0.15 0.42 L 0.1 0.32 L 0.28 0.25 L 0.45 0.28
-    M 0.3 0.55 C 0.2 0.6 0.1 0.65 0.05 0.72 L 0.12 0.78 C 0.2 0.72 0.32 0.68 0.42 0.65 Z`,
+  'schwimmen':       'M 0.15 0.38 C 0.18 0.28 0.28 0.22 0.38 0.26 L 0.52 0.32 L 0.62 0.20 C 0.65 0.14 0.73 0.12 0.78 0.16 C 0.83 0.20 0.83 0.28 0.78 0.32 L 0.68 0.42 L 0.78 0.52 L 0.72 0.58 L 0.60 0.48 L 0.42 0.54 L 0.22 0.60 L 0.08 0.54 L 0.06 0.44 Z',
+  'wasserspringen':  'M 0.50 0.05 C 0.50 0.00 0.56 -0.02 0.61 0.01 C 0.66 0.04 0.66 0.11 0.61 0.14 L 0.55 0.22 L 0.80 0.18 L 0.82 0.26 L 0.58 0.34 L 0.52 0.50 L 0.58 0.68 L 0.72 0.82 L 0.64 0.88 L 0.48 0.72 L 0.32 0.88 L 0.24 0.82 L 0.40 0.66 L 0.44 0.48 L 0.36 0.32 L 0.14 0.28 L 0.16 0.20 L 0.44 0.22 Z',
+  'eishockey':       'M 0.52 0.06 C 0.52 0.01 0.58 -0.02 0.63 0.01 C 0.68 0.04 0.68 0.11 0.63 0.14 L 0.58 0.24 L 0.72 0.18 L 0.78 0.28 L 0.62 0.36 L 0.58 0.52 L 0.68 0.70 L 0.60 0.74 L 0.50 0.58 L 0.40 0.74 L 0.32 0.70 L 0.42 0.52 L 0.36 0.36 L 0.18 0.42 L 0.12 0.32 L 0.32 0.26 L 0.46 0.24 Z M 0.10 0.44 L 0.20 0.40 L 0.22 0.52 L 0.08 0.58 Z',
+  'eiskunstlaufen':  'M 0.50 0.06 C 0.50 0.01 0.56 -0.02 0.61 0.01 C 0.66 0.04 0.66 0.11 0.61 0.14 L 0.55 0.26 L 0.82 0.20 L 0.84 0.30 L 0.58 0.38 L 0.60 0.56 L 0.70 0.74 L 0.62 0.80 L 0.50 0.62 L 0.38 0.80 L 0.30 0.74 L 0.40 0.56 L 0.42 0.38 L 0.16 0.30 L 0.18 0.20 L 0.45 0.26 Z',
+  'eisschnelllauf':  'M 0.55 0.08 C 0.55 0.03 0.61 0.00 0.66 0.03 C 0.71 0.06 0.71 0.13 0.66 0.16 L 0.60 0.26 L 0.78 0.20 L 0.82 0.30 L 0.62 0.38 L 0.58 0.52 L 0.72 0.62 L 0.80 0.78 L 0.70 0.82 L 0.56 0.66 L 0.42 0.82 L 0.32 0.78 L 0.44 0.60 L 0.38 0.48 L 0.20 0.52 L 0.14 0.40 L 0.36 0.34 L 0.48 0.24 Z M 0.60 0.38 L 0.88 0.32 L 0.90 0.40 L 0.62 0.46 Z',
+  'gewichtheben':    'M 0.50 0.06 C 0.50 0.01 0.56 -0.02 0.61 0.01 C 0.66 0.04 0.66 0.11 0.61 0.14 L 0.55 0.26 L 0.72 0.20 L 0.82 0.28 L 0.82 0.36 L 0.72 0.36 L 0.60 0.40 L 0.60 0.60 L 0.66 0.82 L 0.56 0.86 L 0.50 0.64 L 0.44 0.86 L 0.34 0.82 L 0.40 0.60 L 0.40 0.40 L 0.28 0.36 L 0.18 0.36 L 0.18 0.28 L 0.28 0.20 L 0.45 0.26 Z M 0.06 0.26 L 0.18 0.26 L 0.18 0.40 L 0.06 0.40 Z M 0.82 0.26 L 0.94 0.26 L 0.94 0.40 L 0.82 0.40 Z',
+  'handball':        'M 0.45 0.06 C 0.45 0.01 0.51 -0.02 0.56 0.01 C 0.61 0.04 0.61 0.11 0.56 0.14 L 0.50 0.24 L 0.72 0.16 L 0.82 0.26 L 0.68 0.38 L 0.55 0.42 L 0.58 0.60 L 0.64 0.82 L 0.54 0.86 L 0.48 0.64 L 0.36 0.82 L 0.26 0.78 L 0.36 0.58 L 0.32 0.42 L 0.16 0.48 L 0.10 0.36 L 0.28 0.28 L 0.44 0.24 Z M 0.76 0.10 C 0.80 0.06 0.88 0.06 0.90 0.12 C 0.92 0.18 0.88 0.24 0.82 0.22 Z',
+  'judo':            'M 0.35 0.06 C 0.35 0.01 0.41 -0.02 0.46 0.01 C 0.51 0.04 0.51 0.11 0.46 0.14 L 0.40 0.24 L 0.58 0.18 L 0.72 0.28 L 0.60 0.40 L 0.44 0.38 L 0.42 0.56 L 0.50 0.76 L 0.40 0.80 L 0.34 0.60 L 0.22 0.76 L 0.12 0.72 L 0.24 0.52 L 0.22 0.36 L 0.08 0.40 L 0.06 0.28 L 0.24 0.22 L 0.38 0.24 Z M 0.62 0.06 C 0.62 0.01 0.68 -0.02 0.73 0.01 C 0.78 0.04 0.78 0.11 0.73 0.14 L 0.68 0.22 L 0.80 0.30 L 0.88 0.18 L 0.94 0.24 L 0.84 0.40 L 0.66 0.32 Z',
+  'leichtathletik':  'M 0.55 0.06 C 0.55 0.01 0.61 -0.02 0.66 0.01 C 0.71 0.04 0.71 0.11 0.66 0.14 L 0.60 0.24 L 0.76 0.18 L 0.82 0.28 L 0.64 0.38 L 0.58 0.52 L 0.70 0.68 L 0.62 0.74 L 0.50 0.58 L 0.36 0.74 L 0.28 0.68 L 0.40 0.50 L 0.30 0.36 L 0.14 0.44 L 0.08 0.32 L 0.28 0.26 L 0.46 0.26 Z M 0.68 0.52 L 0.82 0.62 L 0.78 0.72 L 0.62 0.62 Z',
+  'radsport':        'M 0.50 0.08 C 0.50 0.03 0.56 0.00 0.61 0.03 C 0.66 0.06 0.66 0.13 0.61 0.16 L 0.55 0.26 L 0.68 0.20 L 0.74 0.30 L 0.60 0.40 L 0.56 0.54 L 0.62 0.54 C 0.74 0.54 0.84 0.64 0.84 0.76 C 0.84 0.88 0.74 0.96 0.62 0.96 C 0.50 0.96 0.40 0.88 0.40 0.76 L 0.44 0.54 L 0.38 0.54 C 0.26 0.54 0.16 0.64 0.16 0.76 C 0.16 0.88 0.26 0.96 0.38 0.96',
+  'turnen':          'M 0.50 0.92 C 0.50 0.97 0.44 1.00 0.39 0.97 C 0.34 0.94 0.34 0.87 0.39 0.84 L 0.45 0.74 L 0.20 0.80 L 0.18 0.70 L 0.44 0.62 L 0.48 0.46 L 0.38 0.28 L 0.46 0.24 L 0.50 0.40 L 0.54 0.24 L 0.62 0.28 L 0.52 0.46 L 0.56 0.62 L 0.82 0.70 L 0.80 0.80 L 0.55 0.74 Z',
+  'volleyball':      'M 0.45 0.06 C 0.45 0.01 0.51 -0.02 0.56 0.01 C 0.61 0.04 0.61 0.11 0.56 0.14 L 0.50 0.24 L 0.70 0.16 L 0.80 0.26 L 0.66 0.40 L 0.52 0.44 L 0.56 0.62 L 0.62 0.84 L 0.52 0.88 L 0.46 0.66 L 0.34 0.84 L 0.24 0.80 L 0.34 0.60 L 0.30 0.44 L 0.14 0.50 L 0.08 0.38 L 0.28 0.28 L 0.44 0.24 Z M 0.72 0.04 C 0.78 0.00 0.86 0.02 0.88 0.08 C 0.90 0.14 0.86 0.20 0.80 0.18 Z',
+  'fussball':        'M 0.48 0.06 C 0.48 0.01 0.54 -0.02 0.59 0.01 C 0.64 0.04 0.64 0.11 0.59 0.14 L 0.53 0.24 L 0.70 0.18 L 0.78 0.28 L 0.62 0.40 L 0.56 0.54 L 0.68 0.70 L 0.60 0.76 L 0.48 0.60 L 0.34 0.76 L 0.26 0.70 L 0.38 0.52 L 0.32 0.38 L 0.14 0.44 L 0.08 0.32 L 0.28 0.26 L 0.46 0.24 Z M 0.68 0.72 L 0.84 0.60 L 0.90 0.68 L 0.74 0.82 Z',
+  'bogenschiessen':  'M 0.30 0.45 L 0.08 0.42 L 0.08 0.38 L 0.30 0.35 L 0.55 0.24 L 0.60 0.08 C 0.62 0.03 0.68 0.01 0.72 0.04 C 0.76 0.07 0.76 0.14 0.72 0.17 L 0.65 0.30 L 0.55 0.40 L 0.55 0.60 L 0.65 0.80 L 0.55 0.85 L 0.45 0.65 L 0.35 0.85 L 0.25 0.80 L 0.35 0.60 Z',
+  'boxen':           'M 0.42 0.06 C 0.42 0.01 0.48 -0.02 0.53 0.01 C 0.58 0.04 0.58 0.11 0.53 0.14 L 0.47 0.24 L 0.62 0.18 L 0.72 0.28 L 0.58 0.40 L 0.52 0.54 L 0.60 0.72 L 0.52 0.78 L 0.44 0.60 L 0.32 0.76 L 0.22 0.72 L 0.34 0.52 L 0.28 0.38 L 0.12 0.44 L 0.06 0.32 L 0.26 0.26 L 0.42 0.24 Z M 0.72 0.22 C 0.80 0.16 0.90 0.18 0.92 0.26 C 0.94 0.34 0.88 0.40 0.80 0.38 Z',
+  'fechten':         'M 0.35 0.06 C 0.35 0.01 0.41 -0.02 0.46 0.01 C 0.51 0.04 0.51 0.11 0.46 0.14 L 0.40 0.22 L 0.56 0.16 L 0.66 0.26 L 0.52 0.38 L 0.44 0.50 L 0.52 0.66 L 0.44 0.72 L 0.36 0.56 L 0.24 0.72 L 0.14 0.68 L 0.26 0.50 L 0.22 0.36 L 0.06 0.42 L 0.02 0.30 L 0.22 0.24 L 0.38 0.22 Z M 0.66 0.20 L 0.96 0.14 L 0.96 0.18 L 0.66 0.26 Z',
+  'basketball':      'M 0.42 0.06 C 0.42 0.01 0.48 -0.02 0.53 0.01 C 0.58 0.04 0.58 0.11 0.53 0.14 L 0.47 0.22 L 0.68 0.14 L 0.78 0.24 L 0.64 0.38 L 0.50 0.42 L 0.54 0.60 L 0.60 0.82 L 0.50 0.86 L 0.44 0.64 L 0.32 0.82 L 0.22 0.78 L 0.32 0.58 L 0.28 0.42 L 0.12 0.48 L 0.06 0.36 L 0.26 0.28 L 0.42 0.22 Z M 0.78 0.18 C 0.84 0.12 0.92 0.12 0.94 0.18 C 0.96 0.24 0.92 0.30 0.86 0.28 Z',
+  'para_schwimmen':  'M 0.15 0.38 C 0.18 0.28 0.28 0.22 0.38 0.26 L 0.52 0.32 L 0.62 0.20 C 0.65 0.14 0.73 0.12 0.78 0.16 C 0.83 0.20 0.83 0.28 0.78 0.32 L 0.68 0.42 L 0.78 0.52 L 0.72 0.58 L 0.60 0.48 L 0.42 0.54 L 0.22 0.60 L 0.08 0.54 L 0.06 0.44 Z M 0.08 0.54 L 0.02 0.66 L 0.10 0.70 L 0.16 0.58 Z',
+  'geraetturnen_m':  'M 0.50 0.92 C 0.50 0.97 0.44 1.00 0.39 0.97 C 0.34 0.94 0.34 0.87 0.39 0.84 L 0.45 0.74 L 0.20 0.80 L 0.18 0.70 L 0.44 0.62 L 0.48 0.46 L 0.38 0.28 L 0.46 0.24 L 0.50 0.40 L 0.54 0.24 L 0.62 0.28 L 0.52 0.46 L 0.56 0.62 L 0.82 0.70 L 0.80 0.80 L 0.55 0.74 Z',
+  'geraetturnen_w':  'M 0.50 0.06 C 0.50 0.01 0.56 -0.02 0.61 0.01 C 0.66 0.04 0.66 0.11 0.61 0.14 L 0.55 0.24 L 0.75 0.16 L 0.80 0.26 L 0.60 0.36 L 0.62 0.54 L 0.74 0.70 L 0.66 0.76 L 0.52 0.60 L 0.38 0.76 L 0.30 0.70 L 0.42 0.54 L 0.40 0.36 L 0.20 0.26 L 0.25 0.16 L 0.45 0.24 Z',
+  'lauf':            'M 0.55 0.06 C 0.55 0.01 0.61 -0.02 0.66 0.01 C 0.71 0.04 0.71 0.11 0.66 0.14 L 0.60 0.24 L 0.76 0.18 L 0.82 0.28 L 0.64 0.38 L 0.58 0.52 L 0.70 0.68 L 0.62 0.74 L 0.50 0.58 L 0.36 0.74 L 0.28 0.68 L 0.40 0.50 L 0.30 0.36 L 0.14 0.44 L 0.08 0.32 L 0.28 0.26 L 0.46 0.26 Z',
 };
 
-// Kategorie-Zuordnung
+// Direkte Sportart → Silhouetten-Key Zuordnung
 const SLZB_SPORT_KATEGORIE = {
-  'Schwimmen': 'wasser', 'Para-Schwimmen': 'wasser', 'Wasserspringen': 'wasser',
-  'Eishockey': 'eis', 'Eiskunstlaufen': 'eis', 'Eisschnelllauf': 'eis',
-  'Leichtathletik': 'lauf',
-  'Judo': 'kampf', 'Boxen': 'kampf', 'Fechten': 'kampf',
-  'Gewichtheben': 'kraft',
-  'Basketball': 'ball', 'Handball': 'ball', 'Volleyball': 'ball',
-  'Volleyball / Beachvolleyball': 'ball',
-  'Bogenschießen': 'ziel',
-  'Radsport': 'ausdauer',
-  'Turnen': 'turnen', 'Gerätturnen männlich': 'turnen', 'Gerätturnen weiblich': 'turnen',
+  'Schwimmen':                    'schwimmen',
+  'Para-Schwimmen':               'para_schwimmen',
+  'Wasserspringen':               'wasserspringen',
+  'Eishockey':                    'eishockey',
+  'Eiskunstlaufen':               'eiskunstlaufen',
+  'Eisschnelllauf':               'eisschnelllauf',
+  'Leichtathletik':               'leichtathletik',
+  'Judo':                         'judo',
+  'Boxen':                        'boxen',
+  'Fechten':                      'fechten',
+  'Gewichtheben':                 'gewichtheben',
+  'Basketball':                   'basketball',
+  'Handball':                     'handball',
+  'Volleyball':                   'volleyball',
+  'Volleyball / Beachvolleyball': 'volleyball',
+  'Bogenschießen':                'bogenschiessen',
+  'Radsport':                     'radsport',
+  'Turnen':                       'turnen',
+  'Gerätturnen männlich':         'geraetturnen_m',
+  'Gerätturnen weiblich':         'geraetturnen_w',
+  'Fußball':                      'fussball',
 };
 
 // Hauptfunktion: Ersatzbild zeichnen
