@@ -2213,3 +2213,175 @@ function snHerunterladen() {
   a.href = canvas.toDataURL('image/png');
   a.click();
 }
+
+// ══════════════════════════════════════════════════════════════
+// KALENDER-ANSICHT
+// ══════════════════════════════════════════════════════════════
+async function renderKalender() {
+  const jetzt = new Date();
+  const aktMonat = jetzt.getMonth();
+  const aktJahr = jetzt.getFullYear();
+
+  // Termine aus SLZB_TERMINE (termine.js)
+  const alleTermine = (typeof SLZB_TERMINE !== 'undefined') ? SLZB_TERMINE : [];
+
+  // Filter-State
+  const state = window._kalenderState || {
+    monat: aktMonat, jahr: aktJahr,
+    sportart: '', prio: '', ansicht: 'monat'
+  };
+  window._kalenderState = state;
+
+  const monatNamen = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  const sportarten = [...new Set(alleTermine.map(t=>t.sportart).filter(Boolean))].sort();
+
+  // Gefilterte Termine
+  const gefiltertAlle = alleTermine.filter(t => {
+    if (state.sportart && t.sportart !== state.sportart) return false;
+    if (state.prio && String(t.prioritaet) !== state.prio) return false;
+    return true;
+  });
+
+  // Termine des aktuellen Monats
+  const monatsTermine = gefiltertAlle.filter(t => {
+    const d = new Date(t.datum);
+    return d.getMonth() === state.monat && d.getFullYear() === state.jahr;
+  });
+
+  // Nächste 30 Tage (für Listenansicht)
+  const heute = new Date(); heute.setHours(0,0,0,0);
+  const in30 = new Date(heute); in30.setDate(in30.getDate()+30);
+  const naechste = gefiltertAlle.filter(t => {
+    const d = new Date(t.datum);
+    return d >= heute && d <= in30;
+  }).slice(0,20);
+
+  const prioFarbe = (p) => p===1?'#E2001A':p===2?'#E07000':p===3?'#0B63CE':'#666';
+  const prioLabel = (p) => p===1?'🏆 Meisterschaft':p===2?'⚡ Wettkampf':p===3?'📋 Lehrgang':'📅 Regulär';
+
+  return `<div class="page">
+    <div class="page-header">
+      <h1>📅 Veranstaltungskalender 2026/27</h1>
+      <p>${alleTermine.length} Termine · ${sportarten.length} Sportarten</p>
+    </div>
+
+    <!-- Filter -->
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="form-row cols-4">
+          <div class="form-group">
+            <label>Sportart</label>
+            <select onchange="kalenderFilter('sportart',this.value)">
+              <option value="">Alle Sportarten</option>
+              ${sportarten.map(s=>`<option value="${esc(s)}" ${state.sportart===s?'selected':''}>${esc(s)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Priorität</label>
+            <select onchange="kalenderFilter('prio',this.value)">
+              <option value="">Alle</option>
+              <option value="1" ${state.prio==='1'?'selected':''}>🏆 Meisterschaft/Olympia</option>
+              <option value="2" ${state.prio==='2'?'selected':''}>⚡ Wettkampf/Qualifikation</option>
+              <option value="3" ${state.prio==='3'?'selected':''}>📋 Lehrgang/Sichtung</option>
+              <option value="4" ${state.prio==='4'?'selected':''}>📅 Regulär</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Ansicht</label>
+            <select onchange="kalenderFilter('ansicht',this.value)">
+              <option value="monat" ${state.ansicht==='monat'?'selected':''}>📆 Monatsansicht</option>
+              <option value="liste" ${state.ansicht==='liste'?'selected':''}>📋 Listenansicht</option>
+              <option value="naechste" ${state.ansicht==='naechste'?'selected':''}>⏭️ Nächste 30 Tage</option>
+            </select>
+          </div>
+          <div class="form-group" style="display:flex;align-items:flex-end;gap:8px">
+            <button class="btn btn-ghost btn-sm" onclick="kalenderFilter('sportart','');kalenderFilter('prio','')">↺ Reset</button>
+            <span class="text-xs text-muted">${gefiltertAlle.length} Treffer</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    ${state.ansicht === 'naechste' ? `
+    <!-- Nächste 30 Tage -->
+    <div class="card">
+      <div class="card-header"><h2>⏭️ Nächste 30 Tage (${naechste.length} Termine)</h2></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Datum</th><th>Sportart</th><th>Veranstaltung</th><th>Ort</th><th>Klasse</th><th>Priorität</th></tr></thead>
+        <tbody>${naechste.length===0?'<tr><td colspan="6" class="text-center text-muted" style="padding:30px">Keine Termine in den nächsten 30 Tagen.</td></tr>':
+          naechste.map(t=>`<tr>
+            <td class="text-sm"><strong>${esc(t.datumAnzeige)}</strong></td>
+            <td class="text-sm">${esc(t.sportart)}</td>
+            <td><strong>${esc(t.veranstaltung)}</strong></td>
+            <td class="text-sm text-muted">${esc(t.ort||'–')}</td>
+            <td class="text-sm text-muted">${esc(t.klasse||'–')}</td>
+            <td><span style="color:${prioFarbe(t.prioritaet)};font-size:.75rem;font-weight:700">${prioLabel(t.prioritaet)}</span></td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>
+    </div>` : state.ansicht === 'liste' ? `
+    <!-- Listenansicht: alle gefilterten Termine -->
+    <div class="card">
+      <div class="card-header"><h2>📋 Alle Termine (${gefiltertAlle.length})</h2></div>
+      <div class="table-wrap" style="max-height:600px;overflow-y:auto"><table>
+        <thead><tr><th>Datum</th><th>Sportart</th><th>Veranstaltung</th><th>Ort</th><th>Klasse</th><th>Priorität</th></tr></thead>
+        <tbody>${gefiltertAlle.map(t=>`<tr>
+          <td class="text-sm">${esc(t.datumAnzeige)}</td>
+          <td class="text-sm">${esc(t.sportart)}</td>
+          <td>${esc(t.veranstaltung)}</td>
+          <td class="text-sm text-muted">${esc(t.ort||'–')}</td>
+          <td class="text-sm text-muted">${esc(t.klasse||'–')}</td>
+          <td><span style="color:${prioFarbe(t.prioritaet)};font-size:.75rem;font-weight:700">${prioLabel(t.prioritaet)}</span></td>
+        </tr>`).join('')}
+        </tbody>
+      </table></div>
+    </div>` : `
+    <!-- Monatsansicht -->
+    <div class="card">
+      <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+        <button class="btn btn-ghost btn-sm" onclick="kalenderMonatNav(-1)">← Vorheriger</button>
+        <h2>📆 ${monatNamen[state.monat]} ${state.jahr} (${monatsTermine.length} Termine)</h2>
+        <button class="btn btn-ghost btn-sm" onclick="kalenderMonatNav(1)">Nächster →</button>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Datum</th><th>Sportart</th><th>Veranstaltung</th><th>Ort</th><th>Klasse</th><th>Priorität</th></tr></thead>
+        <tbody>${monatsTermine.length===0?`<tr><td colspan="6" class="text-center text-muted" style="padding:30px">Keine Termine im ${monatNamen[state.monat]} ${state.jahr}.</td></tr>`:
+          monatsTermine.map(t=>`<tr style="border-left:3px solid ${prioFarbe(t.prioritaet)}">
+            <td class="text-sm"><strong>${esc(t.datumAnzeige)}</strong></td>
+            <td class="text-sm">${esc(t.sportart)}</td>
+            <td><strong>${esc(t.veranstaltung)}</strong></td>
+            <td class="text-sm text-muted">${esc(t.ort||'–')}</td>
+            <td class="text-sm text-muted">${esc(t.klasse||'–')}</td>
+            <td><span style="color:${prioFarbe(t.prioritaet)};font-size:.75rem;font-weight:700">${prioLabel(t.prioritaet)}</span></td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>
+    </div>`}
+
+    <!-- Legende -->
+    <div class="card mt-3">
+      <div class="card-body" style="display:flex;gap:20px;flex-wrap:wrap;align-items:center">
+        <span style="font-size:.8rem;color:#888">Priorität:</span>
+        ${[1,2,3,4].map(p=>`<span style="color:${prioFarbe(p)};font-size:.8rem;font-weight:700">${prioLabel(p)}</span>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+function kalenderFilter(key, value) {
+  if (!window._kalenderState) window._kalenderState = {};
+  window._kalenderState[key] = value;
+  navigateTo('kalender');
+}
+
+function kalenderMonatNav(delta) {
+  if (!window._kalenderState) window._kalenderState = {};
+  let m = (window._kalenderState.monat||0) + delta;
+  let j = window._kalenderState.jahr || new Date().getFullYear();
+  if (m > 11) { m=0; j++; }
+  if (m < 0) { m=11; j--; }
+  window._kalenderState.monat = m;
+  window._kalenderState.jahr = j;
+  navigateTo('kalender');
+}
+
