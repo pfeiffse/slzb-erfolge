@@ -2377,6 +2377,18 @@ async function renderKalender() {
   const gefiltertAlle = alleTermine.filter(t => {
     if (state.sportart && t.sportart !== state.sportart) return false;
     if (state.prio && String(t.prioritaet) !== state.prio) return false;
+    if (state.teilnahme && t.teilnahme !== state.teilnahme) return false;
+    if (state.suche) {
+      const s = state.suche.toLowerCase();
+      const felder = [t.veranstaltung, t.ort, t.klasse, t.sportart, t.datumAnzeige].filter(Boolean).join(' ').toLowerCase();
+      if (!felder.includes(s)) return false;
+    }
+    // Persönliche Ansicht: nur eigene Sportart (für Trainer)
+    if (state.nurEigeneSportart && Auth.rolle()==='trainer') {
+      const trainerSport = Auth.name(); // Anzeigename = Sportart bei Trainern
+      if (!t.sportart.toLowerCase().includes(trainerSport.toLowerCase()) &&
+          !trainerSport.toLowerCase().includes(t.sportart.toLowerCase())) return false;
+    }
     return true;
   });
 
@@ -2408,6 +2420,11 @@ async function renderKalender() {
       <div class="card-body">
         <div class="form-row cols-4">
           <div class="form-group">
+            <label>Suche</label>
+            <input type="text" placeholder="Veranstaltung, Ort, Klasse..." value="${esc(state.suche||'')}"
+              oninput="kalenderFilter('suche',this.value)" style="width:100%">
+          </div>
+          <div class="form-group">
             <label>Sportart</label>
             <select onchange="kalenderFilter('sportart',this.value)">
               <option value="">Alle Sportarten</option>
@@ -2425,22 +2442,33 @@ async function renderKalender() {
             </select>
           </div>
           <div class="form-group">
+            <label>Teilnahme</label>
+            <select onchange="kalenderFilter('teilnahme',this.value)">
+              <option value="">Alle</option>
+              <option value="Ja" ${state.teilnahme==='Ja'?'selected':''}>✅ Bestätigt</option>
+              <option value="Vorläufig" ${state.teilnahme==='Vorläufig'?'selected':''}>⏳ Vorläufig</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">
+          <div class="form-group" style="margin:0">
             <label>Ansicht</label>
-            <select onchange="kalenderFilter('ansicht',this.value)">
+            <select onchange="kalenderFilter('ansicht',this.value)" style="margin-left:8px">
               <option value="monat" ${state.ansicht==='monat'?'selected':''}>📆 Monatsansicht</option>
+              <option value="grid" ${state.ansicht==='grid'?'selected':''}>🗓️ Kalender-Grid</option>
               <option value="liste" ${state.ansicht==='liste'?'selected':''}>📋 Listenansicht</option>
               <option value="naechste" ${state.ansicht==='naechste'?'selected':''}>⏭️ Nächste 30 Tage</option>
             </select>
           </div>
-          <div class="form-group" style="display:flex;align-items:flex-end;gap:8px">
-            <button class="btn btn-ghost btn-sm" onclick="kalenderFilter('sportart','');kalenderFilter('prio','')">↺ Reset</button>
-            <span class="text-xs text-muted">${gefiltertAlle.length} Treffer</span>
-          </div>
+          <button class="btn btn-ghost btn-sm" onclick="kalenderFilter('sportart','');kalenderFilter('prio','');kalenderFilter('suche','');kalenderFilter('teilnahme','')">↺ Reset</button>
+          <span class="text-xs text-muted">${gefiltertAlle.length} Treffer</span>
+          <div style="flex:1"></div>
+          <button class="btn btn-outline btn-sm" onclick="exportiereKalenderIcal()">📅 iCal exportieren</button>
         </div>
       </div>
     </div>
 
-    ${state.ansicht === 'naechste' ? `
+    ${state.ansicht === 'grid' ? renderKalenderGrid(state, gefiltertAlle, monatNamen) : state.ansicht === 'naechste' ? `
     <!-- Nächste 30 Tage -->
     <div class="card">
       <div class="card-header"><h2>⏭️ Nächste 30 Tage (${naechste.length} Termine)</h2></div>
@@ -2480,10 +2508,20 @@ async function renderKalender() {
     </div>` : `
     <!-- Monatsansicht -->
     <div class="card">
-      <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
-        <button class="btn btn-ghost btn-sm" onclick="kalenderMonatNav(-1)">← Vorheriger</button>
-        <h2>📆 ${monatNamen[state.monat]} ${state.jahr} (${monatsTermine.length} Termine)</h2>
-        <button class="btn btn-ghost btn-sm" onclick="kalenderMonatNav(1)">Nächster →</button>
+      <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;gap:4px;align-items:center">
+          <button class="btn btn-ghost btn-sm" onclick="kalenderMonatSchnell(-12)" title="Vorheriges Jahr">«</button>
+          <button class="btn btn-ghost btn-sm" onclick="kalenderMonatNav(-1)">← Vorheriger</button>
+        </div>
+        <div style="text-align:center">
+          <h2 style="margin:0">📆 ${monatNamen[state.monat]} ${state.jahr}</h2>
+          <span class="text-xs text-muted">${monatsTermine.length} Termine</span>
+        </div>
+        <div style="display:flex;gap:4px;align-items:center">
+          <button class="btn btn-ghost btn-sm" onclick="kalenderMonatNav(1)">Nächster →</button>
+          <button class="btn btn-ghost btn-sm" onclick="kalenderMonatSchnell(12)" title="Nächstes Jahr">»</button>
+          <button class="btn btn-outline btn-sm" onclick="window._kalenderState={monat:new Date().getMonth(),jahr:new Date().getFullYear()};navigateTo('kalender')">Heute</button>
+        </div>
       </div>
       <div class="table-wrap"><table>
         <thead><tr><th>Datum</th><th>Sportart</th><th>Veranstaltung</th><th>Ort</th><th>Klasse</th><th>Priorität</th><th></th></tr></thead>
@@ -2516,6 +2554,18 @@ async function renderKalender() {
 function kalenderFilter(key, value) {
   if (!window._kalenderState) window._kalenderState = {};
   window._kalenderState[key] = value;
+  navigateTo('kalender');
+}
+
+function kalenderMonatSchnell(delta) {
+  // Schnellnavigation: +1/-1 Monat, +12/-12 Jahr
+  if (!window._kalenderState) window._kalenderState = {};
+  let m = (window._kalenderState.monat||new Date().getMonth()) + delta;
+  let j = window._kalenderState.jahr || new Date().getFullYear();
+  while (m > 11) { m -= 12; j++; }
+  while (m < 0)  { m += 12; j--; }
+  window._kalenderState.monat = m;
+  window._kalenderState.jahr = j;
   navigateTo('kalender');
 }
 
@@ -5421,6 +5471,18 @@ async function renderKalender() {
   const gefiltertAlle = alleTermine.filter(t => {
     if (state.sportart && t.sportart !== state.sportart) return false;
     if (state.prio && String(t.prioritaet) !== state.prio) return false;
+    if (state.teilnahme && t.teilnahme !== state.teilnahme) return false;
+    if (state.suche) {
+      const s = state.suche.toLowerCase();
+      const felder = [t.veranstaltung, t.ort, t.klasse, t.sportart, t.datumAnzeige].filter(Boolean).join(' ').toLowerCase();
+      if (!felder.includes(s)) return false;
+    }
+    // Persönliche Ansicht: nur eigene Sportart (für Trainer)
+    if (state.nurEigeneSportart && Auth.rolle()==='trainer') {
+      const trainerSport = Auth.name(); // Anzeigename = Sportart bei Trainern
+      if (!t.sportart.toLowerCase().includes(trainerSport.toLowerCase()) &&
+          !trainerSport.toLowerCase().includes(t.sportart.toLowerCase())) return false;
+    }
     return true;
   });
 
@@ -5452,6 +5514,11 @@ async function renderKalender() {
       <div class="card-body">
         <div class="form-row cols-4">
           <div class="form-group">
+            <label>Suche</label>
+            <input type="text" placeholder="Veranstaltung, Ort, Klasse..." value="${esc(state.suche||'')}"
+              oninput="kalenderFilter('suche',this.value)" style="width:100%">
+          </div>
+          <div class="form-group">
             <label>Sportart</label>
             <select onchange="kalenderFilter('sportart',this.value)">
               <option value="">Alle Sportarten</option>
@@ -5469,17 +5536,28 @@ async function renderKalender() {
             </select>
           </div>
           <div class="form-group">
+            <label>Teilnahme</label>
+            <select onchange="kalenderFilter('teilnahme',this.value)">
+              <option value="">Alle</option>
+              <option value="Ja" ${state.teilnahme==='Ja'?'selected':''}>✅ Bestätigt</option>
+              <option value="Vorläufig" ${state.teilnahme==='Vorläufig'?'selected':''}>⏳ Vorläufig</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">
+          <div class="form-group" style="margin:0">
             <label>Ansicht</label>
-            <select onchange="kalenderFilter('ansicht',this.value)">
+            <select onchange="kalenderFilter('ansicht',this.value)" style="margin-left:8px">
               <option value="monat" ${state.ansicht==='monat'?'selected':''}>📆 Monatsansicht</option>
+              <option value="grid" ${state.ansicht==='grid'?'selected':''}>🗓️ Kalender-Grid</option>
               <option value="liste" ${state.ansicht==='liste'?'selected':''}>📋 Listenansicht</option>
               <option value="naechste" ${state.ansicht==='naechste'?'selected':''}>⏭️ Nächste 30 Tage</option>
             </select>
           </div>
-          <div class="form-group" style="display:flex;align-items:flex-end;gap:8px">
-            <button class="btn btn-ghost btn-sm" onclick="kalenderFilter('sportart','');kalenderFilter('prio','')">↺ Reset</button>
-            <span class="text-xs text-muted">${gefiltertAlle.length} Treffer</span>
-          </div>
+          <button class="btn btn-ghost btn-sm" onclick="kalenderFilter('sportart','');kalenderFilter('prio','');kalenderFilter('suche','');kalenderFilter('teilnahme','')">↺ Reset</button>
+          <span class="text-xs text-muted">${gefiltertAlle.length} Treffer</span>
+          <div style="flex:1"></div>
+          <button class="btn btn-outline btn-sm" onclick="exportiereKalenderIcal()">📅 iCal exportieren</button>
         </div>
       </div>
     </div>
@@ -5524,10 +5602,20 @@ async function renderKalender() {
     </div>` : `
     <!-- Monatsansicht -->
     <div class="card">
-      <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
-        <button class="btn btn-ghost btn-sm" onclick="kalenderMonatNav(-1)">← Vorheriger</button>
-        <h2>📆 ${monatNamen[state.monat]} ${state.jahr} (${monatsTermine.length} Termine)</h2>
-        <button class="btn btn-ghost btn-sm" onclick="kalenderMonatNav(1)">Nächster →</button>
+      <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;gap:4px;align-items:center">
+          <button class="btn btn-ghost btn-sm" onclick="kalenderMonatSchnell(-12)" title="Vorheriges Jahr">«</button>
+          <button class="btn btn-ghost btn-sm" onclick="kalenderMonatNav(-1)">← Vorheriger</button>
+        </div>
+        <div style="text-align:center">
+          <h2 style="margin:0">📆 ${monatNamen[state.monat]} ${state.jahr}</h2>
+          <span class="text-xs text-muted">${monatsTermine.length} Termine</span>
+        </div>
+        <div style="display:flex;gap:4px;align-items:center">
+          <button class="btn btn-ghost btn-sm" onclick="kalenderMonatNav(1)">Nächster →</button>
+          <button class="btn btn-ghost btn-sm" onclick="kalenderMonatSchnell(12)" title="Nächstes Jahr">»</button>
+          <button class="btn btn-outline btn-sm" onclick="window._kalenderState={monat:new Date().getMonth(),jahr:new Date().getFullYear()};navigateTo('kalender')">Heute</button>
+        </div>
       </div>
       <div class="table-wrap"><table>
         <thead><tr><th>Datum</th><th>Sportart</th><th>Veranstaltung</th><th>Ort</th><th>Klasse</th><th>Priorität</th><th></th></tr></thead>
@@ -5560,6 +5648,18 @@ async function renderKalender() {
 function kalenderFilter(key, value) {
   if (!window._kalenderState) window._kalenderState = {};
   window._kalenderState[key] = value;
+  navigateTo('kalender');
+}
+
+function kalenderMonatSchnell(delta) {
+  // Schnellnavigation: +1/-1 Monat, +12/-12 Jahr
+  if (!window._kalenderState) window._kalenderState = {};
+  let m = (window._kalenderState.monat||new Date().getMonth()) + delta;
+  let j = window._kalenderState.jahr || new Date().getFullYear();
+  while (m > 11) { m -= 12; j++; }
+  while (m < 0)  { m += 12; j--; }
+  window._kalenderState.monat = m;
+  window._kalenderState.jahr = j;
   navigateTo('kalender');
 }
 
@@ -6631,4 +6731,176 @@ async function exportiereChronikPPTX() {
   const dateiname = `SLZB_Jahreschronik${schuljahr?'_'+schuljahr:''}_${new Date().toISOString().slice(0,10)}`;
   await pptx.writeFile({ fileName: dateiname });
   toast(`✅ PowerPoint "${dateiname}.pptx" heruntergeladen!`, 'success');
+}
+
+// ══════════════════════════════════════════════════════════════
+// KALENDER-GRID (Feature 5: klassische Monatsansicht)
+// ══════════════════════════════════════════════════════════════
+function renderKalenderGrid(state, gefiltertAlle, monatNamen) {
+  const monat = state.monat;
+  const jahr = state.jahr;
+  const ersterTag = new Date(jahr, monat, 1);
+  const letzterTag = new Date(jahr, monat+1, 0);
+  const startWochentag = (ersterTag.getDay()+6)%7; // Mo=0
+  const prioFarbe = (p) => p===1?'#E2001A':p===2?'#E07000':p===3?'#0B63CE':'#555';
+
+  // Termine des Monats
+  const monatsTermine = gefiltertAlle.filter(t => {
+    const d = new Date(t.datum);
+    return d.getMonth()===monat && d.getFullYear()===jahr;
+  });
+
+  // Gruppiere nach Tag
+  const nachTag = {};
+  monatsTermine.forEach(t => {
+    const tag = new Date(t.datum).getDate();
+    if (!nachTag[tag]) nachTag[tag] = [];
+    nachTag[tag].push(t);
+  });
+
+  const heute = new Date();
+  const heuteTag = heute.getDate();
+  const heuteMonat = heute.getMonth();
+  const heuteJahr = heute.getFullYear();
+  const istAktuellerMonat = monat===heuteMonat && jahr===heuteJahr;
+
+  const tagNamen = ['Mo','Di','Mi','Do','Fr','Sa','So'];
+  let html = `<div class="card">
+    <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div style="display:flex;gap:4px">
+        <button class="btn btn-ghost btn-sm" onclick="kalenderMonatSchnell(-12)">«</button>
+        <button class="btn btn-ghost btn-sm" onclick="kalenderMonatNav(-1)">← Vorheriger</button>
+      </div>
+      <div style="text-align:center">
+        <h2 style="margin:0">🗓️ ${monatNamen[monat]} ${jahr}</h2>
+        <span class="text-xs text-muted">${monatsTermine.length} Termine</span>
+      </div>
+      <div style="display:flex;gap:4px">
+        <button class="btn btn-ghost btn-sm" onclick="kalenderMonatNav(1)">Nächster →</button>
+        <button class="btn btn-ghost btn-sm" onclick="kalenderMonatSchnell(12)">»</button>
+        <button class="btn btn-outline btn-sm" onclick="window._kalenderState={monat:new Date().getMonth(),jahr:new Date().getFullYear()};navigateTo('kalender')">Heute</button>
+      </div>
+    </div>
+    <div class="card-body" style="padding:8px">
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">
+        ${tagNamen.map(t=>`<div style="text-align:center;font-size:.75rem;font-weight:700;color:#888;padding:4px">${t}</div>`).join('')}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">`;
+
+  // Leere Zellen vor dem 1.
+  for (let i=0; i<startWochentag; i++) {
+    html += `<div style="min-height:80px;background:rgba(255,255,255,0.02);border-radius:4px"></div>`;
+  }
+
+  // Tage
+  for (let tag=1; tag<=letzterTag.getDate(); tag++) {
+    const termine = nachTag[tag] || [];
+    const istHeute = istAktuellerMonat && tag===heuteTag;
+    const wochentag = (startWochentag + tag - 1) % 7;
+    const istWE = wochentag >= 5;
+    html += `<div style="min-height:80px;background:${istHeute?'rgba(226,0,26,0.15)':istWE?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.05)'};border-radius:4px;padding:4px;border:${istHeute?'1px solid rgba(226,0,26,0.5)':'1px solid transparent'}">
+      <div style="font-size:.8rem;font-weight:${istHeute?'800':'600'};color:${istHeute?'#E2001A':'#fff'};margin-bottom:2px">${tag}</div>
+      ${termine.slice(0,3).map(t=>`<div onclick="zeigeTerminDetail(${JSON.stringify(t).replace(/"/g,'&quot;')})"
+        style="font-size:.65rem;background:${prioFarbe(t.prioritaet)};color:#fff;border-radius:3px;padding:1px 4px;margin-bottom:1px;cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"
+        title="${esc(t.veranstaltung)}">${esc(t.veranstaltung.slice(0,18))}</div>`).join('')}
+      ${termine.length>3?`<div style="font-size:.6rem;color:#888">+${termine.length-3} weitere</div>`:''}
+    </div>`;
+  }
+
+  html += `</div></div></div>`;
+  return html;
+}
+
+// ══════════════════════════════════════════════════════════════
+// TERMIN-DETAIL-MODAL (Feature 8: Klick auf Termin)
+// ══════════════════════════════════════════════════════════════
+function zeigeTerminDetail(termin) {
+  const prioFarbe = (p) => p===1?'#E2001A':p===2?'#E07000':p===3?'#0B63CE':'#555';
+  const prioLabel = (p) => p===1?'🏆 Meisterschaft/Olympia':p===2?'⚡ Wettkampf/Qualifikation':p===3?'📋 Lehrgang/Sichtung':'📅 Regulär';
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.maxWidth = '480px';
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>📅 ${esc(termin.veranstaltung)}</h3>
+      <button class="btn btn-ghost btn-sm close-x">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:auto 1fr;gap:8px 16px;font-size:.9rem">
+        <span class="text-muted">Datum</span><strong>${esc(termin.datumAnzeige)}</strong>
+        <span class="text-muted">Sportart</span><strong>${esc(termin.sportart)}</strong>
+        ${termin.ort?`<span class="text-muted">Ort</span><span>${esc(termin.ort)}</span>`:''}
+        ${termin.klasse?`<span class="text-muted">Klasse</span><span>${esc(termin.klasse)}</span>`:''}
+        <span class="text-muted">Teilnahme</span><span>${esc(termin.teilnahme||'–')}</span>
+        <span class="text-muted">Priorität</span><span style="color:${prioFarbe(termin.prioritaet)};font-weight:700">${prioLabel(termin.prioritaet)}</span>
+      </div>
+    </div>
+    <div class="modal-footer" style="gap:8px;flex-wrap:wrap">
+      <button class="btn btn-ghost close-btn">Schließen</button>
+      <button class="btn btn-outline btn-sm" onclick="kalenderCountdown(${JSON.stringify(termin).replace(/"/g,'&quot;')});document.querySelector('.modal-overlay').remove()">⏳ Countdown-Poster</button>
+    </div>`;
+  modal.querySelector('.close-x').onclick = ()=>overlay.remove();
+  modal.querySelector('.close-btn').onclick = ()=>overlay.remove();
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+// ══════════════════════════════════════════════════════════════
+// iCAL EXPORT (Feature 6)
+// ══════════════════════════════════════════════════════════════
+function exportiereKalenderIcal() {
+  const alleTermine = (typeof SLZB_TERMINE !== 'undefined') ? SLZB_TERMINE : [];
+  const state = window._kalenderState || {};
+
+  let gefiltert = alleTermine.filter(t => {
+    if (state.sportart && t.sportart !== state.sportart) return false;
+    if (state.prio && String(t.prioritaet) !== state.prio) return false;
+    if (state.teilnahme && t.teilnahme !== state.teilnahme) return false;
+    if (state.suche) {
+      const s = state.suche.toLowerCase();
+      const felder = [t.veranstaltung, t.ort, t.klasse, t.sportart].filter(Boolean).join(' ').toLowerCase();
+      if (!felder.includes(s)) return false;
+    }
+    return true;
+  });
+
+  if (!gefiltert.length) { toast('Keine Termine zum Exportieren','warning'); return; }
+
+  // iCal-Format generieren
+  const ical = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//SLZB Berlin//Veranstaltungskalender//DE',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'X-WR-CALNAME:SLZB Berlin Veranstaltungen',
+    'X-WR-TIMEZONE:Europe/Berlin',
+  ];
+
+  gefiltert.forEach(t => {
+    const datum = t.datum.replace(/-/g,'');
+    const uid = `${datum}-${t.sportart.replace(/\s/g,'')}-${t.veranstaltung.slice(0,10).replace(/\s/g,'')}@slzb-berlin.de`;
+    ical.push('BEGIN:VEVENT');
+    ical.push(`UID:${uid}`);
+    ical.push(`DTSTART;VALUE=DATE:${datum}`);
+    ical.push(`DTEND;VALUE=DATE:${datum}`);
+    ical.push(`SUMMARY:${t.sportart}: ${t.veranstaltung}`);
+    if (t.ort) ical.push(`LOCATION:${t.ort}`);
+    ical.push(`DESCRIPTION:Sportart: ${t.sportart}\\nKlasse: ${t.klasse||'–'}\\nTeilnahme: ${t.teilnahme||'–'}\\nPriorität: ${t.prioritaetText||'–'}`);
+    ical.push(`CATEGORIES:${t.sportart}`);
+    ical.push('END:VEVENT');
+  });
+
+  ical.push('END:VCALENDAR');
+
+  const blob = new Blob([ical.join('\r\n')], {type:'text/calendar;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `SLZB_Kalender${state.sportart?'_'+state.sportart:''}_2026-27.ics`;
+  a.click();
+  toast(`✅ ${gefiltert.length} Termine als iCal exportiert`, 'success');
 }
