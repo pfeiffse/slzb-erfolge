@@ -2447,15 +2447,17 @@ async function renderKalender() {
       <div class="table-wrap"><table>
         <thead><tr><th>Datum</th><th>Sportart</th><th>Veranstaltung</th><th>Ort</th><th>Klasse</th><th>Priorität</th><th></th></tr></thead>
         <tbody>${naechste.length===0?'<tr><td colspan="6" class="text-center text-muted" style="padding:30px">Keine Termine in den nächsten 30 Tagen.</td></tr>':
-          naechste.map(t=>`<tr>
-            <td class="text-sm"><strong>${esc(t.datumAnzeige)}</strong></td>
+          naechste.map(t=>{
+            const _istHeuteN = t.datum === new Date().toISOString().slice(0,10);
+            return `<tr style="${_istHeuteN?'background:rgba(226,0,26,0.12);':''}">
+            <td class="text-sm"><strong>${esc(t.datumAnzeige)}</strong>${_istHeuteN?'<span class="badge badge-danger ml-1" style="font-size:.65rem">HEUTE</span>':''}</td>
             <td class="text-sm">${esc(t.sportart)}</td>
             <td><strong>${esc(t.veranstaltung)}</strong></td>
             <td class="text-sm text-muted">${esc(t.ort||'–')}</td>
             <td class="text-sm text-muted">${esc(t.klasse||'–')}</td>
             <td><span style="color:${prioFarbe(t.prioritaet)};font-size:.75rem;font-weight:700">${prioLabel(t.prioritaet)}</span></td>
             <td><button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:2px 8px" onclick="kalenderCountdown(${JSON.stringify(t).replace(/"/g,'&quot;')})">⏳</button></td>
-          </tr>`).join('')}
+          </tr>`;}).join('')}
         </tbody>
       </table></div>
     </div>` : state.ansicht === 'liste' ? `
@@ -2486,15 +2488,17 @@ async function renderKalender() {
       <div class="table-wrap"><table>
         <thead><tr><th>Datum</th><th>Sportart</th><th>Veranstaltung</th><th>Ort</th><th>Klasse</th><th>Priorität</th><th></th></tr></thead>
         <tbody>${monatsTermine.length===0?`<tr><td colspan="6" class="text-center text-muted" style="padding:30px">Keine Termine im ${monatNamen[state.monat]} ${state.jahr}.</td></tr>`:
-          monatsTermine.map(t=>`<tr style="border-left:3px solid ${prioFarbe(t.prioritaet)}">
-            <td class="text-sm"><strong>${esc(t.datumAnzeige)}</strong></td>
+          monatsTermine.map(t=>{
+            const _istHeute = t.datum === new Date().toISOString().slice(0,10);
+            return `<tr style="border-left:3px solid ${prioFarbe(t.prioritaet)};${_istHeute?'background:rgba(226,0,26,0.12);':''}">
+            <td class="text-sm"><strong>${esc(t.datumAnzeige)}</strong>${_istHeute?'<span class="badge badge-danger ml-1" style="font-size:.65rem">HEUTE</span>':''}</td>
             <td class="text-sm">${esc(t.sportart)}</td>
             <td><strong>${esc(t.veranstaltung)}</strong></td>
             <td class="text-sm text-muted">${esc(t.ort||'–')}</td>
             <td class="text-sm text-muted">${esc(t.klasse||'–')}</td>
             <td><span style="color:${prioFarbe(t.prioritaet)};font-size:.75rem;font-weight:700">${prioLabel(t.prioritaet)}</span></td>
             <td><button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:2px 8px" onclick="kalenderCountdown(${JSON.stringify(t).replace(/"/g,'&quot;')})">⏳</button></td>
-          </tr>`).join('')}
+          </tr>`;}).join('')}
         </tbody>
       </table></div>
     </div>`}
@@ -5487,15 +5491,17 @@ async function renderKalender() {
       <div class="table-wrap"><table>
         <thead><tr><th>Datum</th><th>Sportart</th><th>Veranstaltung</th><th>Ort</th><th>Klasse</th><th>Priorität</th><th></th></tr></thead>
         <tbody>${naechste.length===0?'<tr><td colspan="6" class="text-center text-muted" style="padding:30px">Keine Termine in den nächsten 30 Tagen.</td></tr>':
-          naechste.map(t=>`<tr>
-            <td class="text-sm"><strong>${esc(t.datumAnzeige)}</strong></td>
+          naechste.map(t=>{
+            const _istHeuteN = t.datum === new Date().toISOString().slice(0,10);
+            return `<tr style="${_istHeuteN?'background:rgba(226,0,26,0.12);':''}">
+            <td class="text-sm"><strong>${esc(t.datumAnzeige)}</strong>${_istHeuteN?'<span class="badge badge-danger ml-1" style="font-size:.65rem">HEUTE</span>':''}</td>
             <td class="text-sm">${esc(t.sportart)}</td>
             <td><strong>${esc(t.veranstaltung)}</strong></td>
             <td class="text-sm text-muted">${esc(t.ort||'–')}</td>
             <td class="text-sm text-muted">${esc(t.klasse||'–')}</td>
             <td><span style="color:${prioFarbe(t.prioritaet)};font-size:.75rem;font-weight:700">${prioLabel(t.prioritaet)}</span></td>
             <td><button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:2px 8px" onclick="kalenderCountdown(${JSON.stringify(t).replace(/"/g,'&quot;')})">⏳</button></td>
-          </tr>`).join('')}
+          </tr>`;}).join('')}
         </tbody>
       </table></div>
     </div>` : state.ansicht === 'liste' ? `
@@ -5526,15 +5532,17 @@ async function renderKalender() {
       <div class="table-wrap"><table>
         <thead><tr><th>Datum</th><th>Sportart</th><th>Veranstaltung</th><th>Ort</th><th>Klasse</th><th>Priorität</th><th></th></tr></thead>
         <tbody>${monatsTermine.length===0?`<tr><td colspan="6" class="text-center text-muted" style="padding:30px">Keine Termine im ${monatNamen[state.monat]} ${state.jahr}.</td></tr>`:
-          monatsTermine.map(t=>`<tr style="border-left:3px solid ${prioFarbe(t.prioritaet)}">
-            <td class="text-sm"><strong>${esc(t.datumAnzeige)}</strong></td>
+          monatsTermine.map(t=>{
+            const _istHeute = t.datum === new Date().toISOString().slice(0,10);
+            return `<tr style="border-left:3px solid ${prioFarbe(t.prioritaet)};${_istHeute?'background:rgba(226,0,26,0.12);':''}">
+            <td class="text-sm"><strong>${esc(t.datumAnzeige)}</strong>${_istHeute?'<span class="badge badge-danger ml-1" style="font-size:.65rem">HEUTE</span>':''}</td>
             <td class="text-sm">${esc(t.sportart)}</td>
             <td><strong>${esc(t.veranstaltung)}</strong></td>
             <td class="text-sm text-muted">${esc(t.ort||'–')}</td>
             <td class="text-sm text-muted">${esc(t.klasse||'–')}</td>
             <td><span style="color:${prioFarbe(t.prioritaet)};font-size:.75rem;font-weight:700">${prioLabel(t.prioritaet)}</span></td>
             <td><button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:2px 8px" onclick="kalenderCountdown(${JSON.stringify(t).replace(/"/g,'&quot;')})">⏳</button></td>
-          </tr>`).join('')}
+          </tr>`;}).join('')}
         </tbody>
       </table></div>
     </div>`}

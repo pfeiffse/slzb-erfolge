@@ -710,7 +710,7 @@ async function zeichneA3Landscape(canvas, e, bild, meta) {
     ctx.fillText(pt, ovalX+ovalW+16, ovalY+8);
   }
 
-  zeichneA3Footer(ctx, W, H, meta, e._qrUrl||null);
+  zeichneA3Footer(ctx, W, H, meta);
 }
 
 // A3 Layout B: Hochformat-Bild → Bild links, Text rechts
@@ -782,7 +782,7 @@ async function zeichneA3Portrait(canvas, e, bild, meta) {
     zeilen.slice(0,4).forEach(z => { ctx.fillText(z, tx, y); y+=22; });
   }
 
-  zeichneA3Footer(ctx, W, H, meta, e._qrUrl||null);
+  zeichneA3Footer(ctx, W, H, meta);
 }
 
 // A3 Layout C: Kein Bild → Volltext
@@ -841,29 +841,17 @@ async function zeichneA3KeinBild(canvas, e) {
     ctx.fillText(pt, ovalX+ovalW+20, ovalY+12);
   }
 
-  zeichneA3Footer(ctx, W, H, null, e._qrUrl||null);
+  zeichneA3Footer(ctx, W, H, null);
 }
 
-function zeichneA3Footer(ctx, W, H, meta, qrUrl=null) {
+function zeichneA3Footer(ctx, W, H, meta) {
   ctx.fillStyle='#F0F0F0'; ctx.fillRect(0, H-60, W, 60);
   ctx.fillStyle=SLZB_COLORS.blue; ctx.fillRect(0, H-60, W, 3);
   ctx.fillStyle='#333'; ctx.font='13px Montserrat, Arial, sans-serif';
   ctx.textAlign='center'; ctx.textBaseline='middle';
   let footer = 'Schul- und Leistungssportzentrum Berlin · #SLZBerlin';
   if (meta?.creator) footer += ` · Foto: ${meta.creator}`;
-  // QR-Code rechts im Footer
-  const qrSize = 52;
-  const qrX = W - qrSize - 8;
-  const qrY = H - qrSize - 4;
-  if (qrUrl) {
-    zeichneQRCode(ctx, qrX, qrY, qrSize, qrUrl, '#F0F0F0', '#003366');
-    ctx.fillStyle='#666'; ctx.font='9px Montserrat, Arial, sans-serif';
-    ctx.textAlign='center'; ctx.textBaseline='top';
-    ctx.fillText(qrUrl.includes('instagram')?'Instagram':'Website', qrX+qrSize/2, qrY+qrSize+2);
-    ctx.fillText(footer, (W-qrSize-16)/2, H-30);
-  } else {
-    ctx.fillText(footer, W/2, H-30);
-  }
+  ctx.fillText(footer, W/2, H-30);
 }
 
 // ── SOCIAL MEDIA MULTI-FORMAT ─────────────────────────────────
@@ -2371,14 +2359,6 @@ async function zeichneCountdownPoster(canvasId, opts) {
     if (opts.ort) { ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.fillText(opts.ort, CX, ortY+infoSz+6, W-80); }
   }
 
-  // QR-Code unten rechts (Instagram)
-  if (typeof SLZB_QR_URLS !== 'undefined') {
-    const qrSzCD = Math.round(H*0.07);
-    zeichneQRCode(ctx, W-qrSzCD-Math.round(W*0.04), H-qrSzCD-Math.round(H*0.07), qrSzCD, SLZB_QR_URLS.instagram, 'rgba(0,30,10,0.8)', '#fff');
-    ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.font=`${Math.round(H*0.012)}px Montserrat, Arial, sans-serif`;
-    ctx.textAlign='right'; ctx.textBaseline='bottom';
-    ctx.fillText('@slzberlin', W-Math.round(W*0.04), H-Math.round(H*0.04));
-  }
   // 8. Footer: zeichneSlzbFooterNeu (grün)
   zeichneSlzbFooterNeu(ctx, W, H, 'gruen');
 }
@@ -2469,14 +2449,6 @@ async function zeichneNachwuchsSiegerPoster(canvasId, opts) {
     ctx.fillText(opts.zeitraum, cx, y+Math.round(H*0.010));
   }
 
-  // QR-Code unten rechts (Instagram)
-  if (typeof SLZB_QR_URLS !== 'undefined') {
-    const qrSzNW = Math.round(H*0.07);
-    zeichneQRCode(ctx, W-qrSzNW-Math.round(W*0.04), H-qrSzNW-Math.round(H*0.07), qrSzNW, SLZB_QR_URLS.instagram, 'rgba(0,0,30,0.8)', '#fff');
-    ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.font=`${Math.round(H*0.012)}px Montserrat, Arial, sans-serif`;
-    ctx.textAlign='right'; ctx.textBaseline='bottom';
-    ctx.fillText('@slzberlin', W-Math.round(W*0.04), H-Math.round(H*0.04));
-  }
   // Footer
   zeichneSlzbFooterNeu(ctx, W, H, 'blau');
 }
