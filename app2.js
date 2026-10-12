@@ -416,7 +416,13 @@ async function zeigeA3Vorschau(erfolgId) {
             style="max-width:100%;max-height:55vh;display:block;margin:0 auto;border-radius:8px"></canvas>
           <p class="text-xs mt-2" style="color:#888" id="a3-variante-info">Variante 1: Bild oben · A3 Querformat</p>
           <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
-            <span style="color:#888;font-size:.75rem">QR-Code:</span>
+            <span style="color:#888;font-size:.75rem">Hintergrund (ohne Foto):</span>
+            <select id="ersatzbild-modus" onchange="setErsatzbildModus(this.value);wechsleA3Variante(window._a3Variante||1)"
+              style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:4px 8px;font-size:.75rem">
+              <option value="neutral">⚫ Neutral (empfohlen)</option>
+              <option value="farbig">🎨 Sportart-Farben</option>
+            </select>
+            <span style="color:#888;font-size:.75rem;margin-left:8px">QR-Code:</span>
             <select id="a3-qr-select" onchange="wechsleA3Variante(window._a3Variante||1)"
               style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:4px 8px;font-size:.75rem">
               <option value="">Kein QR-Code</option>
@@ -503,6 +509,19 @@ async function zeigeBildschirmModal(erfolgId) {
     overlay.appendChild(modal);
     overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
     document.body.appendChild(overlay);
+    // Modus-Select dynamisch einfügen
+    const _infoEl = document.getElementById('screen-format-info');
+    if (_infoEl) {
+      const _sel = document.createElement('div');
+      _sel.style.cssText='display:flex;gap:8px;align-items:center;margin-top:6px';
+      _sel.innerHTML=`<span style="color:#888;font-size:.75rem">Hintergrund (ohne Foto):</span>
+        <select id="screen-modus-select" onchange="setErsatzbildModus(this.value);wechsleBildschirmFormat(window._screenFormat||'hochformat')"
+          style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:3px 8px;font-size:.75rem">
+          <option value="neutral">⚫ Neutral</option>
+          <option value="farbig">🎨 Sportart-Farben</option>
+        </select>`;
+      _infoEl.parentNode.insertBefore(_sel, _infoEl.nextSibling);
+    }
     window._screenErfolg = e;
     window._screenFormat = 'hochformat';
     setTimeout(()=>zeichneSLZBPoster('screen-canvas', e), 100);
@@ -547,6 +566,14 @@ async function zeigeSocialModal(erfolgId) {
           <canvas id="social-canvas" width="1080" height="1080"
             style="max-width:100%;max-height:60vh;display:block;margin:0 auto;border-radius:8px"></canvas>
           <p class="text-xs mt-2" style="color:#888" id="social-format-info">1080×1080 px · Beitrag</p>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+            <span style="color:#888;font-size:.75rem">Hintergrund (ohne Foto):</span>
+            <select onchange="setErsatzbildModus(this.value);wechsleSocialFormat(window._socialFormat||'beitrag','')"
+              style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:3px 8px;font-size:.75rem">
+              <option value="neutral">⚫ Neutral</option>
+              <option value="farbig">🎨 Sportart-Farben</option>
+            </select>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
@@ -572,6 +599,11 @@ async function zeigeSocialModal(erfolgId) {
 }
 
 async function wechsleBildschirmFormat(format) {
+  // Ersatzbild-Modus aus Select lesen (falls vorhanden)
+  const modusSelect = document.getElementById('screen-modus-select');
+  if (modusSelect && typeof SLZB_ERSATZBILD_MODUS !== 'undefined') {
+    try { eval('SLZB_ERSATZBILD_MODUS = "' + modusSelect.value + '"'); } catch(e) {}
+  }
   const tabs = document.querySelectorAll('.modal .tabs .tab-btn');
   tabs.forEach(b => {
     const isActive = (format==='hochformat' && b.textContent.includes('Hochformat')) ||
@@ -1439,6 +1471,18 @@ async function posterBildLaden(inputId, kategorie='poster') {
   return urlInput?.value?.trim() || null;
 }
 
+
+// Ersatzbild-Modus umschalten (neutral / farbig)
+function setErsatzbildModus(modus) {
+  if (typeof SLZB_ERSATZBILD_MODUS !== 'undefined') {
+    window.SLZB_ERSATZBILD_MODUS = modus;
+    // Auch in poster.js setzen (globale Variable)
+    if (typeof zeichneErsatzbild !== 'undefined') {
+      // poster.js Variable direkt setzen
+      eval('SLZB_ERSATZBILD_MODUS = "' + modus + '"');
+    }
+  }
+}
 // ══════════════════════════════════════════════════════════════
 // FEATURE 1: HIGHLIGHTS-KARUSSELL MODAL
 // ══════════════════════════════════════════════════════════════
@@ -2877,7 +2921,8 @@ async function zeigeWochenvorschau() {
     </div>
     <div class="modal-footer" style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-ghost close-btn">Schließen</button>
-      <button class="btn btn-outline" onclick="wochenvorschauPoster()">🖼️ Als Poster exportieren</button>
+      <button class="btn btn-outline" onclick="wochenvorschauPoster()">🖼️ Poster (1:1)</button>
+      <button class="btn btn-outline" onclick="wochenvorschauStories()">📱 Instagram Stories</button>
       <button class="btn btn-primary" onclick="navigateTo('kalender');document.querySelector('.modal-overlay')?.remove()">📅 Zum Kalender</button>
     </div>`;
 
@@ -2996,4 +3041,183 @@ async function wochenvorschauPoster() {
   a.href = canvas.toDataURL('image/png');
   a.click();
   toast('Wochenvorschau-Poster heruntergeladen!', 'success');
+}
+
+// ══════════════════════════════════════════════════════════════
+// WOCHENVORSCHAU – INSTAGRAM STORY EXPORT (1080×1920)
+// Eine Story pro Wochentag mit Terminen
+// ══════════════════════════════════════════════════════════════
+async function wochenvorschauStories() {
+  const termine = window._wocheTermine || [];
+  const wocheLabel = window._wocheLabel || '';
+  if (!termine.length) { toast('Keine Termine diese Woche', 'warning'); return; }
+
+  await ladeMontserrat(); await ladeLogo();
+
+  const monatNamen = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+  const tagNamen = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
+  const tagKurz = ['So','Mo','Di','Mi','Do','Fr','Sa'];
+
+  // Gruppiere nach Tag
+  const nachTag = {};
+  termine.forEach(t => {
+    if (!nachTag[t.datum]) nachTag[t.datum] = [];
+    nachTag[t.datum].push(t);
+  });
+
+  const prioFarbe = (p) => p===1?'#E2001A':p===2?'#E07000':p===3?'#0B63CE':'#888';
+  const prioIcon = (p) => p===1?'🏆':p===2?'⚡':p===3?'📋':'📅';
+
+  let storyNr = 0;
+  const gesamt = Object.keys(nachTag).length + 1; // +1 für Titelkarte
+
+  // ── Story 0: Titelkarte ──────────────────────────────────────
+  await exportStoryKarte(async (ctx, W, H) => {
+    // Hintergrund
+    const grad = ctx.createLinearGradient(0,0,0,H);
+    grad.addColorStop(0,'#0a0c1a'); grad.addColorStop(1,'#1B1C1F');
+    ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
+    zeichneSlzbDeko(ctx, W, H);
+
+    // Deko-Kreis
+    ctx.save(); ctx.globalAlpha=0.08; ctx.fillStyle='#E2001A';
+    ctx.beginPath(); ctx.arc(W/2, H*0.38, 320, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    // Header
+    drawLogo(ctx, 40, 40, 60);
+
+    // Titel
+    ctx.fillStyle='#E2001A'; ctx.font='bold 22px Montserrat, Arial, sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='top'; ctx.letterSpacing='6px';
+    ctx.fillText('WOCHENVORSCHAU', W/2, H*0.28);
+    ctx.letterSpacing='0px';
+    ctx.fillStyle='#E2001A'; ctx.fillRect((W-100)/2, H*0.28+30, 100, 3);
+
+    ctx.fillStyle='#fff'; ctx.font='bold italic 88px Montserrat, Arial, sans-serif';
+    ctx.fillText('DIESE', W/2, H*0.34);
+    ctx.fillStyle='#E2001A'; ctx.font='bold italic 88px Montserrat, Arial, sans-serif';
+    ctx.fillText('WOCHE', W/2, H*0.34+96);
+
+    ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.font='20px Montserrat, Arial, sans-serif';
+    ctx.fillText(wocheLabel, W/2, H*0.34+200);
+
+    // Anzahl Termine
+    ctx.fillStyle='rgba(226,0,26,0.15)';
+    ctx.beginPath(); ctx.roundRect((W-280)/2, H*0.62, 280, 80, 40); ctx.fill();
+    ctx.fillStyle='#E2001A'; ctx.font='bold italic 48px Montserrat, Arial, sans-serif';
+    ctx.fillText(String(termine.length), W/2, H*0.62+40);
+    ctx.fillStyle='#fff'; ctx.font='bold 18px Montserrat, Arial, sans-serif';
+    ctx.fillText(termine.length===1?'VERANSTALTUNG':'VERANSTALTUNGEN', W/2, H*0.62+62);
+
+    // Story-Nummer
+    zeichneStoryNummer(ctx, W, H, 1, gesamt);
+    zeichneSlzbFooterNeu(ctx, W, H);
+  }, `SLZB_Woche_Story_01_Titel.png`);
+
+  storyNr = 1;
+
+  // ── Story pro Wochentag ──────────────────────────────────────
+  for (const [datum, tage] of Object.entries(nachTag)) {
+    storyNr++;
+    const d = new Date(datum);
+    const tagName = tagNamen[d.getDay()];
+    const datumLabel = `${d.getDate()}. ${monatNamen[d.getMonth()]}`;
+
+    await exportStoryKarte(async (ctx, W, H) => {
+      // Hintergrund
+      const grad = ctx.createLinearGradient(0,0,0,H);
+      grad.addColorStop(0,'#0a0c1a'); grad.addColorStop(1,'#1B1C1F');
+      ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
+      zeichneSlzbDeko(ctx, W, H);
+
+      // Header
+      drawLogo(ctx, 40, 40, 55);
+      ctx.fillStyle='#E2001A'; ctx.fillRect(120, 48, 2, 40);
+      ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.font='12px Montserrat, Arial, sans-serif';
+      ctx.textAlign='left'; ctx.textBaseline='top'; ctx.letterSpacing='3px';
+      ctx.fillText('WOCHENVORSCHAU', 130, 48);
+      ctx.letterSpacing='0px';
+
+      // Wochentag groß
+      ctx.fillStyle='#E2001A'; ctx.font='bold 18px Montserrat, Arial, sans-serif';
+      ctx.textAlign='center'; ctx.textBaseline='top'; ctx.letterSpacing='4px';
+      ctx.fillText(tagName.toUpperCase(), W/2, 140);
+      ctx.letterSpacing='0px';
+      ctx.fillStyle='#fff'; ctx.font='bold italic 72px Montserrat, Arial, sans-serif';
+      ctx.fillText(datumLabel, W/2, 170);
+      ctx.fillStyle='#E2001A'; ctx.fillRect((W-80)/2, 250, 80, 3);
+
+      // Termine-Liste
+      let y = 290;
+      const ROW_H = Math.min(200, Math.floor((H - 290 - 120) / tage.length));
+
+      tage.forEach((t, i) => {
+        if (y + ROW_H > H - 120) return;
+
+        // Karten-Hintergrund
+        ctx.fillStyle='rgba(255,255,255,0.05)';
+        ctx.beginPath(); ctx.roundRect(40, y, W-80, ROW_H-12, 12); ctx.fill();
+
+        // Prioritäts-Akzent
+        ctx.fillStyle=prioFarbe(t.prioritaet);
+        ctx.beginPath(); ctx.roundRect(40, y, 4, ROW_H-12, [2,0,0,2]); ctx.fill();
+
+        // Prioritäts-Icon
+        ctx.font=`${Math.round(ROW_H*0.28)}px Arial`;
+        ctx.textAlign='left'; ctx.textBaseline='top';
+        ctx.fillText(prioIcon(t.prioritaet), 56, y+12);
+
+        // Sportart
+        ctx.fillStyle=prioFarbe(t.prioritaet);
+        ctx.font=`bold 14px Montserrat, Arial, sans-serif`;
+        ctx.letterSpacing='2px';
+        ctx.fillText(t.sportart.toUpperCase(), 100, y+14);
+        ctx.letterSpacing='0px';
+
+        // Veranstaltung
+        ctx.fillStyle='#fff'; ctx.font=`bold ${Math.min(22, Math.round(ROW_H*0.22))}px Montserrat, Arial, sans-serif`;
+        ctx.fillText(t.veranstaltung, 100, y+36, W-160);
+
+        // Ort + Klasse
+        const info = [t.ort, t.klasse].filter(Boolean).join(' · ');
+        if (info && ROW_H > 80) {
+          ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.font='13px Montserrat, Arial, sans-serif';
+          ctx.fillText(info, 100, y+64, W-160);
+        }
+
+        y += ROW_H;
+      });
+
+      // Story-Nummer
+      zeichneStoryNummer(ctx, W, H, storyNr, gesamt);
+      zeichneSlzbFooterNeu(ctx, W, H);
+    }, `SLZB_Woche_Story_${String(storyNr).padStart(2,'0')}_${tagName}.png`);
+
+    await new Promise(r=>setTimeout(r,150)); // kurze Pause zwischen Downloads
+  }
+
+  toast(`${storyNr} Story-Bilder heruntergeladen! 📱`, 'success');
+}
+
+// Hilfsfunktion: Story-Canvas erstellen und herunterladen
+async function exportStoryKarte(drawFn, filename) {
+  const canvas = document.createElement('canvas');
+  canvas.width=1080; canvas.height=1920;
+  const ctx = canvas.getContext('2d');
+  await drawFn(ctx, 1080, 1920);
+  const a = document.createElement('a');
+  a.download = filename;
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+  await new Promise(r=>setTimeout(r,300));
+}
+
+// Story-Nummer oben rechts
+function zeichneStoryNummer(ctx, W, H, nr, gesamt) {
+  ctx.fillStyle='rgba(226,0,26,0.8)';
+  ctx.beginPath(); ctx.roundRect(W-90, 36, 74, 36, 18); ctx.fill();
+  ctx.fillStyle='#fff'; ctx.font='bold 15px Montserrat, Arial, sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(`${nr} / ${gesamt}`, W-53, 54);
 }

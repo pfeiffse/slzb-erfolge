@@ -2635,71 +2635,76 @@ const SLZB_SPORT_KATEGORIE = {
   'Fußball':                      'fussball',
 };
 
+// Ersatzbild-Modus: 'neutral' (Option A) oder 'farbig' (Option B)
+// Umschaltbar über SLZB_ERSATZBILD_MODUS
+let SLZB_ERSATZBILD_MODUS = 'neutral'; // Standard: neutral
+
 // Hauptfunktion: Ersatzbild zeichnen
 function zeichneErsatzbild(ctx, W, H, sportartName) {
   const config = SLZB_SPORT_FARBEN[sportartName] || SLZB_SPORT_FARBEN['default'];
   const kategorie = SLZB_SPORT_KATEGORIE[sportartName] || 'lauf';
   const silhouette = SLZB_SPORT_SILHOUETTEN[kategorie] || SLZB_SPORT_SILHOUETTEN['lauf'];
 
-  // 1. Hintergrund-Gradient (3 Farben, diagonal)
-  const grad = ctx.createLinearGradient(0, 0, W*0.3, H);
-  grad.addColorStop(0, config.grad[0]);
-  grad.addColorStop(0.5, config.grad[1]);
-  grad.addColorStop(1, config.grad[2]);
-  ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+  if (SLZB_ERSATZBILD_MODUS === 'farbig') {
+    // ── Option B: Sportart-Gradient + farbige Silhouette ──────
+    const grad = ctx.createLinearGradient(0, 0, W*0.3, H);
+    grad.addColorStop(0, config.grad[0]);
+    grad.addColorStop(0.5, config.grad[1]);
+    grad.addColorStop(1, config.grad[2]);
+    ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
 
-  // 2. Dezente geometrische Muster (Kreise)
-  ctx.save(); ctx.globalAlpha = 0.06;
-  ctx.fillStyle = config.akzent;
-  ctx.beginPath(); ctx.arc(W*0.85, H*0.15, W*0.35, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(W*0.1, H*0.8, W*0.25, 0, Math.PI*2); ctx.fill();
+    // Dezente Kreise
+    ctx.save(); ctx.globalAlpha = 0.06; ctx.fillStyle = config.akzent;
+    ctx.beginPath(); ctx.arc(W*0.85, H*0.15, W*0.35, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(W*0.1, H*0.8, W*0.25, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    // Silhouette in Sportart-Akzentfarbe
+    _zeichneSilhouette(ctx, W, H, silhouette, config.akzent, 0.22);
+
+  } else {
+    // ── Option A: Neutraler Hintergrund + farbige Silhouette ──
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#0a0c1a');
+    grad.addColorStop(0.5, '#111318');
+    grad.addColorStop(1, '#1B1C1F');
+    ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+
+    // Dezente Kreise (neutral)
+    ctx.save(); ctx.globalAlpha = 0.04; ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(W*0.85, H*0.15, W*0.35, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(W*0.1, H*0.8, W*0.25, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    // Silhouette in Sportart-Akzentfarbe (tritt stärker hervor auf neutralem BG)
+    _zeichneSilhouette(ctx, W, H, silhouette, config.akzent, 0.28);
+  }
+
+  // Sportart-Wasserzeichen (beide Modi)
+  ctx.save(); ctx.globalAlpha = 0.05; ctx.fillStyle = '#ffffff';
+  ctx.font = `bold italic ${Math.round(W*0.12)}px Montserrat, Arial, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(sportartName.toUpperCase(), W/2, H*0.5);
   ctx.restore();
+}
 
-  // 3. Akzentlinie diagonal
-  ctx.save(); ctx.globalAlpha = 0.12;
-  ctx.strokeStyle = config.akzent; ctx.lineWidth = W*0.015;
-  ctx.beginPath(); ctx.moveTo(0, H*0.6); ctx.lineTo(W*0.7, 0); ctx.stroke();
-  ctx.restore();
-
-  // 4. Silhouette zeichnen (zentriert, groß)
+// Silhouette zeichnen (intern)
+function _zeichneSilhouette(ctx, W, H, silhouette, farbe, alpha) {
   const silH = H * 0.55;
   const silW = silH * 0.8;
   const silX = (W - silW) / 2;
   const silY = H * 0.18;
-
   ctx.save();
-  ctx.globalAlpha = 0.18;
-  ctx.fillStyle = config.akzent;
-
-  // SVG-Path skalieren und zeichnen
-  const path2D = new Path2D();
-  const pathStr = silhouette.replace(/(\d+\.?\d*)/g, (match, num) => {
-    // Koordinaten sind 0-1, skalieren auf Canvas
-    return num; // Wird unten per transform skaliert
-  });
-
-  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = farbe;
   ctx.translate(silX, silY);
   ctx.scale(silW, silH);
-
-  // Path manuell zeichnen (Path2D mit SVG-Syntax)
   try {
     const p = new Path2D(silhouette);
     ctx.fill(p);
   } catch(e) {
-    // Fallback: einfacher Kreis
     ctx.beginPath(); ctx.arc(0.5, 0.4, 0.3, 0, Math.PI*2); ctx.fill();
   }
-  ctx.restore();
-  ctx.restore();
-
-  // 5. Sportart-Text als großes Wasserzeichen
-  ctx.save();
-  ctx.globalAlpha = 0.07;
-  ctx.fillStyle = '#ffffff';
-  ctx.font = `bold italic ${Math.round(W*0.12)}px Montserrat, Arial, sans-serif`;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(sportartName.toUpperCase(), W/2, H*0.5);
   ctx.restore();
 }
 
