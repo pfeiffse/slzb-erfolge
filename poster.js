@@ -398,13 +398,12 @@ async function zeichnePosterLandscape(ctx, e, bild, meta) {
     zusatz: [e.disziplin, e.ebene].filter(Boolean).join(' · '),
     wettbewerb: e.wettbewerbText,
   });
-  // Instagram QR-Code
-  if (typeof SLZB_QR_URLS !== 'undefined') {
-    const _qrSz = Math.round(Math.min(W,H)*0.07);
-    zeichneQRCode(ctx, W-_qrSz-Math.round(W*0.04), H-_qrSz-Math.round(H*0.07), _qrSz, SLZB_QR_URLS.instagram, 'rgba(27,28,31,0.85)', '#fff');
-    ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font=`${Math.round(Math.min(W,H)*0.012)}px Montserrat, Arial, sans-serif`;
+  // "Folge uns auf Instagram"-Hinweis
+  { const _fSz = Math.round(Math.min(W,H)*0.013);
+    ctx.fillStyle='rgba(255,255,255,0.45)';
+    ctx.font=`${_fSz}px Montserrat, Arial, sans-serif`;
     ctx.textAlign='right'; ctx.textBaseline='bottom';
-    ctx.fillText('@slzberlin', W-Math.round(W*0.04), H-Math.round(H*0.04));
+    ctx.fillText('📸 Folge uns auf Instagram: @slzberlin', W-Math.round(W*0.03), H-Math.round(H*0.025));
   }
   zeichneSlzbFooterNeu(ctx, W, H);
 }
@@ -430,13 +429,12 @@ async function zeichnePosterPortrait(ctx, e, bild, meta) {
     zusatz: [e.disziplin, e.ebene].filter(Boolean).join(' · '),
     wettbewerb: e.wettbewerbText,
   });
-  // Instagram QR-Code
-  if (typeof SLZB_QR_URLS !== 'undefined') {
-    const _qrSz = Math.round(Math.min(W,H)*0.07);
-    zeichneQRCode(ctx, W-_qrSz-Math.round(W*0.04), H-_qrSz-Math.round(H*0.07), _qrSz, SLZB_QR_URLS.instagram, 'rgba(27,28,31,0.85)', '#fff');
-    ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font=`${Math.round(Math.min(W,H)*0.012)}px Montserrat, Arial, sans-serif`;
+  // "Folge uns auf Instagram"-Hinweis
+  { const _fSz = Math.round(Math.min(W,H)*0.013);
+    ctx.fillStyle='rgba(255,255,255,0.45)';
+    ctx.font=`${_fSz}px Montserrat, Arial, sans-serif`;
     ctx.textAlign='right'; ctx.textBaseline='bottom';
-    ctx.fillText('@slzberlin', W-Math.round(W*0.04), H-Math.round(H*0.04));
+    ctx.fillText('📸 Folge uns auf Instagram: @slzberlin', W-Math.round(W*0.03), H-Math.round(H*0.025));
   }
   zeichneSlzbFooterNeu(ctx, W, H);
 }
@@ -466,13 +464,12 @@ async function zeichnePosterKeinBild(ctx, e) {
     zusatz: [e.disziplin, e.ebene].filter(Boolean).join(' · '),
     wettbewerb: e.wettbewerbText,
   });
-  // Instagram QR-Code
-  if (typeof SLZB_QR_URLS !== 'undefined') {
-    const _qrSz = Math.round(Math.min(W,H)*0.07);
-    zeichneQRCode(ctx, W-_qrSz-Math.round(W*0.04), H-_qrSz-Math.round(H*0.07), _qrSz, SLZB_QR_URLS.instagram, 'rgba(27,28,31,0.85)', '#fff');
-    ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font=`${Math.round(Math.min(W,H)*0.012)}px Montserrat, Arial, sans-serif`;
+  // "Folge uns auf Instagram"-Hinweis
+  { const _fSz = Math.round(Math.min(W,H)*0.013);
+    ctx.fillStyle='rgba(255,255,255,0.45)';
+    ctx.font=`${_fSz}px Montserrat, Arial, sans-serif`;
     ctx.textAlign='right'; ctx.textBaseline='bottom';
-    ctx.fillText('@slzberlin', W-Math.round(W*0.04), H-Math.round(H*0.04));
+    ctx.fillText('📸 Folge uns auf Instagram: @slzberlin', W-Math.round(W*0.03), H-Math.round(H*0.025));
   }
   zeichneSlzbFooterNeu(ctx, W, H);
 }
@@ -912,13 +909,12 @@ async function zeichneSocialBeitragLandscape(ctx, e, bild, meta, W, H) {
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
   zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname, titel: teile.length===1?titel:null, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
-  // Instagram QR-Code
-  if (typeof SLZB_QR_URLS !== 'undefined') {
-    const _qrSz = Math.round(Math.min(W,H)*0.07);
-    zeichneQRCode(ctx, W-_qrSz-Math.round(W*0.04), H-_qrSz-Math.round(H*0.07), _qrSz, SLZB_QR_URLS.instagram, 'rgba(27,28,31,0.85)', '#fff');
-    ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font=`${Math.round(Math.min(W,H)*0.012)}px Montserrat, Arial, sans-serif`;
+  // "Folge uns auf Instagram"-Hinweis
+  { const _fSz = Math.round(Math.min(W,H)*0.013);
+    ctx.fillStyle='rgba(255,255,255,0.45)';
+    ctx.font=`${_fSz}px Montserrat, Arial, sans-serif`;
     ctx.textAlign='right'; ctx.textBaseline='bottom';
-    ctx.fillText('@slzberlin', W-Math.round(W*0.04), H-Math.round(H*0.04));
+    ctx.fillText('📸 Folge uns auf Instagram: @slzberlin', W-Math.round(W*0.03), H-Math.round(H*0.025));
   }
   zeichneSlzbFooterNeu(ctx, W, H);
 }
@@ -937,13 +933,12 @@ async function zeichneSocialBeitragPortrait(ctx, e, bild, meta, W, H) {
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
   zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname, titel: teile.length===1?titel:null, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
-  // Instagram QR-Code
-  if (typeof SLZB_QR_URLS !== 'undefined') {
-    const _qrSz = Math.round(Math.min(W,H)*0.07);
-    zeichneQRCode(ctx, W-_qrSz-Math.round(W*0.04), H-_qrSz-Math.round(H*0.07), _qrSz, SLZB_QR_URLS.instagram, 'rgba(27,28,31,0.85)', '#fff');
-    ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font=`${Math.round(Math.min(W,H)*0.012)}px Montserrat, Arial, sans-serif`;
+  // "Folge uns auf Instagram"-Hinweis
+  { const _fSz = Math.round(Math.min(W,H)*0.013);
+    ctx.fillStyle='rgba(255,255,255,0.45)';
+    ctx.font=`${_fSz}px Montserrat, Arial, sans-serif`;
     ctx.textAlign='right'; ctx.textBaseline='bottom';
-    ctx.fillText('@slzberlin', W-Math.round(W*0.04), H-Math.round(H*0.04));
+    ctx.fillText('📸 Folge uns auf Instagram: @slzberlin', W-Math.round(W*0.03), H-Math.round(H*0.025));
   }
   zeichneSlzbFooterNeu(ctx, W, H);
 }
@@ -962,13 +957,12 @@ async function zeichneSocialBeitragKeinBild(ctx, e, W, H) {
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
   zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname, titel: teile.length===1?titel:null, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
-  // Instagram QR-Code
-  if (typeof SLZB_QR_URLS !== 'undefined') {
-    const _qrSz = Math.round(Math.min(W,H)*0.07);
-    zeichneQRCode(ctx, W-_qrSz-Math.round(W*0.04), H-_qrSz-Math.round(H*0.07), _qrSz, SLZB_QR_URLS.instagram, 'rgba(27,28,31,0.85)', '#fff');
-    ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font=`${Math.round(Math.min(W,H)*0.012)}px Montserrat, Arial, sans-serif`;
+  // "Folge uns auf Instagram"-Hinweis
+  { const _fSz = Math.round(Math.min(W,H)*0.013);
+    ctx.fillStyle='rgba(255,255,255,0.45)';
+    ctx.font=`${_fSz}px Montserrat, Arial, sans-serif`;
     ctx.textAlign='right'; ctx.textBaseline='bottom';
-    ctx.fillText('@slzberlin', W-Math.round(W*0.04), H-Math.round(H*0.04));
+    ctx.fillText('📸 Folge uns auf Instagram: @slzberlin', W-Math.round(W*0.03), H-Math.round(H*0.025));
   }
   zeichneSlzbFooterNeu(ctx, W, H);
 }
@@ -987,13 +981,12 @@ async function zeichneSocialStory(ctx, e, bild, meta, W, H) {
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
   zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname, titel: teile.length===1?titel:null, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
-  // Instagram QR-Code
-  if (typeof SLZB_QR_URLS !== 'undefined') {
-    const _qrSz = Math.round(Math.min(W,H)*0.07);
-    zeichneQRCode(ctx, W-_qrSz-Math.round(W*0.04), H-_qrSz-Math.round(H*0.07), _qrSz, SLZB_QR_URLS.instagram, 'rgba(27,28,31,0.85)', '#fff');
-    ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font=`${Math.round(Math.min(W,H)*0.012)}px Montserrat, Arial, sans-serif`;
+  // "Folge uns auf Instagram"-Hinweis
+  { const _fSz = Math.round(Math.min(W,H)*0.013);
+    ctx.fillStyle='rgba(255,255,255,0.45)';
+    ctx.font=`${_fSz}px Montserrat, Arial, sans-serif`;
     ctx.textAlign='right'; ctx.textBaseline='bottom';
-    ctx.fillText('@slzberlin', W-Math.round(W*0.04), H-Math.round(H*0.04));
+    ctx.fillText('📸 Folge uns auf Instagram: @slzberlin', W-Math.round(W*0.03), H-Math.round(H*0.025));
   }
   zeichneSlzbFooterNeu(ctx, W, H);
 }
@@ -1078,13 +1071,12 @@ async function zeichneA3Split(canvasId, e) {
   }
 
   // Footer (Basis-Funktion)
-  // Instagram QR-Code
-  if (typeof SLZB_QR_URLS !== 'undefined') {
-    const _qrSz = Math.round(Math.min(W,H)*0.07);
-    zeichneQRCode(ctx, W-_qrSz-Math.round(W*0.04), H-_qrSz-Math.round(H*0.07), _qrSz, SLZB_QR_URLS.instagram, 'rgba(27,28,31,0.85)', '#fff');
-    ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font=`${Math.round(Math.min(W,H)*0.012)}px Montserrat, Arial, sans-serif`;
+  // "Folge uns auf Instagram"-Hinweis
+  { const _fSz = Math.round(Math.min(W,H)*0.013);
+    ctx.fillStyle='rgba(255,255,255,0.45)';
+    ctx.font=`${_fSz}px Montserrat, Arial, sans-serif`;
     ctx.textAlign='right'; ctx.textBaseline='bottom';
-    ctx.fillText('@slzberlin', W-Math.round(W*0.04), H-Math.round(H*0.04));
+    ctx.fillText('📸 Folge uns auf Instagram: @slzberlin', W-Math.round(W*0.03), H-Math.round(H*0.025));
   }
   zeichneSlzbFooterNeu(ctx, W, H);
 }
@@ -1212,13 +1204,12 @@ async function zeichnePoster2Bilder(canvasId, e) {
 
   zeichneTextbereich(ctx, e, W, H, fotoH, mColor, sportart, platz, medaille, titel);
   zeichneKopfzeile(ctx, e.wettbewerbText, e.disziplin);
-  // Instagram QR-Code
-  if (typeof SLZB_QR_URLS !== 'undefined') {
-    const _qrSz = Math.round(Math.min(W,H)*0.07);
-    zeichneQRCode(ctx, W-_qrSz-Math.round(W*0.04), H-_qrSz-Math.round(H*0.07), _qrSz, SLZB_QR_URLS.instagram, 'rgba(27,28,31,0.85)', '#fff');
-    ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font=`${Math.round(Math.min(W,H)*0.012)}px Montserrat, Arial, sans-serif`;
+  // "Folge uns auf Instagram"-Hinweis
+  { const _fSz = Math.round(Math.min(W,H)*0.013);
+    ctx.fillStyle='rgba(255,255,255,0.45)';
+    ctx.font=`${_fSz}px Montserrat, Arial, sans-serif`;
     ctx.textAlign='right'; ctx.textBaseline='bottom';
-    ctx.fillText('@slzberlin', W-Math.round(W*0.04), H-Math.round(H*0.04));
+    ctx.fillText('📸 Folge uns auf Instagram: @slzberlin', W-Math.round(W*0.03), H-Math.round(H*0.025));
   }
   zeichneSlzbFooterNeu(ctx, W, H);
 }
@@ -1260,13 +1251,12 @@ async function zeichnePoster4Bilder(canvasId, e) {
 
   zeichneTextbereich(ctx, e, W, H, gridH, mColor, sportart, platz, medaille, titel);
   zeichneKopfzeile(ctx, e.wettbewerbText, e.disziplin);
-  // Instagram QR-Code
-  if (typeof SLZB_QR_URLS !== 'undefined') {
-    const _qrSz = Math.round(Math.min(W,H)*0.07);
-    zeichneQRCode(ctx, W-_qrSz-Math.round(W*0.04), H-_qrSz-Math.round(H*0.07), _qrSz, SLZB_QR_URLS.instagram, 'rgba(27,28,31,0.85)', '#fff');
-    ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font=`${Math.round(Math.min(W,H)*0.012)}px Montserrat, Arial, sans-serif`;
+  // "Folge uns auf Instagram"-Hinweis
+  { const _fSz = Math.round(Math.min(W,H)*0.013);
+    ctx.fillStyle='rgba(255,255,255,0.45)';
+    ctx.font=`${_fSz}px Montserrat, Arial, sans-serif`;
     ctx.textAlign='right'; ctx.textBaseline='bottom';
-    ctx.fillText('@slzberlin', W-Math.round(W*0.04), H-Math.round(H*0.04));
+    ctx.fillText('📸 Folge uns auf Instagram: @slzberlin', W-Math.round(W*0.03), H-Math.round(H*0.025));
   }
   zeichneSlzbFooterNeu(ctx, W, H);
 }
@@ -2590,11 +2580,10 @@ async function zeichnePosterA3Allgemein(ctx, W, H, bild, karteOpts, akzent='rot'
     zeilen.slice(0,3).forEach(z=>{ ctx.fillText(z, TX, y); y+=22; });
   }
 
-  // QR-Code unten rechts (Website)
-  if (typeof SLZB_QR_URLS !== 'undefined') {
-    const qrSzA = 52;
-    zeichneQRCode(ctx, W-qrSzA-8, H-qrSzA-4, qrSzA, SLZB_QR_URLS.website, '#F0F0F0', '#003366');
-  }
+  // "Folge uns auf Instagram"-Hinweis (Druck)
+  ctx.fillStyle='#666'; ctx.font='11px Montserrat, Arial, sans-serif';
+  ctx.textAlign='right'; ctx.textBaseline='middle';
+  ctx.fillText('📸 @slzberlin', W-20, H-30);
   // Footer
   ctx.fillStyle='#F0F0F0'; ctx.fillRect(0, H-60, W, 60);
   ctx.fillStyle=akzentFarbe; ctx.fillRect(0, H-60, W, 3);
