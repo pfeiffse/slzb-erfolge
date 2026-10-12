@@ -168,20 +168,36 @@ const PDF = {
   },
 
   // ── CSV einlesen (ohne SheetJS) ───────────────────────────
-  async leseCSV(datei) {
+  async leseCSV(datei) { return this.leseCSVFlexibel(datei); },
+
+  // CSV einlesen – unterstützt Semikolon und Komma als Trennzeichen
+  async leseCSVFlexibel(datei) {
     return new Promise((resolve,reject)=>{
       const reader=new FileReader();
       reader.onload=(e)=>{
         try {
           const text=e.target.result;
-          const zeilen=text.split('\n').filter(z=>z.trim());
-          const header=zeilen[0].split(',').map(h=>h.trim().replace(/^"|"$/g,''));
+          const zeilen=text.split(/\r?\n/).filter(z=>z.trim()&&!z.startsWith('//'));
+          if (!zeilen.length) { resolve([]); return; }
+          const trenn = zeilen[0].includes(';') ? ';' : ',';
+          const splitZeile = (z) => {
+            const result=[]; let cur=''; let inQ=false;
+            for (let i=0;i<z.length;i++) {
+              const c=z[i];
+              if (c==='"') { inQ=!inQ; }
+              else if (c===trenn&&!inQ) { result.push(cur.trim()); cur=''; }
+              else { cur+=c; }
+            }
+            result.push(cur.trim());
+            return result.map(v=>v.replace(/^"|"$/g,'').trim());
+          };
+          const header=splitZeile(zeilen[0]);
           const daten=zeilen.slice(1).map(z=>{
-            const werte=z.split(',').map(w=>w.trim().replace(/^"|"$/g,''));
+            const werte=splitZeile(z);
             const obj={};
             header.forEach((h,i)=>obj[h]=werte[i]||'');
             return obj;
-          });
+          }).filter(obj=>Object.values(obj).some(v=>v));
           resolve(daten);
         } catch(err){reject(err);}
       };
