@@ -1377,7 +1377,15 @@ async function filterArchiv() {
   const alle=await ladeErfolge();
   const spName=SLZB_DB.getSportart(sportart)?.name?.toLowerCase()||'';
   const gefiltert=alle.filter(e=>{
-    if(suche&&!e.titel.toLowerCase().includes(suche)&&!(e.erfolgNr||'').toLowerCase().includes(suche)) return false;
+    if(suche) {
+      // Volltextsuche: Titel, Nr, Sportart, Wettbewerb, Athlet, Ort, Disziplin
+      const suchFelder = [
+        e.titel, e.erfolgNr, e.sportartText, e.wettbewerbText,
+        e.ort, e.disziplin, e.melderName, e.kurzinfo,
+        ...(e.beteiligte||[]).map(b=>b.anzeigename||''),
+      ].filter(Boolean).map(v=>v.toLowerCase()).join(' ');
+      if(!suchFelder.includes(suche)) return false;
+    }
     if(sportart&&e.sportartId!==sportart&&(e.sportartText||'').toLowerCase()!==spName) return false;
     if(status&&e.status!==status) return false;
     if(ebene&&e.ebene!==ebene) return false;

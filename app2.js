@@ -108,7 +108,7 @@ async function renderErfolgDetail() {
                   ${b.caption?`<div class="text-sm font-bold">${esc(b.caption)}</div>`:''}
                   <div class="text-xs text-muted mt-1">📸 ${esc(b.creator||'–')}</div>
                   <div class="text-xs text-muted">📂 ${esc(b.source||'–')}</div>
-                  ${b.signedUrl?`<a href="${esc(b.signedUrl)}" target="_blank" class="btn btn-ghost btn-sm mt-2" style="font-size:.75rem">🔍 Vollbild</a>`:''}
+                  ${b.signedUrl?`<button class=\"btn btn-ghost btn-sm mt-2\" style=\"font-size:.75rem\" onclick=\"zeigeLightbox('${b.signedUrl}','','')\">&#128269; Vollbild</button>`:''}
                 </div>
               </div>`).join('')}</div>`}
         </div>
@@ -1293,7 +1293,12 @@ async function renderJahreschronik() {
   const schuljahre=[...new Set(alle.map(e=>SLZB_DB.getSchuljahr(e.datum)).filter(Boolean))].sort().reverse();
   const aktuellesSchuljahr=schuljahre[0]||'';
   return`<div class="page">
-    <div class="page-header"><h1>📅 Jahreschronik</h1></div>
+    <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div><h1>📅 Jahreschronik</h1></div>
+      <button class="btn btn-outline btn-sm" onclick="exportiereChronikCSVAktuell()" style="white-space:nowrap">
+        ⬇️ CSV exportieren
+      </button>
+    </div>
     <div class="card mb-3"><div class="card-body">
       <div class="form-row cols-4">
         <div class="form-group"><label>Schuljahr</label>
@@ -3220,4 +3225,88 @@ function zeichneStoryNummer(ctx, W, H, nr, gesamt) {
   ctx.fillStyle='#fff'; ctx.font='bold 15px Montserrat, Arial, sans-serif';
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText(`${nr} / ${gesamt}`, W-53, 54);
+}
+
+// ══════════════════════════════════════════════════════════════
+// QUICK-WIN 1: JAHRESCHRONIK CSV-EXPORT
+// ══════════════════════════════════════════════════════════════
+async function exportiereChronikCSVAktuell() {
+  const alle = await ladeErfolge();
+  // Aktuelle Filter aus der Jahreschronik-Seite lesen
+  const schuljahr = document.getElementById('chronik-schuljahr')?.value || '';
+  const sportart = document.getElementById('chronik-sportart')?.value || '';
+  const ebene = document.getElementById('chronik-ebene')?.value || '';
+
+  let gefiltert = alle.filter(e => ['Freigegeben','Veröffentlicht','Archiviert'].includes(e.status));
+
+  if (schuljahr) {
+    const [von, bis] = schuljahr.split('/').map(Number);
+    gefiltert = gefiltert.filter(e => {
+      if (!e.datum) return false;
+      const d = new Date(e.datum);
+      const j = d.getFullYear(); const m = d.getMonth();
+      return (j === 2000+von && m >= 7) || (j === 2000+bis && m < 7);
+    });
+  }
+  if (sportart) gefiltert = gefiltert.filter(e => e.sportartId===sportart || e.sportartText===sportart);
+  if (ebene) gefiltert = gefiltert.filter(e => e.ebene===ebene);
+
+  if (!gefiltert.length) { toast('Keine Einträge zum Exportieren','warning'); return; }
+
+  // CSV erstellen
+  const header = ['Nr.','Datum','Titel','Meldungsart','Sportart','Disziplin','Wettbewerb','Ort','Ebene','Platzierung','Medaille','Ergebnis','Einheit','Athlet/Team','Status'];
+  const zeilen = gefiltert.map(e => [
+    e.erfolgNr||'',
+    e.datum ? new Date(e.datum).toLocaleDateString('de-DE') : '',
+    e.titel||'',
+    e.meldungsart||'',
+    e.sportartText||'',
+    e.disziplin||'',
+    e.wettbewerbText||'',
+    e.ort||'',
+    e.ebene||'',
+    e.platzierung||'',
+    e.medaille||'',
+    e.ergebnisWert||'',
+    e.ergebnisEinheit||'',
+    (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(Boolean).join(', '),
+    e.status||'',
+  ].map(v => `"${String(v).replace(/"/g,'""')}"`));
+
+  const csv = [header.join(';'), ...zeilen.map(z=>z.join(';'))].join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `SLZB_Jahreschronik${schuljahr?'_'+schuljahr:''}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  toast(`${gefiltert.length} Einträge exportiert`, 'success');
+}
+
+// ══════════════════════════════════════════════════════════════
+// QUICK-WIN 2: BILDVORSCHAU LIGHTBOX
+// ══════════════════════════════════════════════════════════════
+function zeigeLightbox(src, caption, creator) {
+  // Entferne bestehende Lightbox
+  document.getElementById('slzb-lightbox')?.remove();
+
+  const lb = document.createElement('div');
+  lb.id = 'slzb-lightbox';
+  lb.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:zoom-out;padding:20px';
+  lb.onclick = ()=>lb.remove();
+
+  lb.innerHTML = `
+    <button style="position:absolute;top:16px;right:20px;background:none;border:none;color:#fff;font-size:2rem;cursor:pointer;line-height:1" onclick="document.getElementById('slzb-lightbox').remove()">✕</button>
+    <img src="${esc(src)}" alt="${esc(caption||'')}"
+      style="max-width:90vw;max-height:80vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.6)"
+      onclick="event.stopPropagation()">
+    ${caption||creator ? `<div style="margin-top:12px;text-align:center">
+      ${caption?`<p style="color:#fff;font-size:1rem;margin:0 0 4px">${esc(caption)}</p>`:''}
+      ${creator?`<p style="color:rgba(255,255,255,0.5);font-size:.8rem;margin:0">📷 ${esc(creator)}</p>`:''}
+    </div>` : ''}`;
+
+  document.body.appendChild(lb);
+
+  // Tastatur: Escape schließt
+  const onKey = (e) => { if(e.key==='Escape') { lb.remove(); document.removeEventListener('keydown',onKey); }};
+  document.addEventListener('keydown', onKey);
 }
