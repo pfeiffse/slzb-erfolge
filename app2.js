@@ -1348,6 +1348,9 @@ async function renderJahreschronik() {
       <button class="btn btn-outline btn-sm" onclick="exportiereChronikCSVAktuell()" style="white-space:nowrap">
         ⬇️ CSV exportieren
       </button>
+      <button class="btn btn-primary btn-sm" onclick="exportiereChronikPPTX()" style="white-space:nowrap">
+        📊 PowerPoint exportieren
+      </button>
     </div>
     <div class="card mb-3"><div class="card-body">
       <div class="form-row cols-4">
@@ -3437,4 +3440,159 @@ async function speichereKerndaten(erfolgId) {
     toast('Fehler: ' + err.message, 'danger');
     if (btn) { btn.disabled = false; btn.textContent = '💾 Änderungen speichern'; }
   }
+}
+
+// ══════════════════════════════════════════════════════════════
+// JAHRESCHRONIK POWERPOINT EXPORT (PptxGenJS)
+// ══════════════════════════════════════════════════════════════
+async function exportiereChronikPPTX() {
+  // PptxGenJS dynamisch laden
+  if (typeof PptxGenJS === 'undefined') {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';
+    document.head.appendChild(script);
+    await new Promise((resolve, reject) => {
+      script.onload = resolve;
+      script.onerror = () => reject(new Error('PptxGenJS konnte nicht geladen werden'));
+    });
+  }
+
+  toast('PowerPoint wird erstellt...', 'info');
+
+  const alle = await ladeErfolge();
+  const schuljahr = document.getElementById('chronik-schuljahr')?.value || '';
+  const sportartFilter = document.getElementById('chronik-sportart')?.value || '';
+  const ebeneFilter = document.getElementById('chronik-ebene')?.value || '';
+
+  let gefiltert = alle.filter(e => ['Freigegeben','Veröffentlicht','Archiviert'].includes(e.status));
+  if (schuljahr) {
+    const [von, bis] = schuljahr.split('/').map(Number);
+    gefiltert = gefiltert.filter(e => {
+      if (!e.datum) return false;
+      const d = new Date(e.datum); const j = d.getFullYear(); const m = d.getMonth();
+      return (j === 2000+von && m >= 7) || (j === 2000+bis && m < 7);
+    });
+  }
+  if (sportartFilter) gefiltert = gefiltert.filter(e => e.sportartId===sportartFilter || e.sportartText===sportartFilter);
+  if (ebeneFilter) gefiltert = gefiltert.filter(e => e.ebene===ebeneFilter);
+
+  if (!gefiltert.length) { toast('Keine Einträge zum Exportieren','warning'); return; }
+
+  // Statistiken berechnen
+  const prio1 = gefiltert.filter(e => e.platzierung===1 || e.medaille==='Gold').length;
+  const prio2 = gefiltert.filter(e => e.platzierung===2 || e.medaille==='Silber').length;
+  const prio3 = gefiltert.filter(e => e.platzierung===3 || e.medaille==='Bronze').length;
+  const sportarten = [...new Set(gefiltert.map(e => e.sportartText).filter(Boolean))];
+
+  // Gruppiere nach Sportart
+  const nachSportart = {};
+  gefiltert.forEach(e => {
+    const s = e.sportartText || 'Sonstige';
+    if (!nachSportart[s]) nachSportart[s] = [];
+    nachSportart[s].push(e);
+  });
+
+  // PptxGenJS Präsentation erstellen
+  const pptx = new PptxGenJS();
+  pptx.layout = 'LAYOUT_WIDE'; // 16:9
+
+  // Farben
+  const ROT = 'E2001A';
+  const DUNKEL = '1B1C1F';
+  const BLAU = '003366';
+  const WEISS = 'FFFFFF';
+  const GRAU = 'C9CCD2';
+  const GOLD = 'C9A227';
+
+  // ── Folie 1: Titelfolie ──────────────────────────────────────
+  const slide1 = pptx.addSlide();
+  slide1.background = { color: DUNKEL };
+  slide1.addShape(pptx.ShapeType.rect, { x:0, y:0, w:'100%', h:0.06, fill:{color:ROT} });
+  slide1.addShape(pptx.ShapeType.rect, { x:0, y:'95%', w:'40%', h:0.04, fill:{color:ROT} });
+  slide1.addText('SLZB BERLIN', { x:0.5, y:1.2, w:9, h:0.5, fontSize:14, bold:true, color:ROT, charSpacing:8 });
+  slide1.addText('Jahreschronik', { x:0.5, y:1.8, w:9, h:1.2, fontSize:60, bold:true, color:WEISS, fontFace:'Calibri' });
+  slide1.addText(schuljahr ? `Schuljahr ${schuljahr}` : 'Alle Schuljahre', { x:0.5, y:3.1, w:9, h:0.6, fontSize:28, color:GRAU });
+  slide1.addShape(pptx.ShapeType.rect, { x:0.5, y:3.8, w:1.2, h:0.06, fill:{color:ROT} });
+  slide1.addText(`${gefiltert.length} Erfolge · ${sportarten.length} Sportarten`, { x:0.5, y:4.0, w:9, h:0.5, fontSize:16, color:GRAU });
+
+  // ── Folie 2: Überblick KPIs ──────────────────────────────────
+  const slide2 = pptx.addSlide();
+  slide2.background = { color: DUNKEL };
+  slide2.addShape(pptx.ShapeType.rect, { x:0, y:0, w:'100%', h:0.06, fill:{color:ROT} });
+  slide2.addText('ÜBERBLICK', { x:0.5, y:0.2, w:9, h:0.3, fontSize:10, bold:true, color:ROT, charSpacing:6 });
+  slide2.addText('Kennzahlen auf einen Blick', { x:0.5, y:0.55, w:9, h:0.7, fontSize:32, bold:true, color:WEISS });
+
+  const kpis = [
+    { val: String(gefiltert.length), label: 'Erfolge gesamt', icon: '🏆', x: 0.4 },
+    { val: String(sportarten.length), label: 'Sportarten', icon: '⚽', x: 2.9 },
+    { val: String(prio1), label: 'Gold-Medaillen', icon: '🥇', x: 5.4 },
+    { val: String(prio2+prio3), label: 'Silber & Bronze', icon: '🥈', x: 7.9 },
+  ];
+  kpis.forEach(k => {
+    slide2.addShape(pptx.ShapeType.roundRect, { x:k.x, y:1.5, w:2.3, h:2.8, fill:{color:'2A2C31'}, line:{color:ROT,pt:2}, rectRadius:0.1 });
+    slide2.addText(k.val, { x:k.x, y:1.7, w:2.3, h:1.2, fontSize:52, bold:true, color:WEISS, align:'center' });
+    slide2.addText(k.label, { x:k.x, y:2.9, w:2.3, h:0.5, fontSize:11, bold:true, color:ROT, align:'center', charSpacing:2 });
+  });
+
+  // ── Folie 3: Erfolge nach Sportart ───────────────────────────
+  const slide3 = pptx.addSlide();
+  slide3.background = { color: DUNKEL };
+  slide3.addShape(pptx.ShapeType.rect, { x:0, y:0, w:'100%', h:0.06, fill:{color:ROT} });
+  slide3.addText('SPORTARTEN', { x:0.5, y:0.2, w:9, h:0.3, fontSize:10, bold:true, color:ROT, charSpacing:6 });
+  slide3.addText('Erfolge nach Sportart', { x:0.5, y:0.55, w:9, h:0.7, fontSize:32, bold:true, color:WEISS });
+
+  const sportSorted = Object.entries(nachSportart).sort((a,b)=>b[1].length-a[1].length).slice(0,8);
+  const maxVal = sportSorted[0]?.[1]?.length || 1;
+  sportSorted.forEach(([sport, items], i) => {
+    const y = 1.5 + i*0.6;
+    const barW = (items.length/maxVal) * 7.5;
+    slide3.addText(sport, { x:0.4, y, w:2.5, h:0.5, fontSize:11, color:GRAU, valign:'middle' });
+    slide3.addShape(pptx.ShapeType.rect, { x:2.9, y:y+0.08, w:barW, h:0.35, fill:{color: i===0?ROT:BLAU} });
+    slide3.addText(String(items.length), { x:2.9+barW+0.1, y, w:0.6, h:0.5, fontSize:11, bold:true, color:WEISS, valign:'middle' });
+  });
+
+  // ── Folien 4+: Detailliste nach Sportart (max 5 Sportarten) ──
+  const topSportarten = Object.entries(nachSportart).sort((a,b)=>b[1].length-a[1].length).slice(0,5);
+  topSportarten.forEach(([sport, items]) => {
+    const slideN = pptx.addSlide();
+    slideN.background = { color: DUNKEL };
+    slideN.addShape(pptx.ShapeType.rect, { x:0, y:0, w:'100%', h:0.06, fill:{color:ROT} });
+    slideN.addText(sport.toUpperCase(), { x:0.5, y:0.2, w:9, h:0.3, fontSize:10, bold:true, color:ROT, charSpacing:6 });
+    slideN.addText(`${sport} – ${items.length} Erfolge`, { x:0.5, y:0.55, w:9, h:0.7, fontSize:28, bold:true, color:WEISS });
+
+    // Tabellenkopf
+    slideN.addShape(pptx.ShapeType.rect, { x:0.4, y:1.4, w:9.2, h:0.4, fill:{color:BLAU} });
+    slideN.addText('Datum', { x:0.5, y:1.4, w:1.5, h:0.4, fontSize:10, bold:true, color:WEISS, valign:'middle' });
+    slideN.addText('Titel', { x:2.1, y:1.4, w:4.5, h:0.4, fontSize:10, bold:true, color:WEISS, valign:'middle' });
+    slideN.addText('Platz', { x:6.7, y:1.4, w:1.2, h:0.4, fontSize:10, bold:true, color:WEISS, valign:'middle' });
+    slideN.addText('Medaille', { x:8.0, y:1.4, w:1.5, h:0.4, fontSize:10, bold:true, color:WEISS, valign:'middle' });
+
+    items.slice(0,12).forEach((e, i) => {
+      const ry = 1.85 + i*0.38;
+      const bg = i%2===0 ? '2A2C31' : '222428';
+      slideN.addShape(pptx.ShapeType.rect, { x:0.4, y:ry, w:9.2, h:0.36, fill:{color:bg} });
+      const datStr = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '–';
+      slideN.addText(datStr, { x:0.5, y:ry, w:1.5, h:0.36, fontSize:9, color:GRAU, valign:'middle' });
+      slideN.addText((e.titel||'–').slice(0,55), { x:2.1, y:ry, w:4.5, h:0.36, fontSize:9, color:WEISS, valign:'middle' });
+      slideN.addText(e.platzierung ? `${e.platzierung}.` : '–', { x:6.7, y:ry, w:1.2, h:0.36, fontSize:9, color:e.platzierung===1?GOLD:GRAU, bold:e.platzierung===1, valign:'middle' });
+      const medFarbe = e.medaille==='Gold'?GOLD:e.medaille==='Silber'?'BFC8D2':e.medaille==='Bronze'?'C2783A':GRAU;
+      slideN.addText(e.medaille&&e.medaille!=='keine'?e.medaille:'–', { x:8.0, y:ry, w:1.5, h:0.36, fontSize:9, color:medFarbe, bold:!!e.medaille&&e.medaille!=='keine', valign:'middle' });
+    });
+    if (items.length > 12) {
+      slideN.addText(`... und ${items.length-12} weitere Einträge`, { x:0.5, y:6.4, w:9, h:0.3, fontSize:9, color:GRAU, italic:true });
+    }
+  });
+
+  // ── Letzte Folie: Abschluss ──────────────────────────────────
+  const slideEnd = pptx.addSlide();
+  slideEnd.background = { color: DUNKEL };
+  slideEnd.addShape(pptx.ShapeType.rect, { x:0, y:0, w:'100%', h:0.06, fill:{color:ROT} });
+  slideEnd.addShape(pptx.ShapeType.rect, { x:0, y:'95%', w:'40%', h:0.04, fill:{color:ROT} });
+  slideEnd.addText('#SLZBerlin', { x:0.5, y:2.5, w:9, h:1.5, fontSize:56, bold:true, italic:true, color:ROT, align:'center' });
+  slideEnd.addText('Schul- und Leistungssportzentrum Berlin', { x:0.5, y:4.2, w:9, h:0.5, fontSize:16, color:GRAU, align:'center' });
+
+  // Download
+  const dateiname = `SLZB_Jahreschronik${schuljahr?'_'+schuljahr:''}_${new Date().toISOString().slice(0,10)}`;
+  await pptx.writeFile({ fileName: dateiname });
+  toast(`✅ PowerPoint "${dateiname}.pptx" heruntergeladen!`, 'success');
 }
