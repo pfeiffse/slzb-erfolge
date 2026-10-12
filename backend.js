@@ -145,9 +145,9 @@ const Auth = {
   canDo(action) {
     const r = this.rolle();
     const perms = {
-      erfassen:    ['trainer','redaktion','admin'],
-      bearbeiten:  ['redaktion','admin'],
-      freigeben:   ['oea','admin'],
+      erfassen:    ['trainer','redaktion','oea','admin'],
+      bearbeiten:  ['redaktion','oea','admin'],
+      freigeben:   ['redaktion','oea','admin'],
       datenschutz: ['datenschutz','admin'],
       admin:       ['admin'],
       ausgaben:    ['redaktion','oea','admin'],

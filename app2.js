@@ -32,6 +32,7 @@ async function renderErfolgDetail() {
       <button class="tab-btn" onclick="switchTab('datenschutz')">Datenschutz</button>
       <button class="tab-btn" onclick="switchTab('ausgaben')">Ausgaben</button>
       <button class="tab-btn" onclick="switchTab('protokoll')">Protokoll (${e.protokoll?.length||0})</button>
+      ${Auth.canDo('bearbeiten')?`<button class="tab-btn" onclick="switchTab('bearbeiten')" style="color:#E2001A;font-weight:700">✏️ Bearbeiten</button>`:''}
     </div>
 
     <div id="tab-kerndaten" class="tab-panel active">
@@ -160,6 +161,55 @@ async function renderErfolgDetail() {
         </div>
       </div>
     </div>
+
+    ${Auth.canDo('bearbeiten')?`<div id="tab-bearbeiten" class="tab-panel">
+      <div class="card mb-3">
+        <div class="card-header"><h2>✏️ Kerndaten bearbeiten</h2></div>
+        <div class="card-body">
+          <div class="alert alert-warning mb-3"><span class="alert-icon">⚠️</span>
+            <span>Änderungen werden sofort gespeichert und protokolliert.</span></div>
+          <div class="form-row cols-2">
+            <div class="form-group"><label>Titel <span class="required">*</span></label>
+              <input type="text" id="edit-titel" value="${esc(e.titel||'')}" style="width:100%"></div>
+            <div class="form-group"><label>Sportart</label>
+              <input type="text" id="edit-sportart" value="${esc(e.sportartText||'')}" style="width:100%"></div>
+            <div class="form-group"><label>Wettbewerb</label>
+              <input type="text" id="edit-wettbewerb" value="${esc(e.wettbewerbText||'')}" style="width:100%"></div>
+            <div class="form-group"><label>Disziplin</label>
+              <input type="text" id="edit-disziplin" value="${esc(e.disziplin||'')}" style="width:100%"></div>
+            <div class="form-group"><label>Datum</label>
+              <input type="date" id="edit-datum" value="${e.datum||''}" style="width:100%"></div>
+            <div class="form-group"><label>Ort</label>
+              <input type="text" id="edit-ort" value="${esc(e.ort||'')}" style="width:100%"></div>
+            <div class="form-group"><label>Ebene</label>
+              <select id="edit-ebene" style="width:100%">
+                ${['','Schulebene','Bezirk','Landesebene','Bundesebene','International','Weltmeisterschaft','Olympia','Sonstiges']
+                  .map(eb=>`<option value="${eb}" ${e.ebene===eb?'selected':''}>${eb||'– keine –'}</option>`).join('')}
+              </select></div>
+            <div class="form-group"><label>Platzierung</label>
+              <input type="number" id="edit-platzierung" value="${e.platzierung||''}" min="1" style="width:100%"></div>
+            <div class="form-group"><label>Medaille</label>
+              <select id="edit-medaille" style="width:100%">
+                ${['keine','Gold','Silber','Bronze'].map(m=>`<option value="${m}" ${(e.medaille||'keine')===m?'selected':''}>${m}</option>`).join('')}
+              </select></div>
+            <div class="form-group"><label>Ergebnis (Wert)</label>
+              <input type="number" id="edit-ergebnis-wert" value="${e.ergebnisWert||''}" step="any" style="width:100%"></div>
+            <div class="form-group"><label>Einheit</label>
+              <input type="text" id="edit-ergebnis-einheit" value="${esc(e.ergebnisEinheit||'')}" placeholder="z.B. m, s, kg" style="width:100%"></div>
+            <div class="form-group"><label>Quelle / URL</label>
+              <input type="url" id="edit-quelle" value="${esc(e.quelleUrl||'')}" style="width:100%"></div>
+          </div>
+          <div class="form-group mt-2"><label>Kurzinfo</label>
+            <textarea id="edit-kurzinfo" rows="3" style="width:100%">${esc(e.kurzinfo||'')}</textarea></div>
+          <div class="form-group"><label>Artikeltext (Redaktion)</label>
+            <textarea id="edit-artikel-text" rows="6" style="width:100%">${esc(e.textArtikel||'')}</textarea></div>
+          <div class="card-footer mt-3">
+            <button class="btn btn-ghost" onclick="switchTab('kerndaten')">Abbrechen</button>
+            <button class="btn btn-primary" onclick="speichereKerndaten('${e.id}')">💾 Änderungen speichern</button>
+          </div>
+        </div>
+      </div>
+    </div>`:''}
 
     <div id="tab-datenschutz" class="tab-panel">${renderDatenschutzTab(e)}</div>
     <div id="tab-ausgaben" class="tab-panel">${renderAusgabenTab(e)}</div>
@@ -3309,4 +3359,82 @@ function zeigeLightbox(src, caption, creator) {
   // Tastatur: Escape schließt
   const onKey = (e) => { if(e.key==='Escape') { lb.remove(); document.removeEventListener('keydown',onKey); }};
   document.addEventListener('keydown', onKey);
+}
+
+// ══════════════════════════════════════════════════════════════
+// KERNDATEN BEARBEITEN (Redaktion / ÖA / Admin)
+// ══════════════════════════════════════════════════════════════
+async function speichereKerndaten(erfolgId) {
+  const titel = document.getElementById('edit-titel')?.value?.trim();
+  if (!titel) { toast('Titel ist Pflichtfeld', 'warning'); return; }
+
+  const sportartText = document.getElementById('edit-sportart')?.value?.trim() || '';
+  const wettbewerbText = document.getElementById('edit-wettbewerb')?.value?.trim() || '';
+  const disziplin = document.getElementById('edit-disziplin')?.value?.trim() || '';
+  const datum = document.getElementById('edit-datum')?.value || null;
+  const ort = document.getElementById('edit-ort')?.value?.trim() || '';
+  const ebene = document.getElementById('edit-ebene')?.value || '';
+  const platzierung = document.getElementById('edit-platzierung')?.value ? Number(document.getElementById('edit-platzierung').value) : null;
+  const medaille = document.getElementById('edit-medaille')?.value || 'keine';
+  const ergebnisWert = document.getElementById('edit-ergebnis-wert')?.value ? Number(document.getElementById('edit-ergebnis-wert').value) : null;
+  const ergebnisEinheit = document.getElementById('edit-ergebnis-einheit')?.value?.trim() || '';
+  const quelleUrl = document.getElementById('edit-quelle')?.value?.trim() || '';
+  const kurzinfo = document.getElementById('edit-kurzinfo')?.value?.trim() || '';
+  const textArtikel = document.getElementById('edit-artikel-text')?.value?.trim() || '';
+
+  // Sportart-ID auflösen
+  const sp = SLZB_DB.sportarten.find(s => s.name.toLowerCase() === sportartText.toLowerCase());
+
+  // Wettbewerb auflösen oder anlegen
+  let wettbewerbId = null;
+  if (wettbewerbText) {
+    try {
+      const wb = await DB.getOderErstelleWettbewerb(wettbewerbText, datum);
+      wettbewerbId = wb;
+    } catch(e) { /* ignorieren */ }
+  }
+
+  const btn = document.querySelector('#tab-bearbeiten .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Wird gespeichert...'; }
+
+  try {
+    const updateData = {
+      title: titel,
+      sport_id: sp?.id || null,
+      discipline: disziplin,
+      competition_id: wettbewerbId,
+      event_date: datum,
+      location: ort,
+      level: ebene,
+      placement: platzierung,
+      medal: medaille,
+      result_value: ergebnisWert,
+      result_unit: ergebnisEinheit,
+      result_text: '',
+      short_info: kurzinfo,
+      source_url: quelleUrl,
+      article_text: textArtikel,
+      updated_at: new Date().toISOString(),
+    };
+
+    // Entferne null-Werte nicht – Supabase setzt sie auf NULL
+    const { error } = await Backend.client
+      .from('achievements')
+      .update(updateData)
+      .eq('id', erfolgId);
+
+    if (error) throw new Error(error.message);
+
+    // Protokoll
+    await DB.protokolliere(erfolgId, null, null,
+      `Kerndaten bearbeitet durch ${Auth.name()}: Titel="${titel}", Sportart="${sportartText}", Datum="${datum||''}"`);
+
+    APP._erfolgeCache = null;
+    toast('✅ Kerndaten erfolgreich gespeichert!', 'success');
+    navigateTo('erfolg-detail', { currentErfolgId: erfolgId });
+
+  } catch(err) {
+    toast('Fehler: ' + err.message, 'danger');
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Änderungen speichern'; }
+  }
 }
