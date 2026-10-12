@@ -398,6 +398,14 @@ async function zeichnePosterLandscape(ctx, e, bild, meta) {
     zusatz: [e.disziplin, e.ebene].filter(Boolean).join(' · '),
     wettbewerb: e.wettbewerbText,
   });
+  // Instagram QR-Code
+  if (typeof SLZB_QR_URLS !== 'undefined') {
+    const _qrSz = Math.round(Math.min(W,H)*0.07);
+    zeichneQRCode(ctx, W-_qrSz-Math.round(W*0.04), H-_qrSz-Math.round(H*0.07), _qrSz, SLZB_QR_URLS.instagram, 'rgba(27,28,31,0.85)', '#fff');
+    ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font=`${Math.round(Math.min(W,H)*0.012)}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign='right'; ctx.textBaseline='bottom';
+    ctx.fillText('@slzberlin', W-Math.round(W*0.04), H-Math.round(H*0.04));
+  }
   zeichneSlzbFooterNeu(ctx, W, H);
 }
 // Layout 2: Hochformat-Bild → HTML-Design (Vollhintergrund)
@@ -422,6 +430,14 @@ async function zeichnePosterPortrait(ctx, e, bild, meta) {
     zusatz: [e.disziplin, e.ebene].filter(Boolean).join(' · '),
     wettbewerb: e.wettbewerbText,
   });
+  // Instagram QR-Code
+  if (typeof SLZB_QR_URLS !== 'undefined') {
+    const _qrSz = Math.round(Math.min(W,H)*0.07);
+    zeichneQRCode(ctx, W-_qrSz-Math.round(W*0.04), H-_qrSz-Math.round(H*0.07), _qrSz, SLZB_QR_URLS.instagram, 'rgba(27,28,31,0.85)', '#fff');
+    ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font=`${Math.round(Math.min(W,H)*0.012)}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign='right'; ctx.textBaseline='bottom';
+    ctx.fillText('@slzberlin', W-Math.round(W*0.04), H-Math.round(H*0.04));
+  }
   zeichneSlzbFooterNeu(ctx, W, H);
 }
 // Layout 3: Kein Bild → HTML-Design ohne Foto
@@ -450,6 +466,14 @@ async function zeichnePosterKeinBild(ctx, e) {
     zusatz: [e.disziplin, e.ebene].filter(Boolean).join(' · '),
     wettbewerb: e.wettbewerbText,
   });
+  // Instagram QR-Code
+  if (typeof SLZB_QR_URLS !== 'undefined') {
+    const _qrSz = Math.round(Math.min(W,H)*0.07);
+    zeichneQRCode(ctx, W-_qrSz-Math.round(W*0.04), H-_qrSz-Math.round(H*0.07), _qrSz, SLZB_QR_URLS.instagram, 'rgba(27,28,31,0.85)', '#fff');
+    ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font=`${Math.round(Math.min(W,H)*0.012)}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign='right'; ctx.textBaseline='bottom';
+    ctx.fillText('@slzberlin', W-Math.round(W*0.04), H-Math.round(H*0.04));
+  }
   zeichneSlzbFooterNeu(ctx, W, H);
 }
 
@@ -888,6 +912,14 @@ async function zeichneSocialBeitragLandscape(ctx, e, bild, meta, W, H) {
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
   zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname, titel: teile.length===1?titel:null, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
+  // Instagram QR-Code
+  if (typeof SLZB_QR_URLS !== 'undefined') {
+    const _qrSz = Math.round(Math.min(W,H)*0.07);
+    zeichneQRCode(ctx, W-_qrSz-Math.round(W*0.04), H-_qrSz-Math.round(H*0.07), _qrSz, SLZB_QR_URLS.instagram, 'rgba(27,28,31,0.85)', '#fff');
+    ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font=`${Math.round(Math.min(W,H)*0.012)}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign='right'; ctx.textBaseline='bottom';
+    ctx.fillText('@slzberlin', W-Math.round(W*0.04), H-Math.round(H*0.04));
+  }
   zeichneSlzbFooterNeu(ctx, W, H);
 }
 
@@ -905,6 +937,14 @@ async function zeichneSocialBeitragPortrait(ctx, e, bild, meta, W, H) {
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
   zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname, titel: teile.length===1?titel:null, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
+  // Instagram QR-Code
+  if (typeof SLZB_QR_URLS !== 'undefined') {
+    const _qrSz = Math.round(Math.min(W,H)*0.07);
+    zeichneQRCode(ctx, W-_qrSz-Math.round(W*0.04), H-_qrSz-Math.round(H*0.07), _qrSz, SLZB_QR_URLS.instagram, 'rgba(27,28,31,0.85)', '#fff');
+    ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font=`${Math.round(Math.min(W,H)*0.012)}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign='right'; ctx.textBaseline='bottom';
+    ctx.fillText('@slzberlin', W-Math.round(W*0.04), H-Math.round(H*0.04));
+  }
   zeichneSlzbFooterNeu(ctx, W, H);
 }
 
@@ -922,6 +962,14 @@ async function zeichneSocialBeitragKeinBild(ctx, e, W, H) {
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
   zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname, titel: teile.length===1?titel:null, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
+  // Instagram QR-Code
+  if (typeof SLZB_QR_URLS !== 'undefined') {
+    const _qrSz = Math.round(Math.min(W,H)*0.07);
+    zeichneQRCode(ctx, W-_qrSz-Math.round(W*0.04), H-_qrSz-Math.round(H*0.07), _qrSz, SLZB_QR_URLS.instagram, 'rgba(27,28,31,0.85)', '#fff');
+    ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font=`${Math.round(Math.min(W,H)*0.012)}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign='right'; ctx.textBaseline='bottom';
+    ctx.fillText('@slzberlin', W-Math.round(W*0.04), H-Math.round(H*0.04));
+  }
   zeichneSlzbFooterNeu(ctx, W, H);
 }
 
@@ -939,6 +987,14 @@ async function zeichneSocialStory(ctx, e, bild, meta, W, H) {
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
   zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname, titel: teile.length===1?titel:null, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
+  // Instagram QR-Code
+  if (typeof SLZB_QR_URLS !== 'undefined') {
+    const _qrSz = Math.round(Math.min(W,H)*0.07);
+    zeichneQRCode(ctx, W-_qrSz-Math.round(W*0.04), H-_qrSz-Math.round(H*0.07), _qrSz, SLZB_QR_URLS.instagram, 'rgba(27,28,31,0.85)', '#fff');
+    ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font=`${Math.round(Math.min(W,H)*0.012)}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign='right'; ctx.textBaseline='bottom';
+    ctx.fillText('@slzberlin', W-Math.round(W*0.04), H-Math.round(H*0.04));
+  }
   zeichneSlzbFooterNeu(ctx, W, H);
 }
 
@@ -1022,6 +1078,14 @@ async function zeichneA3Split(canvasId, e) {
   }
 
   // Footer (Basis-Funktion)
+  // Instagram QR-Code
+  if (typeof SLZB_QR_URLS !== 'undefined') {
+    const _qrSz = Math.round(Math.min(W,H)*0.07);
+    zeichneQRCode(ctx, W-_qrSz-Math.round(W*0.04), H-_qrSz-Math.round(H*0.07), _qrSz, SLZB_QR_URLS.instagram, 'rgba(27,28,31,0.85)', '#fff');
+    ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font=`${Math.round(Math.min(W,H)*0.012)}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign='right'; ctx.textBaseline='bottom';
+    ctx.fillText('@slzberlin', W-Math.round(W*0.04), H-Math.round(H*0.04));
+  }
   zeichneSlzbFooterNeu(ctx, W, H);
 }
 
@@ -1148,6 +1212,14 @@ async function zeichnePoster2Bilder(canvasId, e) {
 
   zeichneTextbereich(ctx, e, W, H, fotoH, mColor, sportart, platz, medaille, titel);
   zeichneKopfzeile(ctx, e.wettbewerbText, e.disziplin);
+  // Instagram QR-Code
+  if (typeof SLZB_QR_URLS !== 'undefined') {
+    const _qrSz = Math.round(Math.min(W,H)*0.07);
+    zeichneQRCode(ctx, W-_qrSz-Math.round(W*0.04), H-_qrSz-Math.round(H*0.07), _qrSz, SLZB_QR_URLS.instagram, 'rgba(27,28,31,0.85)', '#fff');
+    ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font=`${Math.round(Math.min(W,H)*0.012)}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign='right'; ctx.textBaseline='bottom';
+    ctx.fillText('@slzberlin', W-Math.round(W*0.04), H-Math.round(H*0.04));
+  }
   zeichneSlzbFooterNeu(ctx, W, H);
 }
 
@@ -1188,6 +1260,14 @@ async function zeichnePoster4Bilder(canvasId, e) {
 
   zeichneTextbereich(ctx, e, W, H, gridH, mColor, sportart, platz, medaille, titel);
   zeichneKopfzeile(ctx, e.wettbewerbText, e.disziplin);
+  // Instagram QR-Code
+  if (typeof SLZB_QR_URLS !== 'undefined') {
+    const _qrSz = Math.round(Math.min(W,H)*0.07);
+    zeichneQRCode(ctx, W-_qrSz-Math.round(W*0.04), H-_qrSz-Math.round(H*0.07), _qrSz, SLZB_QR_URLS.instagram, 'rgba(27,28,31,0.85)', '#fff');
+    ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font=`${Math.round(Math.min(W,H)*0.012)}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign='right'; ctx.textBaseline='bottom';
+    ctx.fillText('@slzberlin', W-Math.round(W*0.04), H-Math.round(H*0.04));
+  }
   zeichneSlzbFooterNeu(ctx, W, H);
 }
 
@@ -2301,6 +2381,14 @@ async function zeichneCountdownPoster(canvasId, opts) {
     if (opts.ort) { ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.fillText(opts.ort, CX, ortY+infoSz+6, W-80); }
   }
 
+  // QR-Code unten rechts (Instagram)
+  if (typeof SLZB_QR_URLS !== 'undefined') {
+    const qrSzCD = Math.round(H*0.07);
+    zeichneQRCode(ctx, W-qrSzCD-Math.round(W*0.04), H-qrSzCD-Math.round(H*0.07), qrSzCD, SLZB_QR_URLS.instagram, 'rgba(0,30,10,0.8)', '#fff');
+    ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.font=`${Math.round(H*0.012)}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign='right'; ctx.textBaseline='bottom';
+    ctx.fillText('@slzberlin', W-Math.round(W*0.04), H-Math.round(H*0.04));
+  }
   // 8. Footer: zeichneSlzbFooterNeu (grün)
   zeichneSlzbFooterNeu(ctx, W, H, 'gruen');
 }
@@ -2391,6 +2479,14 @@ async function zeichneNachwuchsSiegerPoster(canvasId, opts) {
     ctx.fillText(opts.zeitraum, cx, y+Math.round(H*0.010));
   }
 
+  // QR-Code unten rechts (Instagram)
+  if (typeof SLZB_QR_URLS !== 'undefined') {
+    const qrSzNW = Math.round(H*0.07);
+    zeichneQRCode(ctx, W-qrSzNW-Math.round(W*0.04), H-qrSzNW-Math.round(H*0.07), qrSzNW, SLZB_QR_URLS.instagram, 'rgba(0,0,30,0.8)', '#fff');
+    ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.font=`${Math.round(H*0.012)}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign='right'; ctx.textBaseline='bottom';
+    ctx.fillText('@slzberlin', W-Math.round(W*0.04), H-Math.round(H*0.04));
+  }
   // Footer
   zeichneSlzbFooterNeu(ctx, W, H, 'blau');
 }
@@ -2494,12 +2590,17 @@ async function zeichnePosterA3Allgemein(ctx, W, H, bild, karteOpts, akzent='rot'
     zeilen.slice(0,3).forEach(z=>{ ctx.fillText(z, TX, y); y+=22; });
   }
 
+  // QR-Code unten rechts (Website)
+  if (typeof SLZB_QR_URLS !== 'undefined') {
+    const qrSzA = 52;
+    zeichneQRCode(ctx, W-qrSzA-8, H-qrSzA-4, qrSzA, SLZB_QR_URLS.website, '#F0F0F0', '#003366');
+  }
   // Footer
   ctx.fillStyle='#F0F0F0'; ctx.fillRect(0, H-60, W, 60);
   ctx.fillStyle=akzentFarbe; ctx.fillRect(0, H-60, W, 3);
   ctx.fillStyle='#333'; ctx.font='13px Montserrat, Arial, sans-serif';
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText('Schul- und Leistungssportzentrum Berlin · #SLZBerlin', W/2, H-30);
+  ctx.fillText('Schul- und Leistungssportzentrum Berlin · #SLZBerlin', W/2-40, H-30);
 }
 
 // ══════════════════════════════════════════════════════════════
