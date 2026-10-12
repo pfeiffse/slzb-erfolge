@@ -259,9 +259,10 @@ async function renderDashboard() {
   const recent = [...alle].sort((a,b)=>new Date(b.eingangsdatum)-new Date(a.eingangsdatum)).slice(0,6);
 
   return `<div class="page">
-    <div class="page-header"><h1>Dashboard</h1>
+    <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div><h1>Dashboard</h1>
       <p>Willkommen, ${esc(Auth.name())}. <span class="text-muted text-sm">v3 · Supabase Auth</span></p></div>
-    <div class="grid grid-4 mb-4">
+      <button class=\"btn btn-primary\" onclick=\"zeigeWochenvorschau()\" style=\"white-space:nowrap;flex-shrink:0\">\xf0\x9f\x93\x85 Wochenvorschau</button>\n    </div>\n    <div class=\"grid grid-4 mb-4\">
       <div class="stat-card clickable" style="cursor:pointer" onclick="navigateTo('archiv')"><div class="stat-icon blue">📋</div><div><div class="stat-value">${alle.length}</div><div class="stat-label">Meldungen gesamt</div></div></div>
       <div class="stat-card clickable" style="cursor:pointer" onclick="navigateTo('ausgaben')"><div class="stat-icon green">✅</div><div><div class="stat-value">${freigegeben}</div><div class="stat-label">Freigegeben</div></div></div>
       <div class="stat-card clickable" style="cursor:pointer" onclick="navigateTo('redaktion')"><div class="stat-icon orange">⏳</div><div><div class="stat-value">${offen}</div><div class="stat-label">In Bearbeitung</div></div></div>

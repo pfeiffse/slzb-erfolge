@@ -2796,3 +2796,204 @@ async function loescheVideoUrl(erfolgId) {
     toast('Fehler: ' + err.message, 'danger');
   }
 }
+
+// ══════════════════════════════════════════════════════════════
+// WOCHENVORSCHAU – Poster + Modal
+// ══════════════════════════════════════════════════════════════
+async function zeigeWochenvorschau() {
+  const alleTermine = (typeof SLZB_TERMINE !== 'undefined') ? SLZB_TERMINE : [];
+  const jetzt = new Date(); jetzt.setHours(0,0,0,0);
+
+  // Aktuelle Woche: Montag bis Sonntag
+  const tag = jetzt.getDay(); // 0=So, 1=Mo...
+  const diffMo = tag === 0 ? -6 : 1 - tag;
+  const montag = new Date(jetzt); montag.setDate(jetzt.getDate() + diffMo);
+  const sonntag = new Date(montag); sonntag.setDate(montag.getDate() + 6);
+
+  const monatNamen = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  const tagNamen = ['So','Mo','Di','Mi','Do','Fr','Sa'];
+
+  const wocheTermine = alleTermine.filter(t => {
+    const d = new Date(t.datum);
+    return d >= montag && d <= sonntag;
+  }).sort((a,b) => a.datum.localeCompare(b.datum));
+
+  const prioFarbe = (p) => p===1?'#E2001A':p===2?'#E07000':p===3?'#0B63CE':'#666';
+  const prioLabel = (p) => p===1?'🏆 Meisterschaft':p===2?'⚡ Wettkampf':p===3?'📋 Lehrgang':'📅 Regulär';
+
+  const wocheLabel = `${montag.getDate()}. ${monatNamen[montag.getMonth()]} – ${sonntag.getDate()}. ${monatNamen[sonntag.getMonth()]} ${sonntag.getFullYear()}`;
+
+  // Gruppiere nach Tag
+  const nachTag = {};
+  wocheTermine.forEach(t => {
+    const d = new Date(t.datum);
+    const key = t.datum;
+    if (!nachTag[key]) nachTag[key] = { datum: d, termine: [] };
+    nachTag[key].termine.push(t);
+  });
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal modal-xl';
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>📅 Wochenvorschau – ${esc(wocheLabel)}</h3>
+      <button class="btn btn-ghost btn-sm close-x">✕</button>
+    </div>
+    <div class="modal-body">
+      ${wocheTermine.length === 0
+        ? `<div class="alert alert-success"><span class="alert-icon">✅</span>
+            <span>Diese Woche stehen keine Veranstaltungen an.</span></div>`
+        : `<div class="alert alert-info mb-3">
+            <span class="alert-icon">📅</span>
+            <span><strong>${wocheTermine.length} Veranstaltung(en)</strong> diese Woche</span>
+          </div>
+          ${Object.entries(nachTag).map(([key, {datum, termine}]) => `
+            <div class="card mb-3">
+              <div class="card-header" style="background:rgba(0,51,102,0.08)">
+                <h3 style="margin:0;font-size:1rem">
+                  <span style="color:#003366;font-weight:800">${tagNamen[datum.getDay()]}, ${datum.getDate()}. ${monatNamen[datum.getMonth()]}</span>
+                  <span class="badge badge-info ml-2">${termine.length}</span>
+                </h3>
+              </div>
+              <div class="table-wrap"><table>
+                <thead><tr>
+                  <th>Sportart</th><th>Veranstaltung</th><th>Ort</th><th>Klasse</th><th>Priorität</th><th></th>
+                </tr></thead>
+                <tbody>${termine.map(t => `<tr>
+                  <td class="text-sm">${esc(t.sportart)}</td>
+                  <td><strong>${esc(t.veranstaltung)}</strong></td>
+                  <td class="text-sm text-muted">${esc(t.ort||'–')}</td>
+                  <td class="text-sm text-muted">${esc(t.klasse||'–')}</td>
+                  <td><span style="color:${prioFarbe(t.prioritaet)};font-size:.75rem;font-weight:700">${prioLabel(t.prioritaet)}</span></td>
+                  <td><button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:2px 8px"
+                    onclick="kalenderCountdown(${JSON.stringify(t).replace(/"/g,'&quot;')})">⏳</button></td>
+                </tr>`).join('')}
+                </tbody>
+              </table></div>
+            </div>`).join('')}`}
+    </div>
+    <div class="modal-footer" style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-ghost close-btn">Schließen</button>
+      <button class="btn btn-outline" onclick="wochenvorschauPoster()">🖼️ Als Poster exportieren</button>
+      <button class="btn btn-primary" onclick="navigateTo('kalender');document.querySelector('.modal-overlay')?.remove()">📅 Zum Kalender</button>
+    </div>`;
+
+  modal.querySelector('.close-x').onclick = ()=>overlay.remove();
+  modal.querySelector('.close-btn').onclick = ()=>overlay.remove();
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+
+  // Wochentermine für Poster merken
+  window._wocheTermine = wocheTermine;
+  window._wocheLabel = wocheLabel;
+}
+
+// Wochenvorschau als Poster exportieren (1080×1350)
+async function wochenvorschauPoster() {
+  const termine = window._wocheTermine || [];
+  const wocheLabel = window._wocheLabel || '';
+  if (!termine.length) { toast('Keine Termine diese Woche','warning'); return; }
+
+  // Canvas erstellen
+  const canvas = document.createElement('canvas');
+  canvas.width=1080; canvas.height=1350;
+  const ctx = canvas.getContext('2d');
+  await ladeMontserrat(); await ladeLogo();
+
+  const W=1080, H=1350;
+  const monatNamen = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+  const tagNamen = ['So','Mo','Di','Mi','Do','Fr','Sa'];
+
+  // Hintergrund
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'#0a0c1a'); grad.addColorStop(1,'#1B1C1F');
+  ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
+
+  // Deko
+  zeichneSlzbDeko(ctx, W, H);
+
+  // Header
+  drawLogo(ctx, 40, 24, 55);
+  ctx.fillStyle='#E2001A'; ctx.fillRect(120, 32, 2, 44);
+  ctx.fillStyle='#fff'; ctx.font='bold 16px Montserrat, Arial, sans-serif';
+  ctx.textAlign='left'; ctx.textBaseline='top';
+  ctx.fillText('WOCHENVORSCHAU', 130, 30);
+  ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.font='12px Montserrat, Arial, sans-serif';
+  ctx.fillText(wocheLabel.toUpperCase(), 130, 52);
+
+  // Titel
+  ctx.fillStyle='#E2001A'; ctx.font='bold italic 48px Montserrat, Arial, sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='top';
+  ctx.fillText('DIESE WOCHE', W/2, 110);
+  ctx.fillStyle='#fff'; ctx.font='bold italic 36px Montserrat, Arial, sans-serif';
+  ctx.fillText('BEI UNS', W/2, 166);
+  ctx.fillStyle='#E2001A'; ctx.fillRect((W-120)/2, 212, 120, 3);
+
+  // Termine-Liste
+  let y = 240;
+  const ROW_H = 72;
+  const PAD = 40;
+  const prioFarbe = (p) => p===1?'#E2001A':p===2?'#E07000':p===3?'#0B63CE':'#555';
+
+  // Gruppiere nach Tag
+  const nachTag = {};
+  termine.forEach(t => {
+    if (!nachTag[t.datum]) nachTag[t.datum] = [];
+    nachTag[t.datum].push(t);
+  });
+
+  Object.entries(nachTag).forEach(([datum, tage]) => {
+    const d = new Date(datum);
+    const tagLabel = `${tagNamen[d.getDay()]}, ${d.getDate()}. ${monatNamen[d.getMonth()]}`;
+
+    // Tag-Header
+    if (y + 30 > H - 100) return;
+    ctx.fillStyle='rgba(226,0,26,0.15)';
+    ctx.fillRect(PAD, y, W-2*PAD, 28);
+    ctx.fillStyle='#E2001A'; ctx.font='bold 13px Montserrat, Arial, sans-serif';
+    ctx.textAlign='left'; ctx.textBaseline='middle';
+    ctx.letterSpacing='2px';
+    ctx.fillText(tagLabel.toUpperCase(), PAD+10, y+14);
+    ctx.letterSpacing='0px';
+    y += 32;
+
+    tage.forEach(t => {
+      if (y + ROW_H > H - 100) return;
+      // Zeilen-Hintergrund
+      ctx.fillStyle='rgba(255,255,255,0.04)';
+      ctx.fillRect(PAD, y, W-2*PAD, ROW_H-4);
+      // Prioritäts-Akzent
+      ctx.fillStyle=prioFarbe(t.prioritaet);
+      ctx.fillRect(PAD, y, 3, ROW_H-4);
+      // Sportart
+      ctx.fillStyle=prioFarbe(t.prioritaet); ctx.font='bold 12px Montserrat, Arial, sans-serif';
+      ctx.textAlign='left'; ctx.textBaseline='top';
+      ctx.fillText(t.sportart.toUpperCase(), PAD+14, y+10);
+      // Veranstaltung
+      ctx.fillStyle='#fff'; ctx.font='bold 16px Montserrat, Arial, sans-serif';
+      ctx.fillText(t.veranstaltung, PAD+14, y+28, W-2*PAD-80);
+      // Ort + Klasse
+      const info = [t.ort, t.klasse].filter(Boolean).join(' · ');
+      if (info) {
+        ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.font='12px Montserrat, Arial, sans-serif';
+        ctx.fillText(info, PAD+14, y+50, W-2*PAD-80);
+      }
+      y += ROW_H;
+    });
+    y += 8;
+  });
+
+  // Footer
+  zeichneSlzbFooterNeu(ctx, W, H);
+
+  // Download
+  const a = document.createElement('a');
+  a.download = `SLZB_Wochenvorschau_${wocheLabel.replace(/[^a-zA-Z0-9]/g,'-')}.png`;
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+  toast('Wochenvorschau-Poster heruntergeladen!', 'success');
+}
