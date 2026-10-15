@@ -1045,10 +1045,24 @@ async function renderAusgaben() {
             <label>Veranstaltung auswählen</label>
             <select id="veranstaltungs-poster-select" style="width:100%">
               <option value="">– Veranstaltung wählen –</option>
+              <optgroup label="📋 Aus Meldungen (freigegebene Erfolge)">
               ${[...new Map(freigegebene.filter(e=>e.wettbewerbText).map(e=>[e.wettbewerbText,e])).values()]
                 .sort((a,b)=>a.wettbewerbText.localeCompare(b.wettbewerbText))
                 .map(e=>`<option value="${esc(e.wettbewerbText)}">${esc(e.wettbewerbText)}${e.datum?' ('+new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})+')':''}</option>`)
                 .join('')}
+              </optgroup>
+              ${(typeof SLZB_TERMINE!=='undefined'&&SLZB_TERMINE.length)?`
+              <optgroup label="📅 Aus Kalender (bevorstehende Veranstaltungen)">
+              ${[...new Map(SLZB_TERMINE
+                .filter(t=>t.datum>=new Date().toISOString().slice(0,10)&&t.prioritaet<=2)
+                .map(t=>[t.veranstaltung,t])).values()]
+                .sort((a,b)=>a.datum.localeCompare(b.datum))
+                .slice(0,30)
+                .map(t=>`<option value="${esc(t.veranstaltung)}" data-datum="${t.datum}" data-ort="${esc(t.ort||'')}" data-sportart="${esc(t.sportart||'')}">
+                  ${esc(t.veranstaltung)} (${new Date(t.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})})
+                </option>`)
+                .join('')}
+              </optgroup>`:''}
             </select>
           </div>
           <button class="btn btn-primary" onclick="zeigeVeranstaltungsPosterModal()" style="white-space:nowrap">
@@ -6706,6 +6720,12 @@ async function zeigeVeranstaltungsPosterModal() {
   const wettbewerbName = select?.value;
   if (!wettbewerbName) { toast('Bitte eine Veranstaltung auswählen', 'warning'); return; }
 
+  // Kalender-Daten aus data-Attributen lesen (wenn aus Kalender gewählt)
+  const selectedOption = select.options[select.selectedIndex];
+  const kalenderDatum = selectedOption?.dataset?.datum || '';
+  const kalenderOrt = selectedOption?.dataset?.ort || '';
+  const kalenderSportart = selectedOption?.dataset?.sportart || '';
+
   toast('Lade Meldungen...', 'info');
   const alle = await ladeErfolge();
   const meldungen = alle.filter(e =>
@@ -6713,7 +6733,27 @@ async function zeigeVeranstaltungsPosterModal() {
     ['Freigegeben','Veröffentlicht'].includes(e.status)
   ).sort((a,b) => (a.platzierung||99) - (b.platzierung||99));
 
-  if (!meldungen.length) { toast('Keine freigegebenen Meldungen für diese Veranstaltung', 'warning'); return; }
+  // Wenn keine Meldungen aber aus Kalender: Countdown-Poster anbieten
+  if (!meldungen.length) {
+    if (kalenderDatum) {
+      const antwort = confirm(`Keine freigegebenen Meldungen für "${wettbewerbName}".
+
+Möchten Sie stattdessen ein Countdown-Poster erstellen?`);
+      if (antwort) {
+        zeigeCountdownModal();
+        setTimeout(()=>{
+          const nameEl=document.getElementById('cd-name'); if(nameEl) nameEl.value=wettbewerbName;
+          const datumEl=document.getElementById('cd-datum'); if(datumEl) datumEl.value=kalenderDatum+'T10:00';
+          const ortEl=document.getElementById('cd-ort'); if(ortEl) ortEl.value=kalenderOrt;
+          const sportEl=document.getElementById('cd-sportart'); if(sportEl) sportEl.value=kalenderSportart;
+          cdVorschau();
+        }, 200);
+      }
+    } else {
+      toast('Keine freigegebenen Meldungen für diese Veranstaltung', 'warning');
+    }
+    return;
+  }
 
   // Bilder laden
   for (const m of meldungen) {
@@ -6727,8 +6767,10 @@ async function zeigeVeranstaltungsPosterModal() {
   const modal = document.createElement('div');
   modal.className = 'modal modal-xl';
 
-  const datum = meldungen[0]?.datum ? new Date(meldungen[0].datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
-  const ort = meldungen[0]?.ort || '';
+  // Datum/Ort: aus Meldungen oder Kalender-Fallback
+  const _mDatum = meldungen[0]?.datum || kalenderDatum;
+  const datum = _mDatum ? new Date(_mDatum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  const ort = meldungen[0]?.ort || kalenderOrt || '';
 
   modal.innerHTML = `
     <div class="modal-header">
@@ -6750,9 +6792,11 @@ async function zeigeVeranstaltungsPosterModal() {
         <p class="text-xs mt-2" style="color:#888" id="vp-info">1080×1350 px · Hochformat</p>
       </div>
     </div>
-    <div class="modal-footer">
+    <div class="modal-footer" style="flex-wrap:wrap;gap:8px">
       <button class="btn btn-ghost close-btn">Schließen</button>
-      <button class="btn btn-primary" onclick="vpHerunterladen('${esc(wettbewerbName)}')">🖼️ PNG herunterladen</button>
+      <button class="btn btn-outline" onclick="vpHerunterladen('${esc(wettbewerbName)}')">🖼️ PNG herunterladen</button>
+      <button class="btn btn-outline" onclick="vpPdfHerunterladen('${esc(wettbewerbName)}','a4')">📄 PDF A4</button>
+      <button class="btn btn-primary" onclick="vpPdfHerunterladen('${esc(wettbewerbName)}','a3')">📄 PDF A3</button>
     </div>`;
 
   modal.querySelector('.close-x').onclick = ()=>overlay.remove();
@@ -6915,4 +6959,134 @@ async function zeichneVeranstaltungsPoster(canvasId, meldungen, wettbewerb, datu
   ctx.textAlign='right'; ctx.textBaseline='bottom';
   ctx.fillText('📸 Folge uns auf Instagram: @slzberlin', W-Math.round(W*0.03), H-Math.round(H*0.025));
   zeichneSlzbFooterNeu(ctx, W, H);
+}
+
+// ══════════════════════════════════════════════════════════════
+// PDF-EXPORT FÜR POSTER (jsPDF, druckoptimiert)
+// ══════════════════════════════════════════════════════════════
+
+// jsPDF dynamisch laden
+async function ladejsPDF() {
+  if (typeof jspdf !== 'undefined' && jspdf.jsPDF) return jspdf.jsPDF;
+  if (typeof jsPDF !== 'undefined') return jsPDF;
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
+    s.onload = () => resolve(jspdf?.jsPDF || jsPDF);
+    s.onerror = () => reject(new Error('jsPDF konnte nicht geladen werden'));
+    document.head.appendChild(s);
+  });
+}
+
+// Veranstaltungs-Poster als PDF exportieren
+async function vpPdfHerunterladen(name, format='a4') {
+  toast('PDF wird erstellt...', 'info');
+  try {
+    const JsPDF = await ladejsPDF();
+    const m = window._vpMeldungen;
+    const wb = window._vpWettbewerb;
+    if (!m || !wb) { toast('Keine Daten vorhanden', 'warning'); return; }
+
+    const datum = m[0]?.datum ? new Date(m[0].datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+    const ort = m[0]?.ort || '';
+
+    // Druckauflösung: 300 DPI
+    // A4: 210×297mm → bei 300dpi = 2480×3508px
+    // A3: 297×420mm → bei 300dpi = 3508×4961px
+    // Wir nutzen 2× Skalierung für gute Qualität ohne zu viel RAM
+    const DPI_SCALE = 2; // 2× = ~150dpi effektiv, guter Kompromiss
+
+    let canvasW, canvasH, pdfW, pdfH, orientation;
+    if (format === 'a3') {
+      canvasW = 1587 * DPI_SCALE; // A3 quer: 1587px × 2 = 3174px
+      canvasH = 1123 * DPI_SCALE;
+      pdfW = 420; pdfH = 297;
+      orientation = 'landscape';
+    } else {
+      // A4 Hochformat
+      canvasW = 1080 * DPI_SCALE; // 1080px × 2 = 2160px
+      canvasH = 1350 * DPI_SCALE; // 1350px × 2 = 2700px
+      pdfW = 210; pdfH = 297;
+      orientation = 'portrait';
+    }
+
+    // Temporäres Canvas in hoher Auflösung
+    const tmpCanvas = document.createElement('canvas');
+    tmpCanvas.width = canvasW;
+    tmpCanvas.height = canvasH;
+    tmpCanvas.id = 'vp-pdf-canvas';
+    tmpCanvas.style.display = 'none';
+    document.body.appendChild(tmpCanvas);
+
+    // Poster in hoher Auflösung zeichnen
+    const posterFormat = format === 'a3' ? 'querformat' : 'hochformat';
+    await zeichneVeranstaltungsPoster('vp-pdf-canvas', m, wb, datum, ort, posterFormat);
+
+    // Canvas → PNG → PDF
+    const imgData = tmpCanvas.toDataURL('image/png', 1.0);
+    tmpCanvas.remove();
+
+    const pdf = new JsPDF({
+      orientation,
+      unit: 'mm',
+      format: format === 'a3' ? 'a3' : 'a4',
+      compress: true,
+    });
+
+    // Bild auf volle Seite (randlos)
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH, '', 'FAST');
+
+    // Metadaten
+    pdf.setProperties({
+      title: `SLZB – ${wb}`,
+      subject: 'Veranstaltungs-Ergebnisse',
+      author: 'Schul- und Leistungssportzentrum Berlin',
+      creator: 'SLZB-Erfolge v3',
+    });
+
+    const dateiname = `SLZB_${wb.replace(/[^a-zA-Z0-9]/g,'-')}_${format.toUpperCase()}.pdf`;
+    pdf.save(dateiname);
+    toast(`✅ PDF "${dateiname}" heruntergeladen!`, 'success');
+
+  } catch(err) {
+    toast('PDF-Fehler: ' + err.message, 'danger');
+    console.error(err);
+  }
+}
+
+// Allgemeine PDF-Export-Funktion für beliebige Canvas-Elemente
+async function exportCanvasAlsPDF(canvasId, dateiname='SLZB_Poster', format='a4', orientation='portrait') {
+  toast('PDF wird erstellt...', 'info');
+  try {
+    const JsPDF = await ladejsPDF();
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) { toast('Canvas nicht gefunden', 'danger'); return; }
+
+    // Hochauflösende Kopie erstellen
+    const DPI_SCALE = 2;
+    const tmpCanvas = document.createElement('canvas');
+    tmpCanvas.width = canvas.width * DPI_SCALE;
+    tmpCanvas.height = canvas.height * DPI_SCALE;
+    const tmpCtx = tmpCanvas.getContext('2d');
+    tmpCtx.scale(DPI_SCALE, DPI_SCALE);
+    tmpCtx.drawImage(canvas, 0, 0);
+
+    const imgData = tmpCanvas.toDataURL('image/png', 1.0);
+
+    // Seitenmaße
+    const formatMap = {
+      'a4': [210, 297], 'a3': [297, 420],
+      'a4-quer': [297, 210], 'a3-quer': [420, 297],
+    };
+    const [pdfW, pdfH] = formatMap[format] || [210, 297];
+
+    const pdf = new JsPDF({ orientation, unit: 'mm', format, compress: true });
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH, '', 'FAST');
+    pdf.setProperties({ title: dateiname, author: 'SLZB Berlin', creator: 'SLZB-Erfolge v3' });
+    pdf.save(`${dateiname}.pdf`);
+    toast(`✅ PDF heruntergeladen!`, 'success');
+
+  } catch(err) {
+    toast('PDF-Fehler: ' + err.message, 'danger');
+  }
 }
