@@ -1028,7 +1028,65 @@ async function renderAusgaben() {
   const alle=await ladeErfolge();
   const freigegebene=alle.filter(e=>['Freigegeben','Veröffentlicht'].includes(e.status));
   return`<div class="page">
-    
+    <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div><h1>📤 Ausgaben & Freigaben</h1></div>
+    </div>
+    <div class="alert alert-warning mb-3"><span class="alert-icon">⚠️</span>
+      <span>Ausgaben nur für Status <strong>Freigegeben</strong> oder <strong>Veröffentlicht</strong>.</span></div>
+
+    <!-- Veranstaltungs-Gesamtposter -->
+    <div class="card mb-3">
+      <div class="card-header"><h2>🏆 Veranstaltungs-Gesamtposter</h2></div>
+      <div class="card-body">
+        <div class="alert alert-info mb-2"><span class="alert-icon">ℹ️</span>
+          <span>Übersichts-Poster mit allen freigegebenen Erfolgen einer Veranstaltung.</span></div>
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+          <div class="form-group" style="flex:1;min-width:200px;margin:0">
+            <label>Veranstaltung auswählen</label>
+            <select id="veranstaltungs-poster-select" style="width:100%">
+              <option value="">– Veranstaltung wählen –</option>
+              ${[...new Map(freigegebene.filter(e=>e.wettbewerbText).map(e=>[e.wettbewerbText,e])).values()]
+                .sort((a,b)=>a.wettbewerbText.localeCompare(b.wettbewerbText))
+                .map(e=>`<option value="${esc(e.wettbewerbText)}">${esc(e.wettbewerbText)}${e.datum?' ('+new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})+')':''}</option>`)
+                .join('')}
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="zeigeVeranstaltungsPosterModal()" style="white-space:nowrap">
+            🏆 Gesamtposter erstellen
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Spezial-Ausgaben -->
+    <div class="card mb-3">
+      <div class="card-header"><h2>✨ Spezial-Ausgaben</h2></div>
+      <div class="card-body">
+        <div class="form-row cols-3">
+          <div style="text-align:center;padding:16px;background:rgba(226,0,26,.08);border-radius:12px">
+            <div style="font-size:2rem;margin-bottom:8px">🎠</div>
+            <strong style="display:block;margin-bottom:6px">Highlights-Karussell</strong>
+            <p class="text-xs text-muted mb-3">Monatliche Top-Erfolge als Social-Media-Serie</p>
+            <button class="btn btn-primary btn-sm" onclick="zeigeHighlightsKarussell()">Karussell erstellen</button>
+          </div>
+          <div style="text-align:center;padding:16px;background:rgba(11,99,206,.08);border-radius:12px">
+            <div style="font-size:2rem;margin-bottom:8px">🏆</div>
+            <strong style="display:block;margin-bottom:6px">Nachwuchssportler-Wahl</strong>
+            <p class="text-xs text-muted mb-3">Abstimmungsaufruf für Social Media</p>
+            <button class="btn btn-primary btn-sm" onclick="zeigeNachwuchswahlModal()">Poster erstellen</button>
+          </div>
+          <div style="text-align:center;padding:16px;background:rgba(227,178,60,.08);border-radius:12px">
+            <div style="font-size:2rem;margin-bottom:8px">⏳</div>
+            <strong style="display:block;margin-bottom:6px">Countdown-Poster</strong>
+            <p class="text-xs text-muted mb-3">Countdown bis zu einem Event</p>
+            <button class="btn btn-primary btn-sm" onclick="zeigeCountdownModal()">Countdown erstellen</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Freigegebene Meldungen -->
+    <div class="card">
       <div class="card-header"><h2>Freigegebene Meldungen</h2><span class="badge badge-success">${freigegebene.length}</span></div>
       <div class="table-wrap"><table>
         <thead><tr><th>Nr.</th><th>Titel</th><th>Sportart</th><th>Datum</th><th>Status</th><th>Ausgaben</th></tr></thead>
@@ -1051,6 +1109,7 @@ async function renderAusgaben() {
     </div>
   </div>`;
 }
+
 
 // ── Stammdaten ───────────────────────────────────────────────
 function renderStammdaten() {
@@ -4173,33 +4232,6 @@ function widerrufEinwilligung(schuelerId,name) {
 }
 
 // ── Ausgaben ─────────────────────────────────────────────────
-async function renderAusgaben() {
-  const alle=await ladeErfolge();
-  const freigegebene=alle.filter(e=>['Freigegeben','Veröffentlicht'].includes(e.status));
-  return`<div class="page">
-    
-      <div class="card-header"><h2>Freigegebene Meldungen</h2><span class="badge badge-success">${freigegebene.length}</span></div>
-      <div class="table-wrap"><table>
-        <thead><tr><th>Nr.</th><th>Titel</th><th>Sportart</th><th>Datum</th><th>Status</th><th>Ausgaben</th></tr></thead>
-        <tbody>${freigegebene.length===0?'<tr><td colspan="6" class="text-center text-muted" style="padding:30px">Keine freigegebenen Meldungen.</td></tr>':
-          freigegebene.map(e=>{const sp=SLZB_DB.getSportart(e.sportartId);
-            return`<tr>
-              <td class="text-xs text-muted">${esc(e.erfolgNr||'–')}</td>
-              <td><strong>${esc(e.titel)}</strong></td>
-              <td class="text-sm">${esc(sp?.name||'–')}</td>
-              <td class="text-sm">${fmt(e.datum)}</td>
-              <td>${statusBadge(e.status)}</td>
-              <td><div class="flex gap-2">
-                <button class="btn btn-outline btn-sm" onclick="zeigeA3Vorschau('${e.id}')">📄 A3</button>
-                <button class="btn btn-outline btn-sm" onclick="zeigeBildschirmModal('${e.id}')">🖥️ Bildschirm</button>
-                <button class="btn btn-warning btn-sm" onclick="zeigeSocialModal('${e.id}')">📱 Social</button>
-              </div></td>
-            </tr>`;}).join('')}
-        </tbody>
-      </table></div>
-    </div>
-  </div>`;
-}
 
 // ── Stammdaten ───────────────────────────────────────────────
 function renderStammdaten() {
@@ -6664,4 +6696,223 @@ async function cdEinreichen() {
     document.querySelector('.modal-overlay')?.remove();
     navigateTo('meine-meldungen');
   }
+}
+
+// ══════════════════════════════════════════════════════════════
+// VERANSTALTUNGS-GESAMTPOSTER
+// ══════════════════════════════════════════════════════════════
+async function zeigeVeranstaltungsPosterModal() {
+  const select = document.getElementById('veranstaltungs-poster-select');
+  const wettbewerbName = select?.value;
+  if (!wettbewerbName) { toast('Bitte eine Veranstaltung auswählen', 'warning'); return; }
+
+  toast('Lade Meldungen...', 'info');
+  const alle = await ladeErfolge();
+  const meldungen = alle.filter(e =>
+    e.wettbewerbText === wettbewerbName &&
+    ['Freigegeben','Veröffentlicht'].includes(e.status)
+  ).sort((a,b) => (a.platzierung||99) - (b.platzierung||99));
+
+  if (!meldungen.length) { toast('Keine freigegebenen Meldungen für diese Veranstaltung', 'warning'); return; }
+
+  // Bilder laden
+  for (const m of meldungen) {
+    if (!m.bilder) {
+      try { m.bilder = await DB.getBilder(m.id); } catch(e) { m.bilder = []; }
+    }
+  }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal modal-xl';
+
+  const datum = meldungen[0]?.datum ? new Date(meldungen[0].datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  const ort = meldungen[0]?.ort || '';
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>🏆 Veranstaltungs-Gesamtposter – ${esc(wettbewerbName)}</h3>
+      <button class="btn btn-ghost btn-sm close-x">✕</button>
+    </div>
+    <div class="modal-body" style="background:#111;padding:16px">
+      <div class="alert alert-info mb-3">
+        <span class="alert-icon">ℹ️</span>
+        <span>${meldungen.length} freigegebene Meldungen · ${datum}${ort?' · '+ort:''}</span>
+      </div>
+      <div class="tabs mb-3" style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="tab-btn active" onclick="vpFormatWechsel('hochformat')">📱 Hochformat (4:5)</button>
+        <button class="tab-btn" onclick="vpFormatWechsel('querformat')">🖥️ Querformat (16:9)</button>
+      </div>
+      <div style="text-align:center">
+        <canvas id="vp-canvas" width="1080" height="1350"
+          style="max-width:100%;max-height:60vh;display:block;margin:0 auto;border-radius:8px"></canvas>
+        <p class="text-xs mt-2" style="color:#888" id="vp-info">1080×1350 px · Hochformat</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost close-btn">Schließen</button>
+      <button class="btn btn-primary" onclick="vpHerunterladen('${esc(wettbewerbName)}')">🖼️ PNG herunterladen</button>
+    </div>`;
+
+  modal.querySelector('.close-x').onclick = ()=>overlay.remove();
+  modal.querySelector('.close-btn').onclick = ()=>overlay.remove();
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+
+  window._vpMeldungen = meldungen;
+  window._vpWettbewerb = wettbewerbName;
+  window._vpFormat = 'hochformat';
+  setTimeout(()=>zeichneVeranstaltungsPoster('vp-canvas', meldungen, wettbewerbName, datum, ort, 'hochformat'), 100);
+}
+
+function vpFormatWechsel(format) {
+  window._vpFormat = format;
+  document.querySelectorAll('.modal .tab-btn').forEach(b=>{
+    b.classList.toggle('active', b.textContent.toLowerCase().includes(format==='hochformat'?'hochformat':'querformat'));
+  });
+  const canvas = document.getElementById('vp-canvas');
+  const info = document.getElementById('vp-info');
+  if (format==='querformat') {
+    if(canvas){canvas.width=1920;canvas.height=1080;canvas.style.maxHeight='45vh';}
+    if(info) info.textContent='1920×1080 px · Querformat';
+  } else {
+    if(canvas){canvas.width=1080;canvas.height=1350;canvas.style.maxHeight='60vh';}
+    if(info) info.textContent='1080×1350 px · Hochformat';
+  }
+  const m=window._vpMeldungen, wb=window._vpWettbewerb;
+  const datum=m[0]?.datum?new Date(m[0].datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}):'';
+  zeichneVeranstaltungsPoster('vp-canvas', m, wb, datum, m[0]?.ort||'', format);
+}
+
+function vpHerunterladen(name) {
+  const canvas = document.getElementById('vp-canvas');
+  if (!canvas) return;
+  const a = document.createElement('a');
+  a.download = `SLZB_Veranstaltung_${name.replace(/[^a-zA-Z0-9]/g,'-')}.png`;
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+}
+
+// Canvas-Rendering: Veranstaltungs-Gesamtposter
+async function zeichneVeranstaltungsPoster(canvasId, meldungen, wettbewerb, datum, ort, format='hochformat') {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const querformat = format === 'querformat';
+  const W = querformat ? 1920 : 1080;
+  const H = querformat ? 1080 : 1350;
+  canvas.width=W; canvas.height=H;
+  const ctx = canvas.getContext('2d');
+  await ladeMontserrat(); await ladeLogo();
+
+  const prioFarbe = (m) => {
+    if (m.medaille==='Gold') return SLZB_COLORS.gold;
+    if (m.medaille==='Silber') return SLZB_COLORS.silver;
+    if (m.medaille==='Bronze') return SLZB_COLORS.bronze;
+    if (m.platzierung===1) return SLZB_COLORS.gold;
+    if (m.platzierung===2) return SLZB_COLORS.silver;
+    if (m.platzierung===3) return SLZB_COLORS.bronze;
+    return SLZB_COLORS.red;
+  };
+
+  // Hintergrund
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'#0a0c1a'); grad.addColorStop(1,'#1B1C1F');
+  ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
+  zeichneSlzbDeko(ctx, W, H);
+
+  // Header
+  zeichneSlzbHeader(ctx, W, H, 'SLZB Berlin', datum);
+
+  // Veranstaltungsname
+  const HEADER_H = Math.round(H*0.095);
+  let y = HEADER_H + Math.round(H*0.025);
+  ctx.fillStyle=SLZB_COLORS.red; ctx.font=`bold ${Math.round(H*0.014)}px Montserrat, Arial, sans-serif`;
+  ctx.textAlign='center'; ctx.textBaseline='top'; ctx.letterSpacing='4px';
+  ctx.fillText('ERGEBNISSE', W/2, y); y+=Math.round(H*0.022);
+  ctx.letterSpacing='0px';
+  ctx.fillStyle=SLZB_COLORS.red; ctx.fillRect((W-80)/2, y, 80, 2); y+=Math.round(H*0.016);
+
+  // Wettbewerbsname
+  const wbSz = querTitelFontSize(wettbewerb, W-80, ctx);
+  const wbWoerter = wettbewerb.toUpperCase().split(' ');
+  const wbMid = wbWoerter.length>3 ? Math.ceil(wbWoerter.length/2) : wbWoerter.length;
+  ctx.font=`bold italic ${wbSz}px Montserrat, Arial, sans-serif`;
+  ctx.fillStyle=SLZB_COLORS.white; ctx.textAlign='center';
+  ctx.fillText(wbWoerter.slice(0,wbMid).join(' '), W/2, y, W-60); y+=wbSz+6;
+  ctx.fillStyle=SLZB_COLORS.red;
+  if (wbWoerter.slice(wbMid).length) { ctx.fillText(wbWoerter.slice(wbMid).join(' '), W/2, y, W-60); y+=wbSz+6; }
+
+  // Datum + Ort
+  if (datum||ort) {
+    ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.font=`${Math.round(H*0.016)}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillText([datum,ort].filter(Boolean).join(' · '), W/2, y, W-80); y+=Math.round(H*0.030);
+  }
+
+  y+=Math.round(H*0.010);
+
+  // Ergebnisliste
+  const FOOTER_H = Math.round(H*0.075);
+  const verfH = H - y - FOOTER_H - Math.round(H*0.010);
+  const maxZeilen = Math.min(meldungen.length, querformat ? 8 : 10);
+  const ROW_H = Math.floor(verfH / maxZeilen);
+  const PAD = Math.round(W*0.04);
+
+  meldungen.slice(0, maxZeilen).forEach((m, i) => {
+    const ry = y + i*ROW_H;
+    const farbe = prioFarbe(m);
+    const athlet = (m.beteiligte||[]).map(b=>b.anzeigename||'').filter(Boolean).join(', ') || m.titel || '–';
+    const sportart = m.sportartText || '';
+
+    // Zeilen-Hintergrund
+    ctx.fillStyle = i%2===0 ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)';
+    ctx.fillRect(PAD, ry+2, W-2*PAD, ROW_H-4);
+
+    // Farbiger Akzentbalken links
+    ctx.fillStyle = farbe;
+    ctx.fillRect(PAD, ry+2, 4, ROW_H-4);
+
+    // Platzierungs-Oval
+    const ovalW=Math.round(ROW_H*0.7), ovalH=Math.round(ROW_H*0.65);
+    const ovalX=PAD+10, ovalY=ry+(ROW_H-ovalH)/2;
+    ctx.fillStyle=farbe; slzbRoundRect(ctx,ovalX,ovalY,ovalW,ovalH,ovalH/2); ctx.fill();
+    ctx.fillStyle='#000'; ctx.font=`bold italic ${Math.round(ovalH*0.55)}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(m.platzierung?String(m.platzierung):'–', ovalX+ovalW/2, ovalY+ovalH/2);
+
+    // Athletenname
+    const textX = PAD+ovalW+20;
+    const textW = W-textX-PAD-Math.round(W*0.15);
+    ctx.fillStyle=SLZB_COLORS.white; ctx.font=`bold ${Math.round(ROW_H*0.38)}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign='left'; ctx.textBaseline='middle';
+    ctx.fillText(athlet, textX, ry+ROW_H*0.38, textW);
+
+    // Sportart + Disziplin
+    const info = [sportart, m.disziplin].filter(Boolean).join(' · ');
+    if (info) {
+      ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.font=`${Math.round(ROW_H*0.28)}px Montserrat, Arial, sans-serif`;
+      ctx.fillText(info, textX, ry+ROW_H*0.72, textW);
+    }
+
+    // Medaille rechts
+    if (m.medaille && m.medaille!=='keine') {
+      ctx.fillStyle=farbe; ctx.font=`bold ${Math.round(ROW_H*0.30)}px Montserrat, Arial, sans-serif`;
+      ctx.textAlign='right'; ctx.textBaseline='middle';
+      ctx.fillText(m.medaille, W-PAD, ry+ROW_H/2);
+    }
+  });
+
+  if (meldungen.length > maxZeilen) {
+    ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.font=`italic ${Math.round(H*0.014)}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillText(`+ ${meldungen.length-maxZeilen} weitere Ergebnisse`, W/2, y+maxZeilen*ROW_H+8);
+  }
+
+  // Instagram-Hinweis + Footer
+  ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font=`${Math.round(H*0.012)}px Montserrat, Arial, sans-serif`;
+  ctx.textAlign='right'; ctx.textBaseline='bottom';
+  ctx.fillText('📸 Folge uns auf Instagram: @slzberlin', W-Math.round(W*0.03), H-Math.round(H*0.025));
+  zeichneSlzbFooterNeu(ctx, W, H);
 }
