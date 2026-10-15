@@ -1883,6 +1883,7 @@ function zeigeCountdownModal() {
     <div class="modal-footer">
       <button class="btn btn-ghost close-btn">Schließen</button>
       <button class="btn btn-outline" onclick="cdVorschau()">👁️ Vorschau aktualisieren</button>
+      <button class=\"btn btn-outline\" onclick=\"cdEinreichen()\" style=\"border-color:#00a040;color:#00a040\">📤 Zur Redaktion einreichen</button>
       <button class="btn btn-primary" onclick="cdHerunterladen()">🖼️ PNG herunterladen</button>
     </div>`;
 
@@ -2149,6 +2150,7 @@ function zeigeJubilaeumModal() {
     <div class="modal-footer">
       <button class="btn btn-ghost close-btn">Schließen</button>
       <button class="btn btn-outline" onclick="jubVorschau()">👁️ Vorschau</button>
+      <button class=\"btn btn-outline\" onclick=\"jubEinreichen()\" style=\"border-color:#C9A227;color:#C9A227\">📤 Zur Redaktion einreichen</button>
       <button class="btn btn-primary" onclick="jubHerunterladen()" style="background:#C9A227;border-color:#C9A227">🖼️ PNG herunterladen</button>
     </div>`;
   modal.querySelector('.close-x').onclick = ()=>overlay.remove();
@@ -2285,6 +2287,7 @@ function zeigeSchulnachrichtModal() {
     <div class="modal-footer">
       <button class="btn btn-ghost close-btn">Schließen</button>
       <button class="btn btn-outline" onclick="snVorschau()">👁️ Vorschau</button>
+      <button class=\"btn btn-outline\" onclick=\"snEinreichen()\" style=\"border-color:#8A9BB0;color:#8A9BB0\">📤 Zur Redaktion einreichen</button>
       <button class="btn btn-primary" onclick="snHerunterladen()" style="background:#8A9BB0;border-color:#8A9BB0">🖼️ PNG herunterladen</button>
     </div>`;
   modal.querySelector('.close-x').onclick = ()=>overlay.remove();
@@ -6707,4 +6710,84 @@ function exportiereKalenderIcal() {
   a.download = `SLZB_Kalender${state.sportart?'_'+state.sportart:''}_2026-27.ics`;
   a.click();
   toast(`✅ ${gefiltert.length} Termine als iCal exportiert`, 'success');
+}
+
+// ══════════════════════════════════════════════════════════════
+// NICHT-SPORT-MELDUNGEN: Einreichen in Redaktions-Workflow
+// ══════════════════════════════════════════════════════════════
+
+// Gemeinsame Funktion: Nicht-Sport-Ausgabe als Meldung einreichen
+async function reicheNichtSportEin(meldungsart, daten) {
+  try {
+    const result = await DB.erstelleErfolg({
+      meldungsart,
+      titel: daten.titel || `${meldungsart} – ${new Date().toLocaleDateString('de-DE')}`,
+      sportartId: null,
+      sportartText: meldungsart,
+      datum: daten.datum || new Date().toISOString().slice(0,10),
+      ort: daten.ort || '',
+      kurzinfo: daten.kurzinfo || daten.text || '',
+      quelleUrl: daten.link || '',
+      textArtikel: daten.text || '',
+      status: 'Eingereicht',
+      // Zusatzdaten als JSON im ai_draft-Feld
+      aiDraft: JSON.stringify(daten),
+    }, []);
+
+    if (!result.ok) throw new Error(result.fehler || 'Unbekannter Fehler');
+    APP._erfolgeCache = null;
+    toast(`✅ ${meldungsart} eingereicht! Wartet auf Freigabe durch Redaktion.`, 'success');
+    return result;
+  } catch(err) {
+    toast('Fehler: ' + err.message, 'danger');
+    return null;
+  }
+}
+
+// Jubiläum einreichen
+async function jubEinreichen() {
+  const titel = document.getElementById('jub-titel')?.value?.trim();
+  const untertitel = document.getElementById('jub-untertitel')?.value?.trim() || '';
+  const datum = document.getElementById('jub-datum')?.value || '';
+  const ort = document.getElementById('jub-ort')?.value?.trim() || '';
+  if (!titel) { toast('Titel ist Pflichtfeld', 'warning'); return; }
+
+  const result = await reicheNichtSportEin('Jubiläum', { titel, untertitel, datum, ort });
+  if (result) {
+    // Felder leeren
+    ['jub-titel','jub-untertitel','jub-ort'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+    document.querySelector('.modal-overlay')?.remove();
+    navigateTo('meine-meldungen');
+  }
+}
+
+// Schulnachricht einreichen
+async function snEinreichen() {
+  const titel = document.getElementById('sn-titel')?.value?.trim();
+  const kategorie = document.getElementById('sn-kategorie')?.value?.trim() || '';
+  const datum = document.getElementById('sn-datum')?.value || '';
+  const text = document.getElementById('sn-text')?.value?.trim() || '';
+  if (!titel) { toast('Überschrift ist Pflichtfeld', 'warning'); return; }
+
+  const result = await reicheNichtSportEin('Schulnachricht', { titel, kategorie, datum, text });
+  if (result) {
+    ['sn-titel','sn-kategorie','sn-text'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+    document.querySelector('.modal-overlay')?.remove();
+    navigateTo('meine-meldungen');
+  }
+}
+
+// Countdown-Ankündigung einreichen
+async function cdEinreichen() {
+  const name = document.getElementById('cd-name')?.value?.trim();
+  const datum = document.getElementById('cd-datum')?.value || '';
+  const ort = document.getElementById('cd-ort')?.value?.trim() || '';
+  const sportart = document.getElementById('cd-sportart')?.value?.trim() || '';
+  if (!name || !datum) { toast('Event-Name und Datum sind Pflichtfelder', 'warning'); return; }
+
+  const result = await reicheNichtSportEin('Countdown-Ankündigung', { titel: name, datum: datum.slice(0,10), ort, sportart });
+  if (result) {
+    document.querySelector('.modal-overlay')?.remove();
+    navigateTo('meine-meldungen');
+  }
 }

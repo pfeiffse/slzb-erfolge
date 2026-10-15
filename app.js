@@ -163,18 +163,18 @@ function renderSidebar() {
   const navDef = [
     {page:'dashboard',icon:'🏠',label:'Dashboard',roles:['trainer','redaktion','oea','datenschutz','admin']},
     {section:'Meldungen',roles:['trainer','redaktion','admin']},
-    {page:'neue-meldung',icon:'➕',label:'Neue Meldung',roles:['trainer','redaktion','admin']},
-    {page:'meine-meldungen',icon:'📋',label:'Meine Meldungen',roles:['trainer','redaktion','admin']},
-    {page:'rueckfragen',icon:'💬',label:'Rückfragen',badge:'rueckfragen',roles:['trainer','redaktion','admin']},
-    {page:'import',icon:'📥',label:'Import',roles:['trainer','redaktion','admin']},
+    {page:'neue-meldung',icon:'➕',label:'Neue Meldung',roles:['trainer','mitarbeiter','redaktion','admin']},
+    {page:'meine-meldungen',icon:'📋',label:'Meine Meldungen',roles:['trainer','mitarbeiter','redaktion','admin']},
+    {page:'rueckfragen',icon:'💬',label:'Rückfragen',badge:'rueckfragen',roles:['trainer','mitarbeiter','redaktion','admin']},
+    {page:'import',icon:'📥',label:'Import',roles:['trainer','mitarbeiter','redaktion','admin']},
     {section:'Redaktion',roles:['redaktion','oea','admin']},
     {page:'redaktion',icon:'✏️',label:'Redaktionsübersicht',badge:'redaktion',roles:['redaktion','admin']},
     {page:'ausgaben',icon:'📤',label:'Ausgaben & Freigaben',badge:'freigabe',roles:['redaktion','oea','admin']},
-    {page:'highlights',icon:'🎠',label:'Highlights-Karussell',roles:['redaktion','oea','admin']},
-    {page:'nachwuchswahl',icon:'🏆',label:'Nachwuchssportler-Wahl',roles:['redaktion','oea','admin']},
-    {page:'countdown',icon:'⏳',label:'Countdown-Poster',roles:['redaktion','oea','admin']},
-    {page:'jubilaeum',icon:'🏅',label:'Jubiläums-Poster',roles:['redaktion','oea','admin']},
-    {page:'schulnachrichten',icon:'📰',label:'Schulnachrichten-Poster',roles:['redaktion','oea','admin']},
+    {page:'highlights',icon:'🎠',label:'Highlights-Karussell',roles:['mitarbeiter','redaktion','oea','admin']},
+    {page:'nachwuchswahl',icon:'🏆',label:'Nachwuchssportler-Wahl',roles:['mitarbeiter','redaktion','oea','admin']},
+    {page:'countdown',icon:'⏳',label:'Countdown-Poster',roles:['mitarbeiter','redaktion','oea','admin']},
+    {page:'jubilaeum',icon:'🏅',label:'Jubiläums-Poster',roles:['mitarbeiter','redaktion','oea','admin']},
+    {page:'schulnachrichten',icon:'📰',label:'Schulnachrichten-Poster',roles:['mitarbeiter','redaktion','oea','admin']},
     {page:'archiv',icon:'🗄️',label:'Archiv',roles:['redaktion','oea','admin']},
     {section:'Auswertung',roles:['redaktion','oea','admin']},
     {page:'kalender',icon:'📅',label:'Veranstaltungskalender',roles:['trainer','redaktion','oea','datenschutz','admin']},
@@ -208,7 +208,7 @@ function renderSidebar() {
       <div class="user-avatar">${initials}</div>
       <div class="user-info">
         <div class="user-name">${esc(name)}</div>
-        <div class="user-role">${esc({trainer:'Trainer/Melder',redaktion:'Redaktion',oea:'Öffentlichkeitsarbeit',datenschutz:'Datenschutz',admin:'Administrator'}[r]||r)}</div>
+        <div class="user-role">${esc({trainer:'Trainer/Melder',mitarbeiter:'Mitarbeiter',redaktion:'Redaktion',oea:'Öffentlichkeitsarbeit',datenschutz:'Datenschutz',admin:'Administrator'}[r]||r)}</div>
       </div>
     </div>
     <nav class="sidebar-nav">${navHtml}</nav>
