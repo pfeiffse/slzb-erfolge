@@ -200,6 +200,8 @@ async function renderErfolgDetail() {
             <div class="form-group"><label>Quelle / URL</label>
               <input type="url" id="edit-quelle" value="${esc(e.quelleUrl||'')}" style="width:100%"></div>
           </div>
+          <div class="form-group mt-2"><label>Athlet / Team <span class="text-muted text-xs">(Name des/der Athleten)</span></label>
+            <input type="text" id="edit-athlet" value="${esc((e.beteiligte||[]).map(b=>b.anzeigename||'').filter(Boolean).join(', '))}" placeholder="z.B. Max Mustermann" style="width:100%"></div>
           <div class="form-group mt-2"><label>Kurzinfo</label>
             <textarea id="edit-kurzinfo" rows="3" style="width:100%">${esc(e.kurzinfo||'')}</textarea></div>
           <div class="form-group"><label>Artikeltext (Redaktion)</label>
@@ -3428,6 +3430,7 @@ async function speichereKerndaten(erfolgId) {
   const ergebnisWert = document.getElementById('edit-ergebnis-wert')?.value ? Number(document.getElementById('edit-ergebnis-wert').value) : null;
   const ergebnisEinheit = document.getElementById('edit-ergebnis-einheit')?.value?.trim() || '';
   const quelleUrl = document.getElementById('edit-quelle')?.value?.trim() || '';
+  const athlet = document.getElementById('edit-athlet')?.value?.trim() || '';
   const kurzinfo = document.getElementById('edit-kurzinfo')?.value?.trim() || '';
   const textArtikel = document.getElementById('edit-artikel-text')?.value?.trim() || '';
 
@@ -3474,9 +3477,27 @@ async function speichereKerndaten(erfolgId) {
 
     if (error) throw new Error(error.message);
 
+    // Athleten-Beteiligten aktualisieren wenn geändert
+    if (athlet !== undefined) {
+      // Bestehende Beteiligte löschen und neu anlegen
+      await Backend.client.from('achievement_participants').delete().eq('achievement_id', erfolgId);
+      if (athlet.trim()) {
+        const namen = athlet.split(',').map(n=>n.trim()).filter(Boolean);
+        for (const name of namen) {
+          await Backend.client.from('achievement_participants').insert({
+            achievement_id: erfolgId,
+            student_id: null,
+            participant_role: 'Athlet',
+            consent_status: 'Nicht geprüft',
+            anzeigename: name,
+          }).catch(()=>{});
+        }
+      }
+    }
+
     // Protokoll
     await DB.protokolliere(erfolgId, null, null,
-      `Kerndaten bearbeitet durch ${Auth.name()}: Titel="${titel}", Sportart="${sportartText}", Datum="${datum||''}"`);
+      `Kerndaten bearbeitet durch ${Auth.name()}: Titel="${titel}", Sportart="${sportartText}", Athlet="${athlet}", Datum="${datum||''}"`);
 
     APP._erfolgeCache = null;
     toast('✅ Kerndaten erfolgreich gespeichert!', 'success');
@@ -6159,6 +6180,7 @@ async function speichereKerndaten(erfolgId) {
   const ergebnisWert = document.getElementById('edit-ergebnis-wert')?.value ? Number(document.getElementById('edit-ergebnis-wert').value) : null;
   const ergebnisEinheit = document.getElementById('edit-ergebnis-einheit')?.value?.trim() || '';
   const quelleUrl = document.getElementById('edit-quelle')?.value?.trim() || '';
+  const athlet = document.getElementById('edit-athlet')?.value?.trim() || '';
   const kurzinfo = document.getElementById('edit-kurzinfo')?.value?.trim() || '';
   const textArtikel = document.getElementById('edit-artikel-text')?.value?.trim() || '';
 
@@ -6205,9 +6227,27 @@ async function speichereKerndaten(erfolgId) {
 
     if (error) throw new Error(error.message);
 
+    // Athleten-Beteiligten aktualisieren wenn geändert
+    if (athlet !== undefined) {
+      // Bestehende Beteiligte löschen und neu anlegen
+      await Backend.client.from('achievement_participants').delete().eq('achievement_id', erfolgId);
+      if (athlet.trim()) {
+        const namen = athlet.split(',').map(n=>n.trim()).filter(Boolean);
+        for (const name of namen) {
+          await Backend.client.from('achievement_participants').insert({
+            achievement_id: erfolgId,
+            student_id: null,
+            participant_role: 'Athlet',
+            consent_status: 'Nicht geprüft',
+            anzeigename: name,
+          }).catch(()=>{});
+        }
+      }
+    }
+
     // Protokoll
     await DB.protokolliere(erfolgId, null, null,
-      `Kerndaten bearbeitet durch ${Auth.name()}: Titel="${titel}", Sportart="${sportartText}", Datum="${datum||''}"`);
+      `Kerndaten bearbeitet durch ${Auth.name()}: Titel="${titel}", Sportart="${sportartText}", Athlet="${athlet}", Datum="${datum||''}"`);
 
     APP._erfolgeCache = null;
     toast('✅ Kerndaten erfolgreich gespeichert!', 'success');
