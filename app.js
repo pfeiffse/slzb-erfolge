@@ -417,22 +417,43 @@ function renderNeueMeldung() {
 }
 
 function renderMeldungsartAuswahl() {
+  const sportArten = [
+    {art:'Einzelerfolg',icon:'🏅',desc:'Ein Schüler, ein Wettbewerb, ein Ergebnis.'},
+    {art:'Teamerfolg',icon:'🏆',desc:'Mehrere Schüler, Team/Mannschaft.'},
+    {art:'Sammelmeldung',icon:'📊',desc:'CSV-Import oder Schnelleingabe.'},
+    {art:'Fertiger Artikel',icon:'📰',desc:'Artikeltext einreichen.'},
+    {art:'Minimalmeldung',icon:'⚡',desc:'Schnellmeldung. Status: Unvollständig.'},
+  ];
+  const nichtSportArten = [
+    {art:'Jubiläum',icon:'🏅',desc:'Jubiläum, Ehrung oder Festveranstaltung.',fn:"navigateTo('jubilaeum')"},
+    {art:'Schulnachricht',icon:'📰',desc:'Ankündigung oder Information.',fn:"navigateTo('schulnachrichten')"},
+    {art:'Countdown-Ankündigung',icon:'⏳',desc:'Veranstaltung ankündigen.',fn:"navigateTo('countdown')"},
+  ];
+  const kannNichtSport = Auth.canDo('nichtSport');
   return `<div class="page">
     <div class="page-header"><h1>Neue Meldung</h1></div>
+    <h2 style="margin:0 0 12px;font-size:.85rem;color:#888;font-weight:700;letter-spacing:2px;text-transform:uppercase">Sportliche Erfolge</h2>
     <div class="meldungsart-grid">
-      ${[{art:'Einzelerfolg',icon:'🏅',desc:'Ein Schüler, ein Wettbewerb, ein Ergebnis.'},
-         {art:'Teamerfolg',icon:'🏆',desc:'Mehrere Schüler, Team/Mannschaft.'},
-         {art:'Sammelmeldung',icon:'📊',desc:'CSV-Import oder Schnelleingabe.'},
-         {art:'Fertiger Artikel',icon:'📰',desc:'Artikeltext einreichen.'},
-         {art:'Minimalmeldung',icon:'⚡',desc:'Schnellmeldung. Status: Unvollständig.'},
-      ].map(m=>`<div class="meldungsart-card" onclick="APP.selectedMeldungsart='${m.art}';navigateTo('neue-meldung')">
+      ${sportArten.map(m=>`<div class="meldungsart-card" onclick="APP.selectedMeldungsart='${m.art}';navigateTo('neue-meldung')">
         <div class="meldungsart-icon">${m.icon}</div>
         <div class="meldungsart-title">${m.art}</div>
         <div class="meldungsart-desc">${m.desc}</div>
       </div>`).join('')}
     </div>
+    ${kannNichtSport?`
+    <h2 style="margin:24px 0 12px;font-size:.85rem;color:#888;font-weight:700;letter-spacing:2px;text-transform:uppercase">Sonstige Ausgaben</h2>
+    <div class="alert alert-info mb-3"><span class="alert-icon">ℹ️</span>
+      <span>Diese Meldungen werden zur Prüfung an die Redaktion weitergeleitet.</span></div>
+    <div class="meldungsart-grid">
+      ${nichtSportArten.map(m=>`<div class="meldungsart-card" onclick="${m.fn}" style="border-color:rgba(201,162,39,0.4)">
+        <div class="meldungsart-icon">${m.icon}</div>
+        <div class="meldungsart-title">${m.art}</div>
+        <div class="meldungsart-desc">${m.desc}</div>
+      </div>`).join('')}
+    </div>`:''}
   </div>`;
 }
+
 
 function formularKopf(titel, icon) {
   return `<div class="page-header flex items-center gap-3">
