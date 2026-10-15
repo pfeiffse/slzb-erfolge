@@ -4936,65 +4936,6 @@ function nwHerunterladen() {
 // ══════════════════════════════════════════════════════════════
 // FEATURE 3: COUNTDOWN-POSTER MODAL
 // ══════════════════════════════════════════════════════════════
-function zeigeCountdownModal() {
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  const modal = document.createElement('div');
-  modal.className = 'modal modal-xl';
-  modal.innerHTML = `
-    <div class="modal-header">
-      <h3>⏳ Countdown-Poster erstellen</h3>
-      <button class="btn btn-ghost btn-sm close-x">✕</button>
-    </div>
-    <div class="modal-body" style="background:#111;padding:16px">
-      <div class="form-row cols-2 mb-3">
-        <div class="form-group">
-          <label style="color:#fff">Event-Name <span class="required">*</span></label>
-          <input type="text" id="cd-name" placeholder="z.B. Berliner Meisterschaften" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
-        </div>
-        <div class="form-group">
-          <label style="color:#fff">Datum & Uhrzeit <span class="required">*</span></label>
-          <input type="datetime-local" id="cd-datum" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
-        </div>
-        <div class="form-group">
-          <label style="color:#fff">Ort</label>
-          <input type="text" id="cd-ort" placeholder="z.B. Schwimmhalle Landsberger Allee" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
-        </div>
-        <div class="form-group">
-          <label style="color:#fff">Sportart (optional)</label>
-          <input type="text" id="cd-sportart" placeholder="z.B. Schwimmen" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
-        </div>
-        ${posterBildInputHTML('cd-bild','Hintergrundbild')}
-      </div>
-      <div class="tabs mb-3" style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="tab-btn active" onclick="cdFormatWechsel('hochformat')">📱 Hochformat (4:5)</button>
-        <button class="tab-btn" onclick="cdFormatWechsel('querformat')">🖥️ Querformat (16:9)</button>
-        <button class="tab-btn" onclick="cdFormatWechsel('a3')">🖨️ A3 Druck (quer)</button>
-      </div>
-      <div style="text-align:center;background:#0a0a1e;padding:16px;border-radius:8px">
-        <canvas id="cd-canvas" width="1080" height="1350"
-          style="max-width:100%;max-height:60vh;display:block;margin:0 auto;border-radius:8px"></canvas>
-        <p class="text-xs mt-2" style="color:#888" id="cd-info">Countdown wird berechnet...</p>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost close-btn">Schließen</button>
-      <button class="btn btn-outline" onclick="cdVorschau()">👁️ Vorschau aktualisieren</button>
-      <button class="btn btn-primary" onclick="cdHerunterladen()">🖼️ PNG herunterladen</button>
-    </div>`;
-
-  modal.querySelector('.close-x').onclick = ()=>overlay.remove();
-  modal.querySelector('.close-btn').onclick = ()=>overlay.remove();
-  overlay.appendChild(modal);
-  overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
-  document.body.appendChild(overlay);
-  window._cdFormat = 'hochformat';
-  // Datum vorausfüllen (morgen)
-  const morgen = new Date(Date.now()+24*60*60*1000);
-  morgen.setHours(10,0,0,0);
-  const iso = morgen.toISOString().slice(0,16);
-  setTimeout(()=>{ const el=document.getElementById('cd-datum'); if(el) el.value=iso; },50);
-}
 
 function cdFormatWechsel(format) {
   window._cdFormat = format;
@@ -5203,60 +5144,6 @@ function renderJubilaeumSeite() {
   </div>`;
 }
 
-function zeigeJubilaeumModal() {
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  const modal = document.createElement('div');
-  modal.className = 'modal modal-xl';
-  modal.innerHTML = `
-    <div class="modal-header">
-      <h3>🏅 Jubiläums-Poster erstellen</h3>
-      <button class="btn btn-ghost btn-sm close-x">✕</button>
-    </div>
-    <div class="modal-body" style="background:#111;padding:16px">
-      <div class="form-row cols-2 mb-3">
-        <div class="form-group">
-          <label style="color:#fff">Titel / Anlass <span class="required">*</span></label>
-          <input type="text" id="jub-titel" placeholder="z.B. 25 Jahre SLZB Berlin" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
-        </div>
-        <div class="form-group">
-          <label style="color:#fff">Untertitel</label>
-          <input type="text" id="jub-untertitel" placeholder="z.B. Festveranstaltung" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
-        </div>
-        <div class="form-group">
-          <label style="color:#fff">Datum</label>
-          <input type="date" id="jub-datum" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
-        </div>
-        <div class="form-group">
-          <label style="color:#fff">Ort</label>
-          <input type="text" id="jub-ort" placeholder="z.B. SLZB Berlin" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
-        </div>
-        ${posterBildInputHTML('jub-bild','Hintergrundbild')}
-      </div>
-      <div class="tabs mb-3" style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="tab-btn active" onclick="jubFormatWechsel('hochformat')">📱 Hochformat (4:5)</button>
-        <button class="tab-btn" onclick="jubFormatWechsel('querformat')">🖥️ Querformat (16:9)</button>
-        <button class="tab-btn" onclick="jubFormatWechsel('a3')">🖨️ A3 Druck (quer)</button>
-      </div>
-      <div style="text-align:center;background:#0a0800;padding:16px;border-radius:8px">
-        <canvas id="jub-canvas" width="1080" height="1350"
-          style="max-width:100%;max-height:60vh;display:block;margin:0 auto;border-radius:8px"></canvas>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost close-btn">Schließen</button>
-      <button class="btn btn-outline" onclick="jubVorschau()">👁️ Vorschau</button>
-      <button class="btn btn-primary" onclick="jubHerunterladen()" style="background:#C9A227;border-color:#C9A227">🖼️ PNG herunterladen</button>
-    </div>`;
-  modal.querySelector('.close-x').onclick = ()=>overlay.remove();
-  modal.querySelector('.close-btn').onclick = ()=>overlay.remove();
-  overlay.appendChild(modal);
-  overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
-  document.body.appendChild(overlay);
-  window._jubFormat = 'hochformat';
-  const morgen = new Date(); morgen.setHours(0,0,0,0);
-  setTimeout(()=>{ const el=document.getElementById('jub-datum'); if(el) el.value=morgen.toISOString().slice(0,10); },50);
-}
 
 function jubFormatWechsel(format) {
   window._jubFormat = format;
@@ -5339,60 +5226,6 @@ function renderSchulnachrichtenSeite() {
   </div>`;
 }
 
-function zeigeSchulnachrichtModal() {
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  const modal = document.createElement('div');
-  modal.className = 'modal modal-xl';
-  modal.innerHTML = `
-    <div class="modal-header">
-      <h3>📰 Schulnachrichten-Poster erstellen</h3>
-      <button class="btn btn-ghost btn-sm close-x">✕</button>
-    </div>
-    <div class="modal-body" style="background:#111;padding:16px">
-      <div class="form-row cols-2 mb-3">
-        <div class="form-group">
-          <label style="color:#fff">Überschrift <span class="required">*</span></label>
-          <input type="text" id="sn-titel" placeholder="z.B. Wichtige Mitteilung" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
-        </div>
-        <div class="form-group">
-          <label style="color:#fff">Kategorie</label>
-          <input type="text" id="sn-kategorie" placeholder="z.B. Schulleitung · Information" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
-        </div>
-        <div class="form-group">
-          <label style="color:#fff">Datum</label>
-          <input type="date" id="sn-datum" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
-        </div>
-        ${posterBildInputHTML('sn-bild','Hintergrundbild')}
-        <div class="form-group" style="grid-column:1/-1">
-          <label style="color:#fff">Nachrichtentext (optional)</label>
-          <textarea id="sn-text" rows="3" placeholder="Kurzer Informationstext..." style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px;width:100%"></textarea>
-        </div>
-      </div>
-      <div class="tabs mb-3" style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="tab-btn active" onclick="snFormatWechsel('hochformat')">📱 Hochformat (4:5)</button>
-        <button class="tab-btn" onclick="snFormatWechsel('querformat')">🖥️ Querformat (16:9)</button>
-        <button class="tab-btn" onclick="snFormatWechsel('a3')">🖨️ A3 Druck (quer)</button>
-      </div>
-      <div style="text-align:center;background:#0a0c10;padding:16px;border-radius:8px">
-        <canvas id="sn-canvas" width="1080" height="1350"
-          style="max-width:100%;max-height:60vh;display:block;margin:0 auto;border-radius:8px"></canvas>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost close-btn">Schließen</button>
-      <button class="btn btn-outline" onclick="snVorschau()">👁️ Vorschau</button>
-      <button class="btn btn-primary" onclick="snHerunterladen()" style="background:#8A9BB0;border-color:#8A9BB0">🖼️ PNG herunterladen</button>
-    </div>`;
-  modal.querySelector('.close-x').onclick = ()=>overlay.remove();
-  modal.querySelector('.close-btn').onclick = ()=>overlay.remove();
-  overlay.appendChild(modal);
-  overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
-  document.body.appendChild(overlay);
-  window._snFormat = 'hochformat';
-  const heute = new Date();
-  setTimeout(()=>{ const el=document.getElementById('sn-datum'); if(el) el.value=heute.toISOString().slice(0,10); },50);
-}
 
 function snFormatWechsel(format) {
   window._snFormat = format;
