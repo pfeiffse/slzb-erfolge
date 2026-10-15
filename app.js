@@ -275,17 +275,32 @@ async function renderDashboard() {
     </div>
     ${Auth.canDo('erfassen') ? `<div class="card mb-4">
       <div class="card-header"><h2>➕ Schnellerfassung</h2></div>
-      <div class="card-body"><div class="meldungsart-grid">
-        ${[{art:'Einzelerfolg',icon:'🏅',desc:'Ein Schüler, ein Ergebnis'},
-           {art:'Teamerfolg',icon:'🏆',desc:'Mehrere Schüler, gemeinsames Ergebnis'},
-           {art:'Sammelmeldung',icon:'📊',desc:'Import / Schnelleingabe'},
-           {art:'Fertiger Artikel',icon:'📰',desc:'Text mit KI-Extraktion'},
-           {art:'Minimalmeldung',icon:'⚡',desc:'Schnellmeldung, Details folgen'},
-        ].map(m=>`<div class="meldungsart-card" onclick="APP.selectedMeldungsart='${m.art}';navigateTo('neue-meldung')">
-          <div class="meldungsart-icon">${m.icon}</div>
-          <div class="meldungsart-title">${m.art}</div>
-          <div class="meldungsart-desc">${m.desc}</div>
-        </div>`).join('')}
+      <div class="card-body">
+        <p style="font-size:.75rem;color:#888;font-weight:700;letter-spacing:2px;margin-bottom:8px">SPORTLICHE ERFOLGE</p>
+        <div class="meldungsart-grid">
+          ${[{art:'Einzelerfolg',icon:'🏅',desc:'Ein Schüler, ein Ergebnis'},
+             {art:'Teamerfolg',icon:'🏆',desc:'Mehrere Schüler, gemeinsames Ergebnis'},
+             {art:'Sammelmeldung',icon:'📊',desc:'Import / Schnelleingabe'},
+             {art:'Fertiger Artikel',icon:'📰',desc:'Text mit KI-Extraktion'},
+             {art:'Minimalmeldung',icon:'⚡',desc:'Schnellmeldung, Details folgen'},
+          ].map(m=>`<div class="meldungsart-card" onclick="APP.selectedMeldungsart='${m.art}';navigateTo('neue-meldung')">
+            <div class="meldungsart-icon">${m.icon}</div>
+            <div class="meldungsart-title">${m.art}</div>
+            <div class="meldungsart-desc">${m.desc}</div>
+          </div>`).join('')}
+        </div>
+        ${Auth.canDo('nichtSport')?`
+        <p style="font-size:.75rem;color:#888;font-weight:700;letter-spacing:2px;margin:16px 0 8px">SONSTIGE AUSGABEN</p>
+        <div class="meldungsart-grid">
+          ${[{art:'Jubiläum',icon:'🏅',desc:'Jubiläum oder Ehrung',fn:"navigateTo('jubilaeum')"},
+             {art:'Schulnachricht',icon:'📰',desc:'Ankündigung oder Info',fn:"navigateTo('schulnachrichten')"},
+             {art:'Countdown',icon:'⏳',desc:'Veranstaltung ankündigen',fn:"navigateTo('countdown')"},
+          ].map(m=>`<div class="meldungsart-card" onclick="${m.fn}" style="border-color:rgba(201,162,39,0.4)">
+            <div class="meldungsart-icon">${m.icon}</div>
+            <div class="meldungsart-title">${m.art}</div>
+            <div class="meldungsart-desc">${m.desc}</div>
+          </div>`).join('')}
+        </div>`:''}
       </div></div></div>` : ''}
     <div class="card">
       <div class="card-header"><h2>🕐 Letzte Meldungen</h2>

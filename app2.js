@@ -52,6 +52,7 @@ async function renderErfolgDetail() {
                 ['Platzierung',e.platzierung?`<strong style="font-size:1.2rem">${e.platzierung}.</strong>`:'–'],
                 ['Medaille',medailleBadge(e.medaille)||'–'],
                 ['Ergebnis',e.ergebnisWert?`${e.ergebnisWert} ${esc(e.ergebnisEinheit||'')}`:esc(e.ergebnisText||'–')],
+                ['Athlet/Team', (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(Boolean).join(', ') || '–'],
                 ['Melder',esc(e.melderName)],
               ].map(([k,v])=>`<tr><td class="text-muted" style="width:40%;padding:6px 0">${k}</td><td>${v}</td></tr>`).join('')}
             </table>
