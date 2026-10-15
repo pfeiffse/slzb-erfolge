@@ -3523,26 +3523,26 @@ async function speichereKerndaten(erfolgId) {
   if (btn) { btn.disabled = true; btn.textContent = 'Wird gespeichert...'; }
 
   try {
+    // Echte Supabase-Spaltennamen (englisch, wie in der DB angelegt)
     const updateData = {
-      titel: titel,
+      title: titel,
       sport_id: sp?.id || null,
-      sport: sportartText,
-      disziplin: disziplin,
-      wettbewerb_id: wettbewerbId,
-      wettbewerb: wettbewerbText,
-      datum: datum,
-      ort: ort,
-      ebene: ebene,
-      platzierung: platzierung,
-      medaille: medaille,
-      ergebnis_wert: ergebnisWert,
-      ergebnis_einheit: ergebnisEinheit,
-      ergebnis_text: '',
-      kurzinfo: kurzinfo,
-      quelle_url: quelleUrl,
-      text_artikel: textArtikel,
+      discipline: disziplin,
+      competition_id: wettbewerbId,
+      event_date: datum,
+      location: ort,
+      level: ebene,
+      placement: platzierung,
+      medal: medaille,
+      result_value: ergebnisWert,
+      result_unit: ergebnisEinheit,
+      result_text: '',
+      short_info: kurzinfo,
+      source_url: quelleUrl,
+      article_text: textArtikel,
       updated_at: new Date().toISOString(),
     };
+
 
     // Entferne null-Werte nicht – Supabase setzt sie auf NULL
     const { error } = await Backend.client
