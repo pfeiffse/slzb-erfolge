@@ -3545,12 +3545,19 @@ async function speichereKerndaten(erfolgId) {
 
 
     // Entferne null-Werte nicht – Supabase setzt sie auf NULL
-    const { error } = await Backend.client
+    console.log('[SLZB] Update achievements:', erfolgId, updateData);
+    const { data: updData, error } = await Backend.client
       .from('achievements')
       .update(updateData)
-      .eq('id', erfolgId);
+      .eq('id', erfolgId)
+      .select();
 
+    console.log('[SLZB] Update Ergebnis:', updData, error);
     if (error) throw new Error(error.message);
+    if (!updData || updData.length === 0) {
+      console.warn('[SLZB] Keine Zeile aktualisiert - RLS-Problem?');
+      toast('⚠️ Daten wurden nicht gespeichert (Berechtigungsproblem)', 'warning');
+    }
 
     // Athleten-Beteiligten aktualisieren wenn geändert
     if (athlet !== undefined) {
