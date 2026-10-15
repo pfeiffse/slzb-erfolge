@@ -3557,13 +3557,14 @@ async function speichereKerndaten(erfolgId) {
       if (athlet.trim()) {
         const namen = athlet.split(',').map(n=>n.trim()).filter(Boolean);
         for (const name of namen) {
-          await Backend.client.from('achievement_participants').insert({
+          const { error: insErr } = await Backend.client.from('achievement_participants').insert({
             achievement_id: erfolgId,
             student_id: null,
             participant_role: 'Athlet',
             consent_status: 'Nicht geprüft',
             anzeigename: name,
-          }).catch(()=>{});
+          });
+          if (insErr) console.warn('Beteiligter:', insErr.message);
         }
       }
     }
@@ -6280,13 +6281,14 @@ async function speichereKerndaten(erfolgId) {
       if (athlet.trim()) {
         const namen = athlet.split(',').map(n=>n.trim()).filter(Boolean);
         for (const name of namen) {
-          await Backend.client.from('achievement_participants').insert({
+          const { error: insErr } = await Backend.client.from('achievement_participants').insert({
             achievement_id: erfolgId,
             student_id: null,
             participant_role: 'Athlet',
             consent_status: 'Nicht geprüft',
             anzeigename: name,
-          }).catch(()=>{});
+          });
+          if (insErr) console.warn('Beteiligter:', insErr.message);
         }
       }
     }
