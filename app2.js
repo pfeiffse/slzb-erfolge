@@ -3545,19 +3545,12 @@ async function speichereKerndaten(erfolgId) {
 
 
     // Entferne null-Werte nicht – Supabase setzt sie auf NULL
-    console.log('[SLZB] Update achievements:', erfolgId, updateData);
-    const { data: updData, error } = await Backend.client
+    const { error } = await Backend.client
       .from('achievements')
       .update(updateData)
-      .eq('id', erfolgId)
-      .select();
+      .eq('id', erfolgId);
 
-    console.log('[SLZB] Update Ergebnis:', updData, error);
     if (error) throw new Error(error.message);
-    if (!updData || updData.length === 0) {
-      console.warn('[SLZB] Keine Zeile aktualisiert - RLS-Problem?');
-      toast('⚠️ Daten wurden nicht gespeichert (Berechtigungsproblem)', 'warning');
-    }
 
     // Athleten-Beteiligten aktualisieren wenn geändert
     if (athlet !== undefined) {
@@ -3568,18 +3561,17 @@ async function speichereKerndaten(erfolgId) {
         for (const name of namen) {
           const { error: insErr } = await Backend.client.from('achievement_participants').insert({
             achievement_id: erfolgId,
-            student_id: null,
+            student_id: name,  // Freitext-Name in student_id (TEXT-Spalte)
             participant_role: 'Athlet',
             consent_status: 'Nicht geprüft',
-            student_name: name,
           });
-          if (insErr) console.warn('Beteiligter konnte nicht gespeichert werden:', insErr.message);
+          if (insErr) console.warn('Beteiligter:', insErr.message);
         }
       }
     }
 
     // Protokoll
-    await DB.protokolliere(erfolgId, null, null,
+    await DB.protokolliere(erfolgId, '', '',
       `Kerndaten bearbeitet durch ${Auth.name()}: Titel="${titel}", Sportart="${sportartText}", Athlet="${athlet}", Datum="${datum||''}"`);
 
     APP._erfolgeCache = null;
