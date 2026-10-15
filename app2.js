@@ -3562,9 +3562,9 @@ async function speichereKerndaten(erfolgId) {
             student_id: null,
             participant_role: 'Athlet',
             consent_status: 'Nicht geprüft',
-            anzeigename: name,
+            student_name: name,
           });
-          if (insErr) console.warn('Beteiligter:', insErr.message);
+          if (insErr) console.warn('Beteiligter konnte nicht gespeichert werden:', insErr.message);
         }
       }
     }
@@ -6212,100 +6212,6 @@ function zeigeLightbox(src, caption, creator) {
 // ══════════════════════════════════════════════════════════════
 // KERNDATEN BEARBEITEN (Redaktion / ÖA / Admin)
 // ══════════════════════════════════════════════════════════════
-async function speichereKerndaten(erfolgId) {
-  const titel = document.getElementById('edit-titel')?.value?.trim();
-  if (!titel) { toast('Titel ist Pflichtfeld', 'warning'); return; }
-
-  const sportartText = document.getElementById('edit-sportart')?.value?.trim() || '';
-  const wettbewerbText = document.getElementById('edit-wettbewerb')?.value?.trim() || '';
-  const disziplin = document.getElementById('edit-disziplin')?.value?.trim() || '';
-  const datum = document.getElementById('edit-datum')?.value || null;
-  const ort = document.getElementById('edit-ort')?.value?.trim() || '';
-  const ebene = document.getElementById('edit-ebene')?.value || '';
-  const platzierung = document.getElementById('edit-platzierung')?.value ? Number(document.getElementById('edit-platzierung').value) : null;
-  const medaille = document.getElementById('edit-medaille')?.value || 'keine';
-  const ergebnisWert = document.getElementById('edit-ergebnis-wert')?.value ? Number(document.getElementById('edit-ergebnis-wert').value) : null;
-  const ergebnisEinheit = document.getElementById('edit-ergebnis-einheit')?.value?.trim() || '';
-  const quelleUrl = document.getElementById('edit-quelle')?.value?.trim() || '';
-  const athlet = document.getElementById('edit-athlet')?.value?.trim() || '';
-  const kurzinfo = document.getElementById('edit-kurzinfo')?.value?.trim() || '';
-  const textArtikel = document.getElementById('edit-artikel-text')?.value?.trim() || '';
-
-  // Sportart-ID auflösen
-  const sp = SLZB_DB.sportarten.find(s => s.name.toLowerCase() === sportartText.toLowerCase());
-
-  // Wettbewerb auflösen oder anlegen
-  let wettbewerbId = null;
-  if (wettbewerbText) {
-    try {
-      const wb = await DB.getOderErstelleWettbewerb(wettbewerbText, datum);
-      wettbewerbId = wb;
-    } catch(e) { /* ignorieren */ }
-  }
-
-  const btn = document.querySelector('#tab-bearbeiten .btn-primary');
-  if (btn) { btn.disabled = true; btn.textContent = 'Wird gespeichert...'; }
-
-  try {
-    const updateData = {
-      title: titel,
-      sport_id: sp?.id || null,
-      discipline: disziplin,
-      competition_id: wettbewerbId,
-      event_date: datum,
-      location: ort,
-      level: ebene,
-      placement: platzierung,
-      medal: medaille,
-      result_value: ergebnisWert,
-      result_unit: ergebnisEinheit,
-      result_text: '',
-      short_info: kurzinfo,
-      source_url: quelleUrl,
-      article_text: textArtikel,
-      updated_at: new Date().toISOString(),
-    };
-
-    // Entferne null-Werte nicht – Supabase setzt sie auf NULL
-    const { error } = await Backend.client
-      .from('achievements')
-      .update(updateData)
-      .eq('id', erfolgId);
-
-    if (error) throw new Error(error.message);
-
-    // Athleten-Beteiligten aktualisieren wenn geändert
-    if (athlet !== undefined) {
-      // Bestehende Beteiligte löschen und neu anlegen
-      await Backend.client.from('achievement_participants').delete().eq('achievement_id', erfolgId);
-      if (athlet.trim()) {
-        const namen = athlet.split(',').map(n=>n.trim()).filter(Boolean);
-        for (const name of namen) {
-          const { error: insErr } = await Backend.client.from('achievement_participants').insert({
-            achievement_id: erfolgId,
-            student_id: null,
-            participant_role: 'Athlet',
-            consent_status: 'Nicht geprüft',
-            anzeigename: name,
-          });
-          if (insErr) console.warn('Beteiligter:', insErr.message);
-        }
-      }
-    }
-
-    // Protokoll
-    await DB.protokolliere(erfolgId, null, null,
-      `Kerndaten bearbeitet durch ${Auth.name()}: Titel="${titel}", Sportart="${sportartText}", Athlet="${athlet}", Datum="${datum||''}"`);
-
-    APP._erfolgeCache = null;
-    toast('✅ Kerndaten erfolgreich gespeichert!', 'success');
-    navigateTo('erfolg-detail', { currentErfolgId: erfolgId });
-
-  } catch(err) {
-    toast('Fehler: ' + err.message, 'danger');
-    if (btn) { btn.disabled = false; btn.textContent = '💾 Änderungen speichern'; }
-  }
-}
 
 // ══════════════════════════════════════════════════════════════
 // JAHRESCHRONIK POWERPOINT EXPORT (PptxGenJS)

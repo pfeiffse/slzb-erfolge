@@ -242,7 +242,7 @@ const DB = {
       .eq('achievement_id', id);
     erfolg.beteiligte = (bet || []).map(b => ({
       schuelerId:          b.student_id,
-      anzeigename:         b.student_id || b.participant_role || '–',
+      anzeigename:         b.student_name || b.student_id || '–',
       rolle:               b.participant_role || 'Athlet',
       einwilligungsstatus: b.consent_status || 'Nicht geprüft',
     }));
