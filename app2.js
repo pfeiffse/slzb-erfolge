@@ -3579,13 +3579,15 @@ async function speichereKerndaten(erfolgId) {
       }
     }
 
-    // Protokoll
-    // Protokoll: Statuswechsel überspringen, nur Kommentar
+    // Protokoll: Nur Kommentar ohne Statuswechsel – aktuellen Status aus DB lesen
     try {
+      const { data: aktErfolg } = await Backend.client
+        .from('achievements').select('status').eq('id', erfolgId).single();
+      const aktStatus = aktErfolg?.status || 'Entwurf';
       await Backend.client.from('achievement_status_history').insert({
         achievement_id: erfolgId,
-        old_status: null,
-        new_status: null,
+        old_status: aktStatus,
+        new_status: aktStatus,
         changed_at: new Date().toISOString(),
         changed_by: Auth.id(),
         changed_by_name: Auth.name(),
