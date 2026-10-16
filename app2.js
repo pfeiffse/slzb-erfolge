@@ -4616,15 +4616,7 @@ function initZeichenZaehler() {
 }
 
 // Zeichen-Zähler nach jedem Seitenwechsel initialisieren
-const _origNavigateTo = navigateTo;
-navigateTo = function(page, params={}) {
-  _origNavigateTo(page, params);
-  setTimeout(() => {
-    initZeichenZaehler();
-    initFormValidierung();
-    initAutosave();
-  }, 300);
-};
+// navigateTo-Override entfernt – Initialisierung erfolgt direkt in switchTab
 
 // ── 4. FILTERSTATUS MERKEN ────────────────────────────────────
 const FilterState = {
@@ -4665,52 +4657,24 @@ function filterArchivMitState() {
   if (typeof filterArchiv === 'function') filterArchiv();
 }
 
-// ── 5. AUTOSAVE FÜR ENTWÜRFE ─────────────────────────────────
-let _autosaveTimer = null;
-let _autosaveErfolgId = null;
-
+// ── 5. ÄNDERUNGSINDIKATOR (kein Autosave – manuell speichern) ─
 function initAutosave() {
-  // Nur auf Bearbeiten-Tab aktiv
+  // Zeigt "Nicht gespeicherte Änderungen" wenn Felder geändert werden
   const bearbeitenTab = document.getElementById('tab-bearbeiten');
   if (!bearbeitenTab || !APP.currentErfolgId) return;
+  if (bearbeitenTab.dataset.autosaveInit === APP.currentErfolgId) return;
+  bearbeitenTab.dataset.autosaveInit = APP.currentErfolgId;
 
-  _autosaveErfolgId = APP.currentErfolgId;
+  const felder = bearbeitenTab.querySelectorAll('input, textarea, select');
+  if (!felder.length) return;
 
-  // Alle Eingabefelder im Bearbeiten-Tab überwachen
-  bearbeitenTab.querySelectorAll('input, textarea, select').forEach(el => {
-    el.addEventListener('input', () => {
-      clearTimeout(_autosaveTimer);
-      _autosaveTimer = setTimeout(autosaveDurchfuehren, 30000); // 30 Sekunden
-    });
-  });
-}
-
-async function autosaveDurchfuehren() {
-  if (!_autosaveErfolgId) return;
-  const titel = document.getElementById('edit-titel')?.value?.trim();
-  if (!titel) return; // Kein Autosave ohne Titel
-
-  try {
-    const kurzinfo = document.getElementById('edit-kurzinfo')?.value?.trim() || '';
-    const textArtikel = document.getElementById('edit-artikel-text')?.value?.trim() || '';
-    await Backend.client.from('achievements').update({
-      title: titel,
-      short_info: kurzinfo,
-      article_text: textArtikel,
-      updated_at: new Date().toISOString(),
-    }).eq('id', _autosaveErfolgId);
-
-    // Dezenter Hinweis
-    const now = new Date().toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+  felder.forEach(el => el.addEventListener('input', () => {
     const hint = document.getElementById('autosave-hint');
-    if (hint) {
-      hint.textContent = `💾 Automatisch gespeichert um ${now}`;
-      hint.style.opacity = '1';
-      setTimeout(() => { hint.style.opacity = '0'; }, 3000);
-    }
-  } catch(e) {
-    console.warn('Autosave fehlgeschlagen:', e.message);
-  }
+    if (hint) { hint.textContent = '✏️ Nicht gespeicherte Änderungen'; hint.style.opacity = '0.7'; }
+    // Speichern-Button hervorheben
+    const btn = document.querySelector('#tab-bearbeiten .btn-primary');
+    if (btn) btn.style.animation = 'pulse 1s ease';
+  }));
 }
 
 // ── FORMULAR-VALIDIERUNG ──────────────────────────────────────

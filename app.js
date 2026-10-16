@@ -201,7 +201,7 @@ function renderSidebar() {
   });
   document.getElementById('sidebar').innerHTML = `
     <div class="sidebar-logo"><div class="logo-badge">
-      <img src="slzb-logo.png" alt="SLZB Logo" style="height:44px;width:auto;border-radius:6px"
+      <img src="slzb-sport-erfolge-logo.png" alt="SLZB Sport-Erfolge Logo" style="height:52px;width:auto;object-fit:contain"
         onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
       <div class="logo-icon" style="display:none">S</div>
       <div class="logo-text"><strong>SLZB-Erfolge</strong><small>v3 · Schul- und Leistungssportzentrum Berlin</small></div>
@@ -1277,6 +1277,13 @@ function switchTab(id) {
   document.querySelectorAll('.tab-btn').forEach(b=>{
     if(b.getAttribute('onclick')?.includes(`'${id}'`)) b.classList.add('active');
   });
+  // Autosave starten wenn Bearbeiten-Tab geöffnet wird
+  if (id === 'bearbeiten' && typeof initAutosave === 'function') {
+    setTimeout(initAutosave, 100);
+  }
+  // Zeichen-Zähler und Validierung initialisieren
+  if (typeof initZeichenZaehler === 'function') setTimeout(initZeichenZaehler, 100);
+  if (typeof initFormValidierung === 'function') setTimeout(initFormValidierung, 100);
 }
 
 
