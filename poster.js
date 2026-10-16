@@ -388,7 +388,7 @@ async function zeichnePosterLandscape(ctx, e, bild, meta) {
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
   // Athletenname: aus beteiligte oder Titel
-  const _ath = (e.beteiligte||[]).find(b=>b.anzeigename)?.anzeigename || '';
+  const _ath = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet').join(', ');
   const _nm = _ath || titel;
   const teile = _nm.trim().split(' ');
   const vorname = teile.length>1 ? teile.slice(0,-1).join(' ') : '';
@@ -422,7 +422,7 @@ async function zeichnePosterPortrait(ctx, e, bild, meta) {
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
   // Athletenname: aus beteiligte oder Titel
-  const _ath = (e.beteiligte||[]).find(b=>b.anzeigename)?.anzeigename || '';
+  const _ath = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet').join(', ');
   const _nm = _ath || titel;
   const teile = _nm.trim().split(' ');
   const vorname = teile.length>1 ? teile.slice(0,-1).join(' ') : '';
@@ -458,7 +458,7 @@ async function zeichnePosterKeinBild(ctx, e) {
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
 
   // Athletenname: aus beteiligte oder Titel
-  const _ath = (e.beteiligte||[]).find(b=>b.anzeigename)?.anzeigename || '';
+  const _ath = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet').join(', ');
   const _nm = _ath || titel;
   const teile = _nm.trim().split(' ');
   const vorname = teile.length>1 ? teile.slice(0,-1).join(' ') : '';
@@ -900,7 +900,7 @@ async function zeichneSocialBeitragLandscape(ctx, e, bild, meta, W, H) {
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
   const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
   // Athletenname: aus beteiligte oder Titel
-  const _athletS = (e.beteiligte||[]).find(b=>b.anzeigename)?.anzeigename || '';
+  const _athletS = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet').join(', ');
   const _nameS = _athletS || titel;
   const teile = _nameS.trim().split(' ');
   const vorname = teile.length>1 ? teile.slice(0,-1).join(' ') : '';
@@ -927,7 +927,7 @@ async function zeichneSocialBeitragPortrait(ctx, e, bild, meta, W, H) {
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
   const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
   // Athletenname: aus beteiligte oder Titel
-  const _athletS = (e.beteiligte||[]).find(b=>b.anzeigename)?.anzeigename || '';
+  const _athletS = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet').join(', ');
   const _nameS = _athletS || titel;
   const teile = _nameS.trim().split(' ');
   const vorname = teile.length>1 ? teile.slice(0,-1).join(' ') : '';
@@ -978,7 +978,7 @@ async function zeichneSocialStory(ctx, e, bild, meta, W, H) {
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
   const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
   // Athletenname: aus beteiligte oder Titel
-  const _athletS = (e.beteiligte||[]).find(b=>b.anzeigename)?.anzeigename || '';
+  const _athletS = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet').join(', ');
   const _nameS = _athletS || titel;
   const teile = _nameS.trim().split(' ');
   const vorname = teile.length>1 ? teile.slice(0,-1).join(' ') : '';
