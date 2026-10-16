@@ -3559,22 +3559,26 @@ async function speichereKerndaten(erfolgId) {
 
     if (error) throw new Error(error.message);
 
-    // Athleten-Beteiligten aktualisieren wenn geändert
+    // Athleten-Beteiligten aktualisieren: erst alle löschen, dann neu anlegen
     if (athlet !== undefined) {
-      // Bestehende Beteiligte löschen und neu anlegen
-      await Backend.client.from('achievement_participants').delete().eq('achievement_id', erfolgId);
+      const { error: delErr } = await Backend.client
+        .from('achievement_participants')
+        .delete()
+        .eq('achievement_id', erfolgId);
+      if (delErr) console.warn('Beteiligte löschen:', delErr.message);
+
       if (athlet.trim()) {
-        const namen = athlet.split(',').map(n=>n.trim()).filter(Boolean);
+        const namen = athlet.split(',').map(n => n.trim()).filter(Boolean);
         for (const name of namen) {
-          // student_id ist FK → NULL für Freitext-Namen
-      // Freitext-Name wird über backend.js _mapErfolg als student_id gespeichert
-      const { error: insErr } = await Backend.client.from('achievement_participants').insert({
-            achievement_id: erfolgId,
-            student_id: null,
-            participant_role: name,  // Freitext-Name temporär in participant_role
-            consent_status: 'Nicht geprüft',
-          });
-          if (insErr) console.warn('Beteiligter:', insErr.message);
+          const { error: insErr } = await Backend.client
+            .from('achievement_participants')
+            .insert({
+              achievement_id: erfolgId,
+              student_id: null,
+              participant_role: name,   // Freitext-Name in participant_role
+              consent_status: 'Nicht geprüft',
+            });
+          if (insErr) console.warn('Beteiligter einfügen:', insErr.message);
         }
       }
     }
