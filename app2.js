@@ -211,10 +211,7 @@ async function renderErfolgDetail() {
             <textarea id="edit-kurzinfo" rows="3" style="width:100%">${esc(e.kurzinfo||'')}</textarea></div>
           <div class="form-group"><label>Artikeltext (Redaktion)</label>
             <textarea id="edit-artikel-text" rows="6" style="width:100%">${esc(e.textArtikel||'')}</textarea></div>
-          <div class="card-footer mt-3">
-            <button class="btn btn-ghost" onclick="switchTab('kerndaten')">Abbrechen</button>
-            <button class="btn btn-primary" onclick="speichereKerndaten('${e.id}')">💾 Änderungen speichern</button>
-          </div>
+          
         </div>
       </div>
     </div>`:''}
@@ -4554,4 +4551,204 @@ async function dupliziereMeldung(erfolgId) {
   } catch(err) {
     toast('Fehler beim Duplizieren: ' + err.message, 'danger');
   }
+}
+
+// ══════════════════════════════════════════════════════════════
+// UX-VERBESSERUNGEN
+// ══════════════════════════════════════════════════════════════
+
+// ── 1. KEYBOARD SHORTCUTS ─────────────────────────────────────
+(function initKeyboardShortcuts() {
+  document.addEventListener('keydown', (e) => {
+    // Escape: Modal schließen
+    if (e.key === 'Escape') {
+      const overlay = document.querySelector('.modal-overlay');
+      if (overlay) { overlay.remove(); return; }
+    }
+    // Strg+S: Formular speichern
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault();
+      const saveBtn = document.querySelector('#tab-bearbeiten .btn-primary');
+      if (saveBtn && !saveBtn.disabled) { saveBtn.click(); return; }
+      // Fallback: Einreichen-Button
+      const submitBtn = document.querySelector('.btn-primary[onclick*="speichereErfolg"]') ||
+                        document.querySelector('.btn-primary[onclick*="speichereTeam"]');
+      if (submitBtn) submitBtn.click();
+    }
+    // Strg+Enter: Meldung einreichen
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      const einreichenBtn = document.querySelector('[onclick*="Eingereicht"]');
+      if (einreichenBtn) einreichenBtn.click();
+    }
+  });
+})();
+
+// ── 2. LEERE ZUSTÄNDE ─────────────────────────────────────────
+function renderLeerZustand(icon, titel, text, btnLabel, btnAction) {
+  return `<div style="text-align:center;padding:60px 20px;color:var(--slzb-text-muted)">
+    <div style="font-size:3rem;margin-bottom:16px">${icon}</div>
+    <h3 style="margin-bottom:8px;color:var(--slzb-text)">${titel}</h3>
+    <p style="margin-bottom:24px;max-width:400px;margin-left:auto;margin-right:auto">${text}</p>
+    ${btnLabel ? `<button class="btn btn-primary" onclick="${btnAction}">${btnLabel}</button>` : ''}
+  </div>`;
+}
+
+// ── 3. ZEICHEN-ZÄHLER ─────────────────────────────────────────
+function initZeichenZaehler() {
+  // Für alle Textareas mit data-maxlength
+  document.querySelectorAll('textarea[data-maxlength]').forEach(ta => {
+    const max = parseInt(ta.dataset.maxlength);
+    let counter = ta.nextElementSibling;
+    if (!counter || !counter.classList.contains('char-counter')) {
+      counter = document.createElement('div');
+      counter.className = 'char-counter';
+      counter.style.cssText = 'font-size:.75rem;text-align:right;margin-top:2px;color:var(--slzb-text-muted)';
+      ta.parentNode.insertBefore(counter, ta.nextSibling);
+    }
+    const update = () => {
+      const len = ta.value.length;
+      counter.textContent = `${len} / ${max} Zeichen`;
+      counter.style.color = len > max * 0.9 ? '#E2001A' : len > max * 0.75 ? '#E07000' : 'var(--slzb-text-muted)';
+    };
+    ta.addEventListener('input', update);
+    update();
+  });
+}
+
+// Zeichen-Zähler nach jedem Seitenwechsel initialisieren
+const _origNavigateTo = navigateTo;
+navigateTo = function(page, params={}) {
+  _origNavigateTo(page, params);
+  setTimeout(() => {
+    initZeichenZaehler();
+    initFormValidierung();
+    initAutosave();
+  }, 300);
+};
+
+// ── 4. FILTERSTATUS MERKEN ────────────────────────────────────
+const FilterState = {
+  _state: {},
+  save(page, filters) {
+    this._state[page] = { ...filters, _ts: Date.now() };
+  },
+  load(page) {
+    const s = this._state[page];
+    if (!s) return null;
+    // Filter nach 30 Minuten vergessen
+    if (Date.now() - s._ts > 30 * 60 * 1000) { delete this._state[page]; return null; }
+    return s;
+  },
+  apply(page) {
+    const s = this.load(page);
+    if (!s) return;
+    setTimeout(() => {
+      Object.entries(s).forEach(([key, val]) => {
+        if (key === '_ts') return;
+        const el = document.getElementById(key);
+        if (el) el.value = val;
+      });
+      // Filter auslösen
+      if (page === 'archiv' && typeof filterArchiv === 'function') filterArchiv();
+    }, 100);
+  }
+};
+
+// Archiv-Filter speichern
+function filterArchivMitState() {
+  FilterState.save('archiv', {
+    'archiv-suche':   document.getElementById('archiv-suche')?.value || '',
+    'archiv-sportart': document.getElementById('archiv-sportart')?.value || '',
+    'archiv-status':  document.getElementById('archiv-status')?.value || '',
+    'archiv-ebene':   document.getElementById('archiv-ebene')?.value || '',
+  });
+  if (typeof filterArchiv === 'function') filterArchiv();
+}
+
+// ── 5. AUTOSAVE FÜR ENTWÜRFE ─────────────────────────────────
+let _autosaveTimer = null;
+let _autosaveErfolgId = null;
+
+function initAutosave() {
+  // Nur auf Bearbeiten-Tab aktiv
+  const bearbeitenTab = document.getElementById('tab-bearbeiten');
+  if (!bearbeitenTab || !APP.currentErfolgId) return;
+
+  _autosaveErfolgId = APP.currentErfolgId;
+
+  // Alle Eingabefelder im Bearbeiten-Tab überwachen
+  bearbeitenTab.querySelectorAll('input, textarea, select').forEach(el => {
+    el.addEventListener('input', () => {
+      clearTimeout(_autosaveTimer);
+      _autosaveTimer = setTimeout(autosaveDurchfuehren, 30000); // 30 Sekunden
+    });
+  });
+}
+
+async function autosaveDurchfuehren() {
+  if (!_autosaveErfolgId) return;
+  const titel = document.getElementById('edit-titel')?.value?.trim();
+  if (!titel) return; // Kein Autosave ohne Titel
+
+  try {
+    const kurzinfo = document.getElementById('edit-kurzinfo')?.value?.trim() || '';
+    const textArtikel = document.getElementById('edit-artikel-text')?.value?.trim() || '';
+    await Backend.client.from('achievements').update({
+      title: titel,
+      short_info: kurzinfo,
+      article_text: textArtikel,
+      updated_at: new Date().toISOString(),
+    }).eq('id', _autosaveErfolgId);
+
+    // Dezenter Hinweis
+    const now = new Date().toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+    const hint = document.getElementById('autosave-hint');
+    if (hint) {
+      hint.textContent = `💾 Automatisch gespeichert um ${now}`;
+      hint.style.opacity = '1';
+      setTimeout(() => { hint.style.opacity = '0'; }, 3000);
+    }
+  } catch(e) {
+    console.warn('Autosave fehlgeschlagen:', e.message);
+  }
+}
+
+// ── FORMULAR-VALIDIERUNG ──────────────────────────────────────
+function initFormValidierung() {
+  document.querySelectorAll('input[required], textarea[required]').forEach(el => {
+    el.addEventListener('blur', () => {
+      if (!el.value.trim()) {
+        el.style.borderColor = '#E2001A';
+        el.style.boxShadow = '0 0 0 2px rgba(226,0,26,0.15)';
+      } else {
+        el.style.borderColor = '';
+        el.style.boxShadow = '';
+      }
+    });
+    el.addEventListener('input', () => {
+      if (el.value.trim()) {
+        el.style.borderColor = '';
+        el.style.boxShadow = '';
+      }
+    });
+  });
+}
+
+// ── TOAST MIT RÜCKGÄNGIG ──────────────────────────────────────
+function toastMitRueckgaengig(msg, undoFn, timeout=5000) {
+  const t = document.createElement('div');
+  t.className = 'alert alert-success';
+  t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;max-width:420px;' +
+    'box-shadow:0 4px 20px rgba(0,0,0,.2);display:flex;align-items:center;gap:12px;animation:slideUp .2s ease';
+  t.innerHTML = `<span class="alert-icon">✅</span><span style="flex:1">${esc(msg)}</span>` +
+    `<button class="btn btn-ghost btn-sm" style="white-space:nowrap;border:1px solid rgba(255,255,255,.3)">↩️ Rückgängig</button>`;
+  const btn = t.querySelector('button');
+  let undone = false;
+  btn.onclick = () => {
+    undone = true;
+    t.remove();
+    if (undoFn) undoFn();
+  };
+  document.body.appendChild(t);
+  setTimeout(() => { if (!undone) t.remove(); }, timeout);
 }
