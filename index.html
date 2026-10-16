@@ -209,6 +209,7 @@ async function doLogin() {
 
 async function doLogout() {
   if (!confirm('Wirklich abmelden?')) return;
+  if (typeof Realtime !== 'undefined') Realtime.stop();
   await Auth.logout();
   showLogin();
 }

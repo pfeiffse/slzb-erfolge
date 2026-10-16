@@ -522,6 +522,106 @@ const DB = {
   },
 };
 
+// ── Realtime ────────────────────────────────────────────────
+const Realtime = {
+  _channel: null,
+  _toastTimeout: null,
+
+  // Nach erfolgreichem Login aufrufen
+  start() {
+    if (this._channel) return;
+    try {
+      this._channel = Backend.client
+        .channel('slzb-live')
+        .on('postgres_changes',
+          { event: '*', schema: 'public', table: 'achievements' },
+          (payload) => this._handle('achievements', payload)
+        )
+        .on('postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'achievement_status_history' },
+          (payload) => this._handle('status_history', payload)
+        )
+        .on('postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'achievement_media' },
+          (payload) => this._handle('media', payload)
+        )
+        .subscribe((status) => {
+          console.log('[SLZB Realtime]', status);
+          this._updateIndicator(status === 'SUBSCRIBED');
+        });
+    } catch(e) {
+      console.warn('[Realtime] Konnte nicht starten:', e.message);
+    }
+  },
+
+  stop() {
+    if (this._channel) {
+      try { Backend.client.removeChannel(this._channel); } catch(_) {}
+      this._channel = null;
+    }
+    this._updateIndicator(false);
+  },
+
+  _handle(table, payload) {
+    if (typeof APP !== 'undefined') APP._erfolgeCache = null;
+    const changedId = payload.new?.id || payload.old?.id;
+    setTimeout(() => {
+      this._refreshCurrentPage(table, changedId);
+      if (typeof ladeErfolge === 'function') {
+        ladeErfolge(true).then(() => {
+          if (typeof updateBadges === 'function') updateBadges();
+        }).catch(() => {});
+      }
+    }, 400);
+    // Toast nur wenn eine andere Person die Änderung gemacht hat
+    const myId = typeof Auth !== 'undefined' ? Auth.id() : null;
+    const changerId = payload.new?.reporter_id || payload.new?.changed_by;
+    if (changerId && changerId !== myId) {
+      this._showLiveHint(table, payload.eventType);
+    }
+  },
+
+  _refreshCurrentPage(table, changedId) {
+    if (typeof APP === 'undefined' || typeof navigateTo === 'undefined') return;
+    const page = APP.currentPage;
+    const autoRefreshPages = ['dashboard', 'redaktion', 'meine-meldungen',
+                              'archiv', 'jahreschronik', 'ausgaben'];
+    if (autoRefreshPages.includes(page)) {
+      navigateTo(page);
+      return;
+    }
+    if (page === 'erfolg-detail' && APP.currentErfolgId && changedId === APP.currentErfolgId) {
+      navigateTo('erfolg-detail', { currentErfolgId: APP.currentErfolgId });
+    }
+  },
+
+  _showLiveHint(table, eventType) {
+    if (this._toastTimeout) return;
+    const msgs = {
+      achievements: {
+        INSERT: '📥 Neue Meldung eingegangen',
+        UPDATE: '✏️ Meldung wurde aktualisiert',
+        DELETE: '🗑️ Meldung wurde gelöscht',
+      },
+      status_history: { INSERT: '🔄 Statuswechsel bei einer Meldung' },
+      media:          { INSERT: '📷 Neues Bild hochgeladen' },
+    };
+    const msg = msgs[table]?.[eventType];
+    if (msg && typeof toast === 'function') {
+      toast(msg, 'info');
+      this._toastTimeout = setTimeout(() => { this._toastTimeout = null; }, 5000);
+    }
+  },
+
+  _updateIndicator(active) {
+    const el = document.getElementById('realtime-indicator');
+    if (!el) return;
+    el.style.background = active ? '#00c853' : '#888';
+    el.title = active ? 'Live-Synchronisation aktiv' : 'Keine Live-Verbindung';
+  },
+};
+
+
 // ── UserAdmin ────────────────────────────────────────────────
 const UserAdmin = {
   users: [],

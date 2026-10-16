@@ -212,18 +212,11 @@ function renderSidebar() {
       </div>
     </div>
     <nav class="sidebar-nav">${navHtml}</nav>
-    <div style="padding:14px 20px;border-top:1px solid rgba(255,255,255,.1);font-size:.7rem;opacity:.4;text-align:center">
-      SLZB-Erfolge v3.0<br>© SLZB Berlin
-    </div>`;
+    
   updateBadges();
 }
 
-function initApp() {
-  renderSidebar();
-  document.getElementById('topbar-subtitle').textContent =
-    `Angemeldet als: ${Auth.name()} (${Auth.rolle()})`;
-  navigateTo('dashboard');
-}
+
 
 // ── Dashboard ────────────────────────────────────────────────
 // Cache für geladene Erfolge
