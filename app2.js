@@ -45,7 +45,7 @@ async function renderErfolgDetail() {
                 ['Meldungsart',`<strong>${esc(e.meldungsart)}</strong>`],
                 ['Sportart',esc(sp?.name||'–')],
                 ['Disziplin',esc(e.disziplin||'–')],
-                ['Wettbewerb',esc(wb?.name||'–')],
+                ['Wettbewerb',esc(e.wettbewerbText||wb?.name||'–')],
                 ['Datum',fmt(e.datum)],
                 ['Ort',esc(e.ort||'–')],
                 ['Ebene',ebeneBadge(e.ebene)||'–'],

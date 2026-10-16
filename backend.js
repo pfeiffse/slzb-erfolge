@@ -242,8 +242,9 @@ const DB = {
       .eq('achievement_id', id);
     erfolg.beteiligte = (bet || []).map(b => ({
       schuelerId:          b.student_id,
-      anzeigename:         b.student_name || b.student_id || '–',
-      rolle:               b.participant_role || 'Athlet',
+      // participant_role enthält den Freitext-Namen (kein student_name in der DB)
+      anzeigename:         b.participant_role || b.student_id || '–',
+      rolle:               b.student_id ? (b.participant_role || 'Athlet') : 'Athlet',
       einwilligungsstatus: b.consent_status || 'Nicht geprüft',
     }));
 
