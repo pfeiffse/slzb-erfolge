@@ -18,8 +18,7 @@ async function renderErfolgDetail() {
         <h1>${esc(e.titel)}</h1>
         <p class="text-muted text-sm">${esc(e.erfolgNr||e.id)} · ${esc(e.meldungsart)} · ${fmtDT(e.eingangsdatum)}</p>
       </div>
-      ${statusBadge(e.status)}
-    </div>
+      
     ${e.dublettenhinweis?`<div class=\"datenschutz-warning\"><h4>🔄 Dublettenverdacht</h4><p>${esc(e.dublettenhinweisText)}</p><button class=\"btn btn-primary btn-sm mt-2\" onclick=\"zeigeDublettenModal('${e.id}')\">Dubletten verwalten</button></div>`:''}
     ${e.status==='Dublettenverdacht'&&!e.dublettenhinweis?`<div class=\"alert alert-warning mt-2\" style=\"display:flex;align-items:center;gap:12px;flex-wrap:wrap\"><span>🔄 Dublettenverdacht</span><button class=\"btn btn-primary btn-sm ml-2\" onclick=\"zeigeDublettenModal('${e.id}')\">Verwalten</button></div>`:''}
 
@@ -4394,5 +4393,96 @@ async function exportCanvasAlsPDF(canvasId, dateiname='SLZB_Poster', format='a4'
 
   } catch(err) {
     toast('PDF-Fehler: ' + err.message, 'danger');
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// MELDUNG LÖSCHEN
+// ══════════════════════════════════════════════════════════════
+async function loescheMeldung(erfolgId, titel) {
+  if (!confirm(`Meldung wirklich löschen?\n\n"${titel}"\n\nDieser Vorgang kann nicht rückgängig gemacht werden.\nAlle Beteiligte, Medien und Protokolleinträge werden ebenfalls gelöscht.`)) return;
+
+  try {
+    // 1. Beteiligte löschen
+    await Backend.client.from('achievement_participants').delete().eq('achievement_id', erfolgId);
+    // 2. Protokoll löschen
+    await Backend.client.from('achievement_status_history').delete().eq('achievement_id', erfolgId);
+    // 3. Medien-Metadaten löschen (Storage-Dateien bleiben, können manuell bereinigt werden)
+    await Backend.client.from('achievement_media').delete().eq('achievement_id', erfolgId);
+    // 4. Meldung selbst löschen
+    const { error } = await Backend.client.from('achievements').delete().eq('id', erfolgId);
+    if (error) throw new Error(error.message);
+
+    APP._erfolgeCache = null;
+    toast('✅ Meldung wurde gelöscht', 'success');
+    // Zurück zur Übersicht
+    const ziel = Auth.canDo('bearbeiten') ? 'redaktion' : 'meine-meldungen';
+    navigateTo(ziel);
+  } catch(err) {
+    toast('Fehler beim Löschen: ' + err.message, 'danger');
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// MELDUNG DUPLIZIEREN
+// ══════════════════════════════════════════════════════════════
+async function dupliziereMeldung(erfolgId) {
+  if (!confirm('Meldung duplizieren?\n\nEs wird eine Kopie als Entwurf erstellt.')) return;
+
+  try {
+    // Original laden
+    const original = await DB.getErfolgById(erfolgId);
+    if (!original) throw new Error('Meldung nicht gefunden');
+
+    // Neue Meldung anlegen (ohne ID, ohne Erfolgsnummer – wird automatisch generiert)
+    const { data: neu, error } = await Backend.client
+      .from('achievements')
+      .insert([{
+        report_type:    original.meldungsart,
+        title:          'Kopie: ' + original.titel,
+        sport_id:       original.sportartId || null,
+        discipline:     original.disziplin || null,
+        competition_id: original.wettbewerbId || null,
+        event_date:     original.datum || null,
+        location:       original.ort || null,
+        level:          original.ebene || null,
+        placement:      original.platzierung || null,
+        medal:          original.medaille || 'keine',
+        result_value:   original.ergebnisWert || null,
+        result_unit:    original.ergebnisEinheit || null,
+        short_info:     original.kurzinfo || null,
+        source_url:     original.quelleUrl || null,
+        article_text:   original.textArtikel || null,
+        status:         'Entwurf',
+        reporter_id:    Auth.id(),
+        reporter_name:  Auth.name(),
+        submitted_at:   new Date().toISOString(),
+        consent_checked: false,
+      }])
+      .select('id')
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    // Beteiligte kopieren
+    if (original.beteiligte?.length) {
+      for (const b of original.beteiligte) {
+        await Backend.client.from('achievement_participants').insert({
+          achievement_id:   neu.id,
+          student_id:       b.schuelerId || null,
+          participant_role: b.anzeigename || b.rolle || 'Athlet',
+          consent_status:   'Nicht geprüft',
+        });
+      }
+    }
+
+    // Protokoll
+    await DB.protokolliere(neu.id, 'Entwurf', 'Entwurf', `Dupliziert von Meldung ${erfolgId}`);
+
+    APP._erfolgeCache = null;
+    toast('✅ Meldung dupliziert – Entwurf geöffnet', 'success');
+    navigateTo('erfolg-detail', { currentErfolgId: neu.id });
+  } catch(err) {
+    toast('Fehler beim Duplizieren: ' + err.message, 'danger');
   }
 }
