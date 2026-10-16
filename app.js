@@ -119,6 +119,7 @@ function navigateTo(page, params={}) {
     'mein-profil':     renderMeinProfil,
     jahreschronik:     renderJahreschronik,
     diagnose:          renderDiagnose,
+    papierkorb:        renderPapierkorb,
   };
   const fn = pages[page];
   try {
@@ -185,6 +186,7 @@ function renderSidebar() {
     {page:'stammdaten',icon:'⚙️',label:'Stammdaten',roles:['admin']},
     {page:'nutzerverwaltung',icon:'👥',label:'Nutzerverwaltung',roles:['admin']},
     {page:'diagnose',icon:'🔍',label:'Diagnose',roles:['admin']},
+    {page:'papierkorb',icon:'🗑️',label:'Papierkorb',roles:['admin']},
     {section:'Mein Konto',roles:['trainer','redaktion','oea','datenschutz','admin']},
     {page:'mein-profil',icon:'👤',label:'Mein Profil',roles:['trainer','redaktion','oea','datenschutz','admin']},
   ];

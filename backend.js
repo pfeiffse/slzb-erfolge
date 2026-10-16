@@ -182,12 +182,56 @@ const DB = {
       .from('achievements')
       .select('*, competitions(name)')
       .order('submitted_at', { ascending: false });
-    if (filter.melderId)  q = q.eq('melder_id', filter.melderId);
-    if (filter.status)    q = q.eq('status', filter.status);
-    if (filter.statusIn)  q = q.in('status', filter.statusIn);
+    if (filter.melderId)    q = q.eq('melder_id', filter.melderId);
+    if (filter.status)      q = q.eq('status', filter.status);
+    if (filter.statusIn)    q = q.in('status', filter.statusIn);
+    // Papierkorb: nur gelöschte anzeigen (Admin)
+    if (filter.nurGeloescht) {
+      q = q.not('deleted_at', 'is', null);
+    } else {
+      // Standard: gelöschte ausblenden
+      q = q.is('deleted_at', null);
+    }
     const { data, error } = await q;
     if (error) throw new Error(error.message);
     return (data || []).map(e => this._mapErfolg(e));
+  },
+
+  // Soft-Delete: deleted_at setzen (reversibel)
+  async softDelete(erfolgId, grund = '') {
+    const { error } = await Backend.client
+      .from('achievements')
+      .update({
+        deleted_at:       new Date().toISOString(),
+        deleted_by:       Auth.id(),
+        deleted_by_name:  Auth.name(),
+        delete_reason:    grund || null,
+      })
+      .eq('id', erfolgId)
+      .is('deleted_at', null);
+    if (error) throw new Error(error.message);
+    await this.protokolliere(erfolgId, null, null,
+      `Soft-Delete durch ${Auth.name()}${grund ? ': ' + grund : ''}`);
+  },
+
+  // Wiederherstellen: deleted_at zurücksetzen
+  async wiederherstellen(erfolgId) {
+    const { error } = await Backend.client
+      .from('achievements')
+      .update({ deleted_at: null, deleted_by: null, deleted_by_name: null, delete_reason: null })
+      .eq('id', erfolgId);
+    if (error) throw new Error(error.message);
+    await this.protokolliere(erfolgId, null, null,
+      `Wiederhergestellt durch ${Auth.name()}`);
+  },
+
+  // Hard-Delete: wirklich löschen (nur Admin)
+  async hardDelete(erfolgId) {
+    await Backend.client.from('achievement_participants').delete().eq('achievement_id', erfolgId);
+    await Backend.client.from('achievement_status_history').delete().eq('achievement_id', erfolgId);
+    await Backend.client.from('achievement_media').delete().eq('achievement_id', erfolgId);
+    const { error } = await Backend.client.from('achievements').delete().eq('id', erfolgId);
+    if (error) throw new Error(error.message);
   },
 
   
@@ -419,6 +463,10 @@ const DB = {
       dublettenhinweis:     e.duplicate_flag,
       dublettenhinweisText: e.duplicate_note,
       videoUrl:             e.video_url || null,
+      deletedAt:            e.deleted_at || null,
+      deletedBy:            e.deleted_by || null,
+      deletedByName:        e.deleted_by_name || null,
+      deleteReason:         e.delete_reason || null,
       beteiligte:           [],
       protokoll:            [],
       medien:               [],
@@ -519,105 +567,6 @@ const DB = {
       duplicate_flag:  false,
       duplicate_note:  '',
     };
-  },
-};
-
-// ── Realtime ────────────────────────────────────────────────
-const Realtime = {
-  _channel: null,
-  _toastTimeout: null,
-
-  // Nach erfolgreichem Login aufrufen
-  start() {
-    if (this._channel) return;
-    try {
-      this._channel = Backend.client
-        .channel('slzb-live')
-        .on('postgres_changes',
-          { event: '*', schema: 'public', table: 'achievements' },
-          (payload) => this._handle('achievements', payload)
-        )
-        .on('postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'achievement_status_history' },
-          (payload) => this._handle('status_history', payload)
-        )
-        .on('postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'achievement_media' },
-          (payload) => this._handle('media', payload)
-        )
-        .subscribe((status) => {
-          console.log('[SLZB Realtime]', status);
-          this._updateIndicator(status === 'SUBSCRIBED');
-        });
-    } catch(e) {
-      console.warn('[Realtime] Konnte nicht starten:', e.message);
-    }
-  },
-
-  stop() {
-    if (this._channel) {
-      try { Backend.client.removeChannel(this._channel); } catch(_) {}
-      this._channel = null;
-    }
-    this._updateIndicator(false);
-  },
-
-  _handle(table, payload) {
-    if (typeof APP !== 'undefined') APP._erfolgeCache = null;
-    const changedId = payload.new?.id || payload.old?.id;
-    setTimeout(() => {
-      this._refreshCurrentPage(table, changedId);
-      if (typeof ladeErfolge === 'function') {
-        ladeErfolge(true).then(() => {
-          if (typeof updateBadges === 'function') updateBadges();
-        }).catch(() => {});
-      }
-    }, 400);
-    // Toast nur wenn eine andere Person die Änderung gemacht hat
-    const myId = typeof Auth !== 'undefined' ? Auth.id() : null;
-    const changerId = payload.new?.reporter_id || payload.new?.changed_by;
-    if (changerId && changerId !== myId) {
-      this._showLiveHint(table, payload.eventType);
-    }
-  },
-
-  _refreshCurrentPage(table, changedId) {
-    if (typeof APP === 'undefined' || typeof navigateTo === 'undefined') return;
-    const page = APP.currentPage;
-    const autoRefreshPages = ['dashboard', 'redaktion', 'meine-meldungen',
-                              'archiv', 'jahreschronik', 'ausgaben'];
-    if (autoRefreshPages.includes(page)) {
-      navigateTo(page);
-      return;
-    }
-    if (page === 'erfolg-detail' && APP.currentErfolgId && changedId === APP.currentErfolgId) {
-      navigateTo('erfolg-detail', { currentErfolgId: APP.currentErfolgId });
-    }
-  },
-
-  _showLiveHint(table, eventType) {
-    if (this._toastTimeout) return;
-    const msgs = {
-      achievements: {
-        INSERT: '📥 Neue Meldung eingegangen',
-        UPDATE: '✏️ Meldung wurde aktualisiert',
-        DELETE: '🗑️ Meldung wurde gelöscht',
-      },
-      status_history: { INSERT: '🔄 Statuswechsel bei einer Meldung' },
-      media:          { INSERT: '📷 Neues Bild hochgeladen' },
-    };
-    const msg = msgs[table]?.[eventType];
-    if (msg && typeof toast === 'function') {
-      toast(msg, 'info');
-      this._toastTimeout = setTimeout(() => { this._toastTimeout = null; }, 5000);
-    }
-  },
-
-  _updateIndicator(active) {
-    const el = document.getElementById('realtime-indicator');
-    if (!el) return;
-    el.style.background = active ? '#00c853' : '#888';
-    el.title = active ? 'Live-Synchronisation aktiv' : 'Keine Live-Verbindung';
   },
 };
 

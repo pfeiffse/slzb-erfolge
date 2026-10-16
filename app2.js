@@ -4400,27 +4400,90 @@ async function exportCanvasAlsPDF(canvasId, dateiname='SLZB_Poster', format='a4'
 // MELDUNG LÖSCHEN
 // ══════════════════════════════════════════════════════════════
 async function loescheMeldung(erfolgId, titel) {
-  if (!confirm(`Meldung wirklich löschen?\n\n"${titel}"\n\nDieser Vorgang kann nicht rückgängig gemacht werden.\nAlle Beteiligte, Medien und Protokolleinträge werden ebenfalls gelöscht.`)) return;
+  const r = Auth.rolle();
+  const istAdmin = r === 'admin';
+  const istRedaktion = ['redaktion', 'oea'].includes(r);
+  const istTrainer = ['trainer', 'mitarbeiter'].includes(r);
+
+  // Grund abfragen
+  const grund = prompt(
+    `Meldung in den Papierkorb verschieben?\n\n"${titel}"\n\n` +
+    (istAdmin
+      ? 'Als Admin kannst du danach im Papierkorb endgültig löschen oder wiederherstellen.'
+      : 'Die Meldung wird in den Papierkorb verschoben und kann von einem Admin wiederhergestellt werden.') +
+    '\n\nGrund (optional):'
+  );
+  if (grund === null) return; // Abbrechen
 
   try {
-    // 1. Beteiligte löschen
-    await Backend.client.from('achievement_participants').delete().eq('achievement_id', erfolgId);
-    // 2. Protokoll löschen
-    await Backend.client.from('achievement_status_history').delete().eq('achievement_id', erfolgId);
-    // 3. Medien-Metadaten löschen (Storage-Dateien bleiben, können manuell bereinigt werden)
-    await Backend.client.from('achievement_media').delete().eq('achievement_id', erfolgId);
-    // 4. Meldung selbst löschen
-    const { error } = await Backend.client.from('achievements').delete().eq('id', erfolgId);
-    if (error) throw new Error(error.message);
-
+    await DB.softDelete(erfolgId, grund);
     APP._erfolgeCache = null;
-    toast('✅ Meldung wurde gelöscht', 'success');
-    // Zurück zur Übersicht
+    toast('🗑️ Meldung in Papierkorb verschoben', 'success');
     const ziel = Auth.canDo('bearbeiten') ? 'redaktion' : 'meine-meldungen';
     navigateTo(ziel);
   } catch(err) {
-    toast('Fehler beim Löschen: ' + err.message, 'danger');
+    toast('Fehler: ' + err.message, 'danger');
   }
+}
+
+// Wiederherstellen aus Papierkorb (Admin)
+async function wiederherstellenMeldung(erfolgId) {
+  if (!confirm('Meldung wiederherstellen?')) return;
+  try {
+    await DB.wiederherstellen(erfolgId);
+    APP._erfolgeCache = null;
+    toast('✅ Meldung wiederhergestellt', 'success');
+    navigateTo('papierkorb');
+  } catch(err) {
+    toast('Fehler: ' + err.message, 'danger');
+  }
+}
+
+// Endgültig löschen (nur Admin)
+async function endgueltigLoeschen(erfolgId, titel) {
+  if (!confirm(`Meldung ENDGÜLTIG löschen?\n\n"${titel}"\n\n⚠️ Dieser Vorgang kann NICHT rückgängig gemacht werden!\nAlle Daten werden dauerhaft gelöscht.`)) return;
+  try {
+    await DB.hardDelete(erfolgId);
+    APP._erfolgeCache = null;
+    toast('🗑️ Meldung endgültig gelöscht', 'success');
+    navigateTo('papierkorb');
+  } catch(err) {
+    toast('Fehler: ' + err.message, 'danger');
+  }
+}
+
+// Papierkorb-Ansicht (nur Admin)
+async function renderPapierkorb() {
+  if (Auth.rolle() !== 'admin') return '<div class="page"><div class="alert alert-danger">Kein Zugriff.</div></div>';
+  const alle = await DB.getErfolge({ nurGeloescht: true });
+  return `<div class="page">
+    <div class="page-header"><h1>🗑️ Papierkorb</h1>
+      <p class="text-muted">Soft-gelöschte Meldungen – können wiederhergestellt oder endgültig gelöscht werden.</p>
+    </div>
+    ${!alle.length ? '<div class="alert alert-info"><span class="alert-icon">ℹ️</span><span>Papierkorb ist leer.</span></div>' :
+    `<div class="card">
+      <div class="card-body">
+        <table style="width:100%;font-size:.85rem">
+          <thead><tr>
+            <th>Titel</th><th>Sportart</th><th>Gelöscht am</th><th>Von</th><th>Grund</th><th>Aktionen</th>
+          </tr></thead>
+          <tbody>${alle.map(e=>`<tr>
+            <td><strong>${esc(e.titel)}</strong><br><span class="text-xs text-muted">${esc(e.erfolgNr||e.id)}</span></td>
+            <td>${esc(e.sportartText||'–')}</td>
+            <td>${fmtDT(e.deletedAt)}</td>
+            <td>${esc(e.deletedByName||'–')}</td>
+            <td>${esc(e.deleteReason||'–')}</td>
+            <td>
+              <div class="flex gap-2">
+                <button class="btn btn-outline btn-sm" onclick="wiederherstellenMeldung('${e.id}')">↩️ Wiederherstellen</button>
+                <button class="btn btn-danger btn-sm" onclick="endgueltigLoeschen('${e.id}','${esc(e.titel)}')" style="background:#c0392b;border-color:#c0392b;color:#fff">🗑️ Endgültig löschen</button>
+              </div>
+            </td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </div>`}
+  </div>`;
 }
 
 // ══════════════════════════════════════════════════════════════
