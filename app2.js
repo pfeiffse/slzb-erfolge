@@ -210,7 +210,7 @@ async function renderErfolgDetail() {
           <div class="form-group mt-2"><label>Kurzinfo</label>
             <textarea id="edit-kurzinfo" rows="3" style="width:100%">${esc(e.kurzinfo||'')}</textarea></div>
           <div class="form-group"><label>Artikeltext (Redaktion)</label>
-            <textarea id="edit-artikel-text" rows="6" style="width:100%">${esc(e.textArtikel||'')}</textarea></div>
+            <textarea id="edit-artikel-text" rows="6" style="width:100%">${esc(e.textArtikel||'')}</textarea></div>\n          <div id=\"autosave-hint\" style=\"font-size:.75rem;color:#888;text-align:right;margin-bottom:6px;opacity:0;transition:opacity .5s\"></div>\n          <div class=\"card-footer mt-3\" style=\"display:flex;align-items:center;gap:8px\">\n            <button class=\"btn btn-ghost\" onclick=\"switchTab('kerndaten')\">Abbrechen</button>\n            <span class=\"text-xs text-muted\" style=\"flex:1\">Tipp: Strg+S</span>\n            <button class=\"btn btn-primary\" onclick=\"speichereKerndaten('${e.id}')\">💾 Änderungen speichern</button>\n          </div>
           
         </div>
       </div>
