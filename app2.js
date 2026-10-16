@@ -18,7 +18,13 @@ async function renderErfolgDetail() {
         <h1>${esc(e.titel)}</h1>
         <p class="text-muted text-sm">${esc(e.erfolgNr||e.id)} · ${esc(e.meldungsart)} · ${fmtDT(e.eingangsdatum)}</p>
       </div>
-      
+      ${statusBadge(e.status)}
+      ${Auth.canDo('bearbeiten') ? `
+        <div style="display:flex;gap:8px;flex-shrink:0">
+          <button class="btn btn-outline btn-sm" onclick="dupliziereMeldung('${e.id}')" title="Meldung duplizieren">📋 Duplizieren</button>
+          <button class="btn btn-danger btn-sm" onclick="loescheMeldung('${e.id}','${esc(e.titel)}')" style="background:#c0392b;border-color:#c0392b;color:#fff">🗑️ Löschen</button>
+        </div>` : ''}
+    </div>
     ${e.dublettenhinweis?`<div class=\"datenschutz-warning\"><h4>🔄 Dublettenverdacht</h4><p>${esc(e.dublettenhinweisText)}</p><button class=\"btn btn-primary btn-sm mt-2\" onclick=\"zeigeDublettenModal('${e.id}')\">Dubletten verwalten</button></div>`:''}
     ${e.status==='Dublettenverdacht'&&!e.dublettenhinweis?`<div class=\"alert alert-warning mt-2\" style=\"display:flex;align-items:center;gap:12px;flex-wrap:wrap\"><span>🔄 Dublettenverdacht</span><button class=\"btn btn-primary btn-sm ml-2\" onclick=\"zeigeDublettenModal('${e.id}')\">Verwalten</button></div>`:''}
 
