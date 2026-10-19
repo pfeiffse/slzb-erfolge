@@ -295,7 +295,7 @@ function renderDatenschutzTab(e) {
 
 function renderAusgabenTab(e) {
   const kannAusgeben=['Freigegeben','Veröffentlicht'].includes(e.status);
-  return`<div class="card">
+  const html=`<div class="card">
     <div class="card-header"><h2>📤 Ausgaben</h2></div>
     <div class="card-body">
       ${!kannAusgeben?`<div class="alert alert-warning"><span class="alert-icon">⚠️</span>
@@ -314,8 +314,14 @@ function renderAusgabenTab(e) {
           </div>
         </div>`).join('')}
       </div>
+      <div class=\"card mt-3\">
+        <div class=\"card-header\"><h2>\ud83d\udcc2 Gespeicherte Poster-Entw\u00fcrfe</h2></div>
+        <div class=\"card-body\" id=\"poster-entwuerfe-liste\"><p class=\"text-muted text-sm\">Wird geladen...</p></div>
+      </div>
     </div>
   </div>`;
+  setTimeout(()=>renderPosterEntwuerfeInTab(e.id),300);
+  return html;
 }
 
 // ── Statusaktionen ───────────────────────────────────────────
@@ -466,6 +472,7 @@ async function zeigeA3Vorschau(erfolgId) {
           <button class=\"tab-btn\" style=\"color:#aaa;flex:1\" onclick=\"wechsleA3Variante(3)\">3: Vollbild</button>
           ${extraTabs}${extraTabs2}${extraTabTeam}${extraTabPortrait}
         </div>
+        ${posterEditorHTML(e)}
         <div style="text-align:center">
           <canvas id="a3-canvas" width="1587" height="1123"
             style="max-width:100%;max-height:55vh;display:block;margin:0 auto;border-radius:8px"></canvas>
@@ -541,6 +548,7 @@ async function zeigeBildschirmModal(erfolgId) {
           <button class=\"tab-btn\" style=\"color:#aaa;flex:1\" onclick=\"wechsleBildschirmFormat('portrait')\">👤 Porträt</button>
           <button class=\"tab-btn\" style=\"color:#aaa;flex:1\" onclick=\"wechsleBildschirmFormat('multierfolg')\">🏅 Multi-Erfolg</button>
         </div>
+        ${posterEditorHTML(e)}
         <div style=\"text-align:center\">
           <canvas id=\"screen-canvas\" width=\"1080\" height=\"1350\"
             style=\"max-width:100%;max-height:65vh;display:block;margin:0 auto;border-radius:8px\"></canvas>
@@ -571,6 +579,7 @@ async function zeigeBildschirmModal(erfolgId) {
       _infoEl.parentNode.insertBefore(_sel, _infoEl.nextSibling);
     }
     window._screenErfolg = e;
+    window._bsErfolg = e;
     window._screenFormat = 'hochformat';
     setTimeout(()=>zeichneSLZBPoster('screen-canvas', e), 100);
   } catch(err) {
@@ -610,6 +619,7 @@ async function zeigeSocialModal(erfolgId) {
           <button class="tab-btn" onclick="wechsleSocialFormat('portrait','${e.id}')">👤 Porträt</button>
           <button class="tab-btn" onclick="wechsleSocialFormat('multierfolg','${e.id}')">🏅 Multi</button>
         </div>
+        ${posterEditorHTML(e)}
         <div style="text-align:center;background:#111;padding:16px;border-radius:8px">
           <canvas id="social-canvas" width="1080" height="1080"
             style="max-width:100%;max-height:60vh;display:block;margin:0 auto;border-radius:8px"></canvas>
@@ -638,6 +648,7 @@ async function zeigeSocialModal(erfolgId) {
 
     // Aktuelles Format merken
     window._socialErfolg = e;
+    window._smErfolg = e;
     window._socialFormat = 'beitrag';
     setTimeout(()=>zeichneSocialFormat('social-canvas', e, 'beitrag'), 100);
   } catch(err) {
@@ -4715,4 +4726,309 @@ function toastMitRueckgaengig(msg, undoFn, timeout=5000) {
   };
   document.body.appendChild(t);
   setTimeout(() => { if (!undone) t.remove(); }, timeout);
+}
+
+// ══════════════════════════════════════════════════════════════
+// POSTER-EDITOR: Editierbare Felder für Ausgabe-Modals
+// ══════════════════════════════════════════════════════════════
+
+// Gibt das HTML für die editierbaren Poster-Felder zurück
+function posterEditorHTML(e) {
+  const athlet = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet').join(', ');
+  const medailleOptionen = ['keine','Gold','Silber','Bronze'].map(m=>
+    `<option value="${m}" ${(e.medaille||'keine')===m?'selected':''}>${m==='keine'?'–':m}</option>`
+  ).join('');
+  const ebeneOptionen = ['','Schulebene','Bezirk','Landesebene','Bundesebene','International','Weltmeisterschaft','Olympia'].map(eb=>
+    `<option value="${eb}" ${(e.ebene||'')===eb?'selected':''}>${eb||'–'}</option>`
+  ).join('');
+
+  return `<div id="poster-editor" style="background:rgba(255,255,255,.06);border-radius:8px;padding:12px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <span style="color:#fff;font-size:.8rem;font-weight:700">✏️ Poster-Inhalte anpassen</span>
+      <button class="btn btn-ghost btn-sm" onclick="posterEditorAktualisieren()" style="color:#E2001A;border-color:#E2001A;font-size:.75rem">🔄 Vorschau aktualisieren</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div>
+        <label style="color:#aaa;font-size:.72rem;display:block;margin-bottom:2px">Titel</label>
+        <input id="pe-titel" type="text" value="${esc(e.titel||'')}"
+          style="width:100%;background:#222;color:#fff;border:1px solid #444;border-radius:5px;padding:5px 8px;font-size:.8rem">
+      </div>
+      <div>
+        <label style="color:#aaa;font-size:.72rem;display:block;margin-bottom:2px">Athlet / Team</label>
+        <input id="pe-athlet" type="text" value="${esc(athlet)}"
+          style="width:100%;background:#222;color:#fff;border:1px solid #444;border-radius:5px;padding:5px 8px;font-size:.8rem"
+          placeholder="Name des Athleten">
+      </div>
+      <div>
+        <label style="color:#aaa;font-size:.72rem;display:block;margin-bottom:2px">Wettbewerb</label>
+        <input id="pe-wettbewerb" type="text" value="${esc(e.wettbewerbText||'')}"
+          style="width:100%;background:#222;color:#fff;border:1px solid #444;border-radius:5px;padding:5px 8px;font-size:.8rem">
+      </div>
+      <div>
+        <label style="color:#aaa;font-size:.72rem;display:block;margin-bottom:2px">Datum</label>
+        <input id="pe-datum" type="date" value="${e.datum||''}"
+          style="width:100%;background:#222;color:#fff;border:1px solid #444;border-radius:5px;padding:5px 8px;font-size:.8rem">
+      </div>
+      <div>
+        <label style="color:#aaa;font-size:.72rem;display:block;margin-bottom:2px">Ort</label>
+        <input id="pe-ort" type="text" value="${esc(e.ort||'')}"
+          style="width:100%;background:#222;color:#fff;border:1px solid #444;border-radius:5px;padding:5px 8px;font-size:.8rem"
+          placeholder="z.B. Berlin">
+      </div>
+      <div>
+        <label style="color:#aaa;font-size:.72rem;display:block;margin-bottom:2px">Platzierung</label>
+        <input id="pe-platz" type="number" min="1" max="99" value="${e.platzierung||''}"
+          style="width:100%;background:#222;color:#fff;border:1px solid #444;border-radius:5px;padding:5px 8px;font-size:.8rem"
+          placeholder="z.B. 1">
+      </div>
+      <div>
+        <label style="color:#aaa;font-size:.72rem;display:block;margin-bottom:2px">Medaille</label>
+        <select id="pe-medaille" style="width:100%;background:#222;color:#fff;border:1px solid #444;border-radius:5px;padding:5px 8px;font-size:.8rem">
+          ${medailleOptionen}
+        </select>
+      </div>
+      <div>
+        <label style="color:#aaa;font-size:.72rem;display:block;margin-bottom:2px">Ebene</label>
+        <select id="pe-ebene" style="width:100%;background:#222;color:#fff;border:1px solid #444;border-radius:5px;padding:5px 8px;font-size:.8rem">
+          ${ebeneOptionen}
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:8px">
+      <label style="color:#aaa;font-size:.72rem;display:block;margin-bottom:2px">Sportart</label>
+      <input id="pe-sportart" type="text" value="${esc(e.sportartText||'')}"
+        style="width:100%;background:#222;color:#fff;border:1px solid #444;border-radius:5px;padding:5px 8px;font-size:.8rem"
+        placeholder="z.B. Judo">
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.1)">
+      <p style="color:#666;font-size:.7rem;margin:0">💡 Änderungen gelten nur für diese Ausgabe.</p>
+      <button id="pe-save-btn" class="btn btn-outline btn-sm" onclick="posterEntwurfSpeichern(window._a3Erfolg?'a3':window._bsErfolg?'bildschirm':'social')" style="color:#C9A227;border-color:#C9A227;font-size:.75rem">💾 Entwurf speichern</button>
+    </div>
+  </div>`;
+}
+
+// Liest die Editor-Felder aus und gibt ein modifiziertes Erfolg-Objekt zurück
+function posterEditorWerte(e) {
+  const athlet = document.getElementById('pe-athlet')?.value?.trim() || '';
+  return {
+    ...e,
+    titel:        document.getElementById('pe-titel')?.value?.trim()     || e.titel,
+    wettbewerbText: document.getElementById('pe-wettbewerb')?.value?.trim() || e.wettbewerbText,
+    datum:        document.getElementById('pe-datum')?.value             || e.datum,
+    ort:          document.getElementById('pe-ort')?.value?.trim()       || e.ort,
+    platzierung:  parseInt(document.getElementById('pe-platz')?.value)   || e.platzierung,
+    medaille:     document.getElementById('pe-medaille')?.value          || e.medaille,
+    ebene:        document.getElementById('pe-ebene')?.value             || e.ebene,
+    sportartText: document.getElementById('pe-sportart')?.value?.trim()  || e.sportartText,
+    // Athletenname als Beteiligter überschreiben
+    beteiligte: athlet
+      ? [{ anzeigename: athlet, rolle: 'Athlet', schuelerId: null, einwilligungsstatus: 'Nicht geprüft' }]
+      : e.beteiligte,
+  };
+}
+
+// Aktualisiert die aktive Vorschau mit den Editor-Werten
+async function posterEditorAktualisieren() {
+  const e = window._a3Erfolg || window._bsErfolg || window._smErfolg;
+  if (!e) return;
+  const eNeu = posterEditorWerte(e);
+
+  // Welches Modal ist aktiv?
+  if (window._a3Erfolg) {
+    window._a3Erfolg = eNeu;
+    await zeichneA3Variante('a3-canvas', eNeu, window._a3Variante || 1);
+  } else if (window._bsErfolg) {
+    window._bsErfolg = eNeu;
+    await wechsleBildschirmFormat(window._bsFormat || 'hochformat', eNeu.id);
+  } else if (window._smErfolg) {
+    window._smErfolg = eNeu;
+    await wechsleSocialFormat(window._smFormat || 'beitrag', eNeu.id);
+  }
+  toast('✅ Vorschau aktualisiert', 'success');
+}
+
+// ══════════════════════════════════════════════════════════════
+// POSTER-ENTWÜRFE SPEICHERN & LADEN
+// ══════════════════════════════════════════════════════════════
+
+// Entwurf speichern (Parameter + optional PNG)
+async function posterEntwurfSpeichern(typ, variante, format) {
+  const e = window._a3Erfolg || window._bsErfolg || window._smErfolg;
+  if (!e) { toast('Kein aktiver Entwurf', 'warning'); return; }
+  const werte = posterEditorWerte(e);
+  const notiz = prompt('Optionale Notiz (z.B. "Finale Version"):');
+  if (notiz === null) return;
+  const btn = document.getElementById('pe-save-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Wird gespeichert...'; }
+  try {
+    const vorhandene = await ladePosterEntwuerfe(e.id, typ);
+    const neueVersion = vorhandene.length > 0 ? (vorhandene[0].version||vorhandene.length) + 1 : 1;
+    const letzteId = vorhandene.length > 0 ? vorhandene[0].id : null;
+    // Max 5 Versionen: älteste löschen
+    if (vorhandene.length >= 5) {
+      for (const alt of vorhandene.slice(4)) {
+        if (alt.storage_path) await Backend.client.storage.from('poster-exports').remove([alt.storage_path]);
+        await Backend.client.from('poster_drafts').delete().eq('id', alt.id);
+      }
+    }
+    const draft = {
+      achievement_id: e.id, typ,
+      variante: variante || window._a3Variante || 1,
+      format: format || window._screenFormat || window._socialFormat || 'hochformat',
+      version: neueVersion, parent_id: letzteId,
+      titel: werte.titel || null,
+      athlet: (werte.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet').join(', ') || null,
+      wettbewerb: werte.wettbewerbText || null,
+      datum: werte.datum || null,
+      ort: werte.ort || null,
+      platzierung: werte.platzierung || null,
+      medaille: werte.medaille || 'keine',
+      ebene: werte.ebene || null,
+      sportart: werte.sportartText || null,
+      notiz: notiz || null,
+      erstellt_von: Auth.id(),
+      erstellt_von_name: Auth.name(),
+    };
+    // PNG hochladen
+    const cId = typ==='a3'?'a3-canvas':typ==='bildschirm'?'screen-canvas':'social-canvas';
+    const cv = document.getElementById(cId);
+    if (cv) {
+      try {
+        const blob = await new Promise(r => cv.toBlob(r, 'image/png', 0.92));
+        const pfad = Auth.id()+'/'+e.id+'_'+typ+'_v'+neueVersion+'_'+Date.now()+'.png';
+        const { error: upErr } = await Backend.client.storage.from('poster-exports').upload(pfad, blob, { contentType: 'image/png' });
+        if (!upErr) draft.storage_path = pfad;
+        else console.warn('PNG-Upload:', upErr.message);
+      } catch(pe) { console.warn('PNG:', pe.message); }
+    }
+    const { error } = await Backend.client.from('poster_drafts').insert([draft]);
+    if (error) throw new Error(error.message);
+    toast('\u2705 Version '+neueVersion+' gespeichert'+(draft.storage_path?' (inkl. PNG)':'')+'!', 'success');
+    await renderPosterEntwuerfeInTab(e.id);
+  } catch(err) {
+    toast('Fehler: ' + err.message, 'danger');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '\ud83d\udcbe Entwurf speichern'; }
+  }
+}
+
+
+// Alle Entwürfe einer Meldung laden (optional nach Typ filtern)
+async function ladePosterEntwuerfe(erfolgId, typ) {
+  let q = Backend.client
+    .from('poster_drafts')
+    .select('*')
+    .eq('achievement_id', erfolgId)
+    .order('version', { ascending: false });
+  if (typ) q = q.eq('typ', typ);
+  const { data, error } = await q;
+  if (error) throw new Error(error.message);
+  return data || [];
+}
+
+// Entwurf öffnen (Parameter in Editor laden + Poster zeichnen)
+async function posterEntwurfOeffnen(draftId) {
+  const { data: draft, error } = await Backend.client
+    .from('poster_drafts').select('*').eq('id', draftId).single();
+  if (error || !draft) { toast('Entwurf nicht gefunden', 'danger'); return; }
+
+  if (draft.typ === 'a3') await zeigeA3Vorschau(draft.achievement_id);
+  else if (draft.typ === 'bildschirm') await zeigeBildschirmModal(draft.achievement_id);
+  else await zeigeSocialModal(draft.achievement_id);
+
+  setTimeout(() => {
+    const felder = {
+      'pe-titel': draft.titel||'', 'pe-athlet': draft.athlet||'',
+      'pe-wettbewerb': draft.wettbewerb||'', 'pe-datum': draft.datum||'',
+      'pe-ort': draft.ort||'', 'pe-platz': draft.platzierung||'',
+      'pe-medaille': draft.medaille||'keine', 'pe-ebene': draft.ebene||'',
+      'pe-sportart': draft.sportart||'',
+    };
+    Object.entries(felder).forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if (el) el.value = val;
+    });
+    posterEditorAktualisieren();
+    toast('📂 Version ' + (draft.version||'?') + ' geladen', 'success');
+  }, 600);
+}
+
+// Entwurf löschen
+async function posterEntwurfLoeschen(draftId, erfolgId) {
+  if (!confirm('Entwurf löschen?')) return;
+  try {
+    const { data: draft } = await Backend.client
+      .from('poster_drafts').select('storage_path').eq('id', draftId).single();
+    if (draft?.storage_path) {
+      await Backend.client.storage.from('poster-exports').remove([draft.storage_path]);
+    }
+    await Backend.client.from('poster_drafts').delete().eq('id', draftId);
+    toast('🗑️ Entwurf gelöscht', 'success');
+    await renderPosterEntwuerfeInTab(erfolgId);
+  } catch(err) {
+    toast('Fehler: ' + err.message, 'danger');
+  }
+}
+
+// Entwurfs-Liste mit Versions-Timeline im Ausgaben-Tab rendern
+async function renderPosterEntwuerfeInTab(erfolgId) {
+  const container = document.getElementById('poster-entwuerfe-liste');
+  if (!container) return;
+  container.innerHTML = '<p class="text-muted text-sm">⏳ Lade Entwürfe...</p>';
+  try {
+    const drafts = await ladePosterEntwuerfe(erfolgId);
+    if (!drafts.length) {
+      container.innerHTML = '<p class="text-muted text-sm">Noch keine gespeicherten Entwürfe. Öffne eine Ausgabe und klicke auf "💾 Entwurf speichern".</p>';
+      return;
+    }
+    const typLabel = { a3: '📄 A3', bildschirm: '🖥️ Bildschirm', social: '📱 Social' };
+    const typFarbe = { a3: '#003366', bildschirm: '#0B63CE', social: '#E07000' };
+
+    // Gruppiere nach Typ
+    const nachTyp = {};
+    drafts.forEach(d => {
+      if (!nachTyp[d.typ]) nachTyp[d.typ] = [];
+      nachTyp[d.typ].push(d);
+    });
+
+    let html = '';
+    for (const [typ, versionen] of Object.entries(nachTyp)) {
+      html += `<div style="margin-bottom:16px">
+        <div style="font-weight:700;color:${typFarbe[typ]||'#333'};margin-bottom:8px;font-size:.85rem">
+          ${typLabel[typ]||typ} – ${versionen.length} Version${versionen.length!==1?'en':''}
+        </div>
+        <div style="border-left:3px solid ${typFarbe[typ]||'#ccc'};padding-left:12px">`;
+
+      versionen.forEach((d, idx) => {
+        const istNeueste = idx === 0;
+        html += `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(0,0,0,.06)">
+          <div style="flex-shrink:0;width:32px;height:32px;border-radius:50%;background:${istNeueste?typFarbe[typ]||'#003366':'#e0e0e0'};
+            color:${istNeueste?'#fff':'#666'};display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700">
+            v${d.version||'?'}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:.82rem;font-weight:${istNeueste?'700':'400'}">
+              ${esc(d.notiz||'Kein Kommentar')}
+              ${istNeueste?'<span style="background:#00c853;color:#fff;font-size:.65rem;padding:1px 6px;border-radius:10px;margin-left:6px">Aktuell</span>':''}
+            </div>
+            <div style="font-size:.72rem;color:#888;margin-top:2px">
+              ${fmtDT(d.erstellt_am)} · ${esc(d.erstellt_von_name||'–')}
+              ${d.storage_path?'· <span style="color:#00c853">PNG ✓</span>':''}
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0">
+            <button class="btn btn-outline btn-sm" onclick="posterEntwurfOeffnen('${d.id}')"
+              style="font-size:.72rem;padding:3px 8px">📂 Öffnen</button>
+            <button class="btn btn-ghost btn-sm" onclick="posterEntwurfLoeschen('${d.id}','${erfolgId}')"
+              style="font-size:.72rem;padding:3px 8px;color:#c0392b">🗑️</button>
+          </div>
+        </div>`;
+      });
+
+      html += '</div></div>';
+    }
+    container.innerHTML = html;
+  } catch(err) {
+    container.innerHTML = `<p class="text-muted text-sm">Fehler: ${esc(err.message)}</p>`;
+  }
 }
