@@ -698,6 +698,11 @@ async function zeichneA3Landscape(canvas, e, bild, meta) {
   ctx.fillStyle=SLZB_COLORS.red; ctx.font='bold 14px Montserrat, Arial, sans-serif';
   ctx.textAlign='center'; ctx.textBaseline='top';
   ctx.fillText(sportart.toUpperCase(), W/2, y); y+=22;
+  // Wettbewerb
+  if (e.wettbewerbText) {
+    ctx.fillStyle='#555'; ctx.font='13px Montserrat, Arial, sans-serif';
+    ctx.fillText(e.wettbewerbText.toUpperCase(), W/2, y); y+=18;
+  }
   ctx.fillStyle=SLZB_COLORS.blue; ctx.fillRect((W-80)/2, y, 80, 3); y+=12;
 
   const woerter = titel.toUpperCase().split(' ');
@@ -782,6 +787,10 @@ async function zeichneA3Portrait(canvas, e, bild, meta) {
   ctx.fillStyle=SLZB_COLORS.red; ctx.font='bold 14px Montserrat, Arial, sans-serif';
   ctx.textAlign='left'; ctx.textBaseline='top';
   ctx.fillText(sportart.toUpperCase(), tx, y); y+=22;
+  if (e.wettbewerbText) {
+    ctx.fillStyle='#555'; ctx.font='13px Montserrat, Arial, sans-serif';
+    ctx.fillText(e.wettbewerbText.toUpperCase(), tx, y, tw); y+=18;
+  }
   ctx.fillStyle=SLZB_COLORS.blue; ctx.fillRect(tx, y, 60, 3); y+=14;
 
   const woerter = titel.toUpperCase().split(' ');
@@ -1108,6 +1117,10 @@ async function zeichneA3Split(canvasId, e) {
   ctx.textAlign='left'; ctx.textBaseline='top';
   ctx.fillStyle=SLZB_COLORS.red; ctx.font='bold 20px Montserrat, Arial, sans-serif';
   ctx.fillText(sportart.toUpperCase(), TX, y); y+=26;
+  if (e.wettbewerbText) {
+    ctx.fillStyle=SLZB_COLORS.gray1; ctx.font='13px Montserrat, Arial, sans-serif';
+    ctx.fillText(e.wettbewerbText.toUpperCase(), TX, y, TW); y+=18;
+  }
   ctx.fillStyle=SLZB_COLORS.red; ctx.fillRect(TX, y, 80, 3); y+=14;
   ctx.font=`bold italic ${tSz}px Montserrat, Arial, sans-serif`;
   ctx.fillStyle=SLZB_COLORS.white;
@@ -1520,6 +1533,13 @@ async function zeichneBildschirmQuerformat(canvasId, e) {
     y += ovalH + 16;
   }
 
+  // Athletenname
+  const _athQ = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet'&&n.trim()!=='').join(', ');
+  if (_athQ) {
+    ctx.fillStyle=SLZB_COLORS.white; ctx.font='bold italic 22px Montserrat, Arial, sans-serif';
+    ctx.textAlign='left'; ctx.textBaseline='top';
+    ctx.fillText(_athQ.toUpperCase(), textX, y, textW); y+=30;
+  }
   // Wettbewerb / Disziplin
   if (wettbewerb || disziplin) {
     ctx.fillStyle=SLZB_COLORS.gray1;

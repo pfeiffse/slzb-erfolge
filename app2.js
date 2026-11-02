@@ -4831,6 +4831,35 @@ function posterEditorWerte(e) {
 async function posterEditorAktualisieren() {
   const e = window._a3Erfolg || window._bsErfolg || window._smErfolg;
   if (!e) return;
+
+  // Validierung: Warnungen bei fehlenden Feldern
+  const warnungen = [];
+  const titel = document.getElementById('pe-titel')?.value?.trim();
+  const athlet = document.getElementById('pe-athlet')?.value?.trim();
+  const datum = document.getElementById('pe-datum')?.value;
+  const wettbewerb = document.getElementById('pe-wettbewerb')?.value?.trim();
+
+  if (!titel) warnungen.push('⚠️ Kein Titel eingetragen');
+  if (!athlet) warnungen.push('ℹ️ Kein Athletenname – Poster zeigt nur Titel/Platzierung');
+  if (!datum) warnungen.push('ℹ️ Kein Datum eingetragen');
+  if (!wettbewerb) warnungen.push('ℹ️ Kein Veranstaltungsname eingetragen');
+
+  // Warnungen im Editor anzeigen
+  let warnEl = document.getElementById('pe-warnungen');
+  if (!warnEl) {
+    warnEl = document.createElement('div');
+    warnEl.id = 'pe-warnungen';
+    warnEl.style.cssText = 'margin-top:8px;font-size:.72rem;';
+    const editor = document.getElementById('poster-editor');
+    if (editor) editor.appendChild(warnEl);
+  }
+  if (warnungen.length) {
+    warnEl.innerHTML = warnungen.map(w =>
+      `<div style="color:${w.startsWith('⚠️')?'#E2001A':'#888'};margin-bottom:2px">${w}</div>`
+    ).join('');
+  } else {
+    warnEl.innerHTML = '<div style="color:#00c853;font-size:.72rem">✅ Alle Felder ausgefüllt</div>';
+  }
   const eNeu = posterEditorWerte(e);
 
   // Welches Modal ist aktiv?
