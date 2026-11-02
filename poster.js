@@ -657,6 +657,7 @@ function zeichneA3Wasserzeichen(ctx, W, H, sportartName, offsetX=0, offsetY=90) 
 // ── A3-Header: groß und gut lesbar für Aushang ───────────────────────────────
 function zeichneA3Header(ctx, W, e) {
   const HEADER_H = 120;
+  const MARGIN = 60; // Sicherheitsabstand für Einspannrahmen (~15mm bei A3)
   const sportart = e.sportartText || SLZB_DB.getSportart(e.sportartId)?.name || '';
   const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'}) : '';
 
@@ -664,13 +665,13 @@ function zeichneA3Header(ctx, W, e) {
   ctx.fillStyle = SLZB_COLORS.blue;
   ctx.fillRect(0, 0, W, HEADER_H);
 
-  // Logo (korrekte Ratio)
-  let logoEndX = 20;
+  // Logo (korrekte Ratio) – mit Sicherheitsabstand
+  let logoEndX = MARGIN;
   if (_slzbLogo) {
     const _lRatio = _slzbLogo.width / _slzbLogo.height;
     const _lH = 90; const _lW = Math.round(_lH * _lRatio);
-    ctx.drawImage(_slzbLogo, 20, 15, _lW, _lH);
-    logoEndX = 20 + _lW + 20;
+    ctx.drawImage(_slzbLogo, MARGIN, 15, _lW, _lH);
+    logoEndX = MARGIN + _lW + 20;
   }
 
   // Roter Trennstrich
@@ -690,11 +691,11 @@ function zeichneA3Header(ctx, W, e) {
   const zeile2 = [sportart.toUpperCase(), datum].filter(Boolean).join('  ·  ');
   ctx.fillText(zeile2, logoEndX, 60);
 
-  // Hashtag rechts
+  // Hashtag rechts – mit Sicherheitsabstand
   ctx.font = 'bold italic 26px Montserrat, Arial, sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.85)';
   ctx.textAlign = 'right';
-  ctx.fillText('#SLZBerlin', W - 30, 45);
+  ctx.fillText('#SLZBerlin', W - MARGIN, 45);
 
   return HEADER_H;
 }
@@ -930,13 +931,16 @@ async function zeichneA3KeinBild(canvas, e) {
 }
 
 function zeichneA3Footer(ctx, W, H, meta) {
-  ctx.fillStyle='#F0F0F0'; ctx.fillRect(0, H-60, W, 60);
-  ctx.fillStyle=SLZB_COLORS.blue; ctx.fillRect(0, H-60, W, 3);
-  ctx.fillStyle='#333'; ctx.font='13px Montserrat, Arial, sans-serif';
+  const FOOTER_H = 60;
+  const MARGIN = 60; // Sicherheitsabstand für Einspannrahmen
+  ctx.fillStyle='#F0F0F0'; ctx.fillRect(0, H-FOOTER_H, W, FOOTER_H);
+  ctx.fillStyle=SLZB_COLORS.blue; ctx.fillRect(0, H-FOOTER_H, W, 3);
+  ctx.fillStyle='#333'; ctx.font='bold 14px Montserrat, Arial, sans-serif';
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  let footer = 'Schul- und Leistungssportzentrum Berlin · #SLZBerlin';
-  if (meta?.creator) footer += ` · Foto: ${meta.creator}`;
-  ctx.fillText(footer, W/2, H-30);
+  let footer = 'Schul- und Leistungssportzentrum Berlin  ·  #SLZBerlin';
+  if (meta?.creator) footer += `  ·  Foto: ${meta.creator}`;
+  // Text zentriert mit Sicherheitsabstand beachtet
+  ctx.fillText(footer, W/2, H-FOOTER_H/2);
 }
 
 // ── SOCIAL MEDIA MULTI-FORMAT ─────────────────────────────────
@@ -1312,7 +1316,7 @@ async function zeichneA3Vollbild(canvasId, e) {
   ctx.fillStyle='#E2001A'; ctx.fillRect(0, H-FOOTER_H_V, W, 2);
   ctx.fillStyle='#fff'; ctx.font='bold 14px Montserrat, Arial, sans-serif';
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText('Schul- und Leistungssportzentrum Berlin · #SLZBerlin', W/2, H-FOOTER_H_V+28);
+  ctx.fillText('Schul- und Leistungssportzentrum Berlin  ·  #SLZBerlin', W/2, H-FOOTER_H_V/2);
 }
 
 // ── MULTI-BILD LAYOUTS ────────────────────────────────────────
