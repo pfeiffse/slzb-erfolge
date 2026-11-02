@@ -1027,13 +1027,15 @@ async function zeichneSocialBeitragKeinBild(ctx, e, W, H) {
   const medaille = e.medaille && e.medaille!=='keine' ? e.medaille : '';
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
   const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
-  const teile = titel.trim().split(' ');
-  const vorname = teile.length>1 ? teile.slice(0,-1).join(' ') : '';
-  const nachname = teile.length>1 ? teile[teile.length-1] : titel;
+  // Athletenname aus beteiligte (nicht Titel!)
+  const _athKS = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet'&&n.trim()!=='').join(', ');
+  const teileKS = _athKS ? _athKS.trim().split(' ') : [];
+  const vorname = teileKS.length>1 ? teileKS.slice(0,-1).join(' ') : '';
+  const nachname = teileKS.length>0 ? teileKS[teileKS.length-1] : '';
   zeichneSlzbHintergrund(ctx, W, H, null);
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
-  zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname: nachname||null, titel: nachname?null:titel, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
+  zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname: nachname||null, titel: (vorname||nachname)?null:titel, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
   // "Folge uns auf Instagram"-Hinweis
   { const _fSz = Math.round(Math.min(W,H)*0.013);
     ctx.fillStyle='rgba(255,255,255,0.45)';
@@ -1110,9 +1112,8 @@ async function zeichneA3Split(canvasId, e) {
     ctx.fillStyle=fgB; ctx.fillRect(0,H-100,FOTO_W,100);
   }
 
-  // Header + Deko (Basis-Funktionen)
-  zeichneSlzbDeko(ctx, W, H);
-  zeichneSlzbHeader(ctx, W, H, sportart, datum);
+  // Zentraler A3-Header (konsistent mit allen anderen Varianten)
+  const HEADER_H_S = zeichneA3Header(ctx, W, e);
 
   // Text rechts – mit Glasmorphismus-Hintergrund für Lesbarkeit
   const TX = FOTO_W + 50;
@@ -1124,15 +1125,15 @@ async function zeichneA3Split(canvasId, e) {
   ctx.fillRect(FOTO_W, 0, W - FOTO_W, H);
   ctx.restore();
   const FOOTER_H = 60;
-  const nutzH = H - 80 - FOOTER_H;
+  const nutzH = H - HEADER_H_S - FOOTER_H;
   const tSz = querTitelFontSize(titel, TW, ctx);
   const woerter = titel.toUpperCase().split(' ');
   const mid = woerter.length > 3 ? Math.ceil(woerter.length/2) : woerter.length;
   const z1 = woerter.slice(0,mid).join(' ');
   const z2 = woerter.slice(mid).join(' ');
   let blockH = 26+14 + tSz+12 + (z2?tSz+12:0) + (platz?70:0);
-  let y = 80 + Math.round((nutzH - blockH)/2);
-  if (y < 100) y = 100;
+  let y = HEADER_H_S + Math.round((nutzH - blockH)/2);
+  if (y < HEADER_H_S + 20) y = HEADER_H_S + 20;
 
   ctx.textAlign='left'; ctx.textBaseline='top';
   ctx.fillStyle=SLZB_COLORS.red; ctx.font='bold 20px Montserrat, Arial, sans-serif';
@@ -1210,19 +1211,8 @@ async function zeichneA3Vollbild(canvasId, e) {
     ctx.fillStyle=fadeGrad; ctx.fillRect(0, H*0.55, W, H*0.45);
   }
 
-  // Blauer Header (halbtransparent)
-  ctx.fillStyle='rgba(0,51,102,0.88)'; ctx.fillRect(0,0,W,80);
-  const lw = drawLogo(ctx, 16, 6, 68);
-  ctx.fillStyle='rgba(226,0,26,1)'; ctx.fillRect(lw+26, 20, 3, 42);
-  ctx.font='bold 18px Montserrat, Arial, sans-serif';
-  ctx.fillStyle='#fff'; ctx.textAlign='left'; ctx.textBaseline='top';
-  ctx.fillText((e.wettbewerbText||'SLZB BERLIN').toUpperCase(), lw+38, 22);
-  ctx.font='bold 11px Montserrat, Arial, sans-serif';
-  ctx.fillStyle='#E2001A';
-  ctx.fillText((e.disziplin||'SCHUL- UND LEISTUNGSSPORTZENTRUM BERLIN').toUpperCase(), lw+40, 50);
-  ctx.font='bold italic 18px Montserrat, Arial, sans-serif';
-  ctx.fillStyle='#fff'; ctx.textAlign='right';
-  ctx.fillText('#SLZBerlin', W-20, 30);
+  // Zentraler A3-Header (konsistent mit allen anderen Varianten)
+  const HEADER_H_V = zeichneA3Header(ctx, W, e);
 
   // Glasmorphismus-Karte unten (garantiert lesbarer Text)
   const CARD_PAD = 50;

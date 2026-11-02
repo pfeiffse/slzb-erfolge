@@ -673,8 +673,9 @@ async function wechsleBildschirmFormat(format) {
   const info = document.getElementById('screen-format-info');
   const canvas = document.getElementById('screen-canvas');
   window._screenFormat = format;
-  const e = window._screenErfolg;
-  if (!e) return;
+  const _eBaseBS = window._screenErfolg;
+  if (!_eBaseBS) return;
+  const e = document.getElementById('pe-titel') ? posterEditorWerte(_eBaseBS) : _eBaseBS;
   if (format==='querformat') {
     if (canvas) { canvas.width=1920; canvas.height=1080; canvas.style.maxHeight='50vh'; }
     if (info) info.textContent='1920×1080 px · Querformat (16:9)';
@@ -718,8 +719,10 @@ async function wechsleSocialFormat(format, erfolgId) {
   const canvas = document.getElementById('social-canvas');
   const info = document.getElementById('social-format-info');
   window._socialFormat = format;
-  const e = window._socialErfolg;
-  if (!e) return;
+  const _eBase = window._socialErfolg;
+  if (!_eBase) return;
+  // Editor-Werte verwenden wenn Poster-Editor geöffnet ist
+  const e = document.getElementById('pe-titel') ? posterEditorWerte(_eBase) : _eBase;
 
   if (format==='story') {
     canvas.width=1080; canvas.height=1920;
