@@ -3,8 +3,24 @@
 <html lang="de">
 <head>
 <meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0" name="viewport"/>
-<title>SLZB-Erfolge v3</title>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>SLZB-Erfolge</title>
+
+<!-- PWA Meta-Tags -->
+<meta name="application-name" content="SLZB-Erfolge">
+<meta name="description" content="Sportliche Erfolge des SLZB Berlin erfassen und veröffentlichen">
+<meta name="theme-color" content="#003366">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SLZB-Erfolge">
+
+<!-- PWA Icons -->
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png">
+<link rel="apple-touch-icon" href="icons/icon-152x152.png">
+<link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152x152.png">
+<link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192x192.png">
 <link href="../slzb-final/style.css" rel="stylesheet"/>
 <style>
     .login-screen {
@@ -247,5 +263,78 @@ async function startApp() {
 
 document.addEventListener('DOMContentLoaded', startApp);
 </script>
+
+<!-- PWA: Service Worker Registrierung -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => {
+        console.log('[PWA] Service Worker registriert:', reg.scope);
+        // Auf Updates prüfen
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              // Neues Update verfügbar
+              if (confirm('🔄 Update verfügbar! Jetzt neu laden?')) {
+                newWorker.postMessage('skipWaiting');
+                window.location.reload();
+              }
+            }
+          });
+        });
+      })
+      .catch(err => console.warn('[PWA] Service Worker Fehler:', err));
+  });
+}
+
+// PWA Install-Banner
+let _pwaInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  _pwaInstallPrompt = e;
+  // Install-Button in der App anzeigen
+  const btn = document.getElementById('pwa-install-btn');
+  if (btn) btn.style.display = 'flex';
+});
+
+function installPWA() {
+  if (!_pwaInstallPrompt) return;
+  _pwaInstallPrompt.prompt();
+  _pwaInstallPrompt.userChoice.then(result => {
+    if (result.outcome === 'accepted') {
+      console.log('[PWA] App installiert!');
+      const btn = document.getElementById('pwa-install-btn');
+      if (btn) btn.style.display = 'none';
+    }
+    _pwaInstallPrompt = null;
+  });
+}
+
+// Shortcut-Handling beim Start
+window.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(window.location.search);
+  const action = params.get('action');
+  if (action && typeof navigateTo === 'function') {
+    setTimeout(() => navigateTo(action), 500);
+  }
+});
+</script>
+
+<!-- PWA Install-Button (wird automatisch eingeblendet) -->
+<div id="pwa-install-btn" style="display:none;position:fixed;bottom:80px;right:16px;z-index:9998;
+  background:#003366;color:#fff;border-radius:12px;padding:10px 16px;
+  box-shadow:0 4px 20px rgba(0,0,0,.3);cursor:pointer;align-items:center;gap:10px;
+  font-family:Montserrat,sans-serif;font-size:.85rem;font-weight:700;
+  animation:slideUp .3s ease" onclick="installPWA()">
+  <span style="font-size:1.3rem">📲</span>
+  <div>
+    <div>App installieren</div>
+    <div style="font-size:.72rem;opacity:.8;font-weight:400">Zum Homescreen hinzufügen</div>
+  </div>
+  <span style="opacity:.6;font-size:.8rem" onclick="event.stopPropagation();this.parentNode.style.display='none'">✕</span>
+</div>
+
 </body>
 </html>
