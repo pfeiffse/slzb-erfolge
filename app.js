@@ -547,9 +547,10 @@ function renderEinzelerfolgForm() {
       <div class="card-body">
         ${kerndatenFelder(`
         <div class="form-group">
-          <label>Athlet/in <span class="hint">(Freitext – kein Schüler muss vorher angelegt sein)</span></label>
+          <label>Athlet/in <span class="required">*</span> <span class="hint">(Name erscheint auf dem Poster)</span></label>
           <input type="text" id="f-schueler-text"
-            placeholder="z.B. Max M., Klasse 10a – oder leer lassen" autocomplete="off">
+            placeholder="z.B. Max Mustermann" autocomplete="off"
+            style="border-left:3px solid #E2001A">
         </div>
         <div class="form-group"><label>Quell-URL</label>
           <input type="url" id="f-quelle" placeholder="https://..."></div>\n          <div class=\"form-group\"><label>Video-URL <span class=\"text-muted text-xs\">(YouTube/Vimeo, optional)</span></label>\n          <input type=\"url\" id=\"f-video-url\" placeholder=\"https://www.youtube.com/watch?v=...\" oninput=\"videoUrlVorschauInline(this)\">\n          <div id=\"f-video-status\" class=\"text-xs mt-1\" style=\"color:#888\"></div></div>`)}
@@ -751,6 +752,16 @@ async function uploadBilderAusFormular(erfolgId) {
 async function speichereErfolg(status, meldungsart) {
   const daten = leseDatenAusFormular(meldungsart);
   const athletText = document.getElementById('f-schueler-text')?.value?.trim()||'';
+
+  // Warnung wenn Athletenname fehlt und Meldung eingereicht wird
+  if (!athletText && status === 'Eingereicht' && meldungsart === 'Einzelerfolg') {
+    const ok = confirm('⚠️ Kein Athletenname eingetragen!\n\nOhne Namen erscheint auf dem Poster nur der Titel.\nTrotzdem einreichen?');
+    if (!ok) {
+      document.getElementById('f-schueler-text')?.focus();
+      return;
+    }
+  }
+
   const fehler = validiereFormular(daten, meldungsart);
   if (fehler.length) {
     const el=document.getElementById('form-errors');
