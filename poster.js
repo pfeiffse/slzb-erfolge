@@ -667,7 +667,11 @@ async function zeichneA3Landscape(canvas, e, bild, meta) {
 
   // Blauer Header
   ctx.fillStyle=SLZB_COLORS.blue; ctx.fillRect(0,0,W,90);
-  if (_slzbLogo) ctx.drawImage(_slzbLogo, 20, 8, 115, 74);
+  if (_slzbLogo) {
+    const _lRatio = _slzbLogo.width / _slzbLogo.height;
+    const _lH = 74; const _lW = Math.round(_lH * _lRatio);
+    ctx.drawImage(_slzbLogo, 20, 8, _lW, _lH);
+  }
   ctx.fillStyle='#fff'; ctx.font='bold 20px Montserrat, Arial, sans-serif';
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText('Schul- und Leistungssportzentrum Berlin', W/2, 45);
@@ -716,6 +720,21 @@ async function zeichneA3Landscape(canvas, e, bild, meta) {
     ctx.fillText(pt, ovalX+ovalW+16, ovalY+8);
   }
 
+  // Athletenname
+  const _athL = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet'&&n.trim()!=='').join(', ');
+  if (_athL) {
+    y += 12;
+    ctx.fillStyle=SLZB_COLORS.blue; ctx.font='bold italic 28px Montserrat, Arial, sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillText(_athL.toUpperCase(), W/2, y, W-100);
+  }
+  // Datum
+  const _datumL2 = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'}) : '';
+  if (_datumL2 && !_datumA3L) {
+    y += _athL ? 36 : 12;
+    ctx.fillStyle='#666'; ctx.font='14px Montserrat, Arial, sans-serif';
+    ctx.textAlign='center'; ctx.fillText(_datumL2, W/2, y);
+  }
   zeichneA3Footer(ctx, W, H, meta);
 }
 
@@ -732,7 +751,11 @@ async function zeichneA3Portrait(canvas, e, bild, meta) {
 
   ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
   ctx.fillStyle=SLZB_COLORS.blue; ctx.fillRect(0,0,W,90);
-  if (_slzbLogo) ctx.drawImage(_slzbLogo, 20, 8, 115, 74);
+  if (_slzbLogo) {
+    const _lRatio = _slzbLogo.width / _slzbLogo.height;
+    const _lH = 74; const _lW = Math.round(_lH * _lRatio);
+    ctx.drawImage(_slzbLogo, 20, 8, _lW, _lH);
+  }
   ctx.fillStyle='#fff'; ctx.font='bold 20px Montserrat, Arial, sans-serif';
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText('Schul- und Leistungssportzentrum Berlin', W/2, 45);
@@ -781,11 +804,25 @@ async function zeichneA3Portrait(canvas, e, bild, meta) {
     ctx.fillText(pt, ovalX+ovalW+16, ovalY+8); y+=70;
   }
 
+  // Athletenname
+  const _athP = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet'&&n.trim()!=='').join(', ');
+  if (_athP) {
+    y += 8;
+    ctx.fillStyle=SLZB_COLORS.blue; ctx.font='bold italic 26px Montserrat, Arial, sans-serif';
+    ctx.textAlign='left'; ctx.textBaseline='top';
+    ctx.fillText(_athP.toUpperCase(), tx, y, tw); y+=34;
+  }
+  // Datum
+  const _datumP = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'}) : '';
+  if (_datumP) {
+    ctx.fillStyle='#666'; ctx.font='14px Montserrat, Arial, sans-serif';
+    ctx.textAlign='left'; ctx.fillText(_datumP, tx, y); y+=22;
+  }
   if (e.kurzinfo) {
     ctx.fillStyle='#444'; ctx.font='16px Montserrat, Arial, sans-serif';
     ctx.textAlign='left'; ctx.textBaseline='top';
     const zeilen = slzbWrapText(ctx, e.kurzinfo, tw);
-    zeilen.slice(0,4).forEach(z => { ctx.fillText(z, tx, y); y+=22; });
+    zeilen.slice(0,3).forEach(z => { ctx.fillText(z, tx, y); y+=22; });
   }
 
   zeichneA3Footer(ctx, W, H, meta);
@@ -806,7 +843,11 @@ async function zeichneA3KeinBild(canvas, e) {
   // Wasserzeichen-Silhouette (sehr hell, druckfreundlich)
   zeichneA3Wasserzeichen(ctx, W, H, sportart, 0, 90);
   ctx.fillStyle=SLZB_COLORS.blue; ctx.fillRect(0,0,W,90);
-  if (_slzbLogo) ctx.drawImage(_slzbLogo, 20, 8, 115, 74);
+  if (_slzbLogo) {
+    const _lRatio = _slzbLogo.width / _slzbLogo.height;
+    const _lH = 74; const _lW = Math.round(_lH * _lRatio);
+    ctx.drawImage(_slzbLogo, 20, 8, _lW, _lH);
+  }
   ctx.fillStyle='#fff'; ctx.font='bold 20px Montserrat, Arial, sans-serif';
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText('Schul- und Leistungssportzentrum Berlin', W/2, 45);
@@ -847,6 +888,21 @@ async function zeichneA3KeinBild(canvas, e) {
     ctx.fillText(pt, ovalX+ovalW+20, ovalY+12);
   }
 
+  // Athletenname
+  const _athK = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet'&&n.trim()!=='').join(', ');
+  if (_athK) {
+    const _yK = y + (platz ? 80 : 20);
+    ctx.fillStyle=SLZB_COLORS.blue; ctx.font='bold italic 34px Montserrat, Arial, sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillText(_athK.toUpperCase(), W/2, _yK, W-120);
+  }
+  // Datum
+  const _datumK = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'}) : '';
+  if (_datumK) {
+    const _yDK = y + (platz ? 80 : 20) + (_athK ? 44 : 0);
+    ctx.fillStyle='#666'; ctx.font='16px Montserrat, Arial, sans-serif';
+    ctx.textAlign='center'; ctx.fillText(_datumK, W/2, _yDK);
+  }
   zeichneA3Footer(ctx, W, H, null);
 }
 
@@ -1070,7 +1126,15 @@ async function zeichneA3Split(canvasId, e) {
     ctx.fillText(pt, TX+ow+16, y+oh/2);
   }
 
-  // Footer (Basis-Funktion)
+    // Athletenname
+  const _athSp = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet'&&n.trim()!=='').join(', ');
+  if (_athSp) {
+    const _ySp = y + (platz ? 70 : 10);
+    ctx.fillStyle=SLZB_COLORS.white; ctx.font='bold italic 26px Montserrat, Arial, sans-serif';
+    ctx.textAlign='left'; ctx.textBaseline='top';
+    ctx.fillText(_athSp.toUpperCase(), TX, _ySp, TW);
+  }
+// Footer (Basis-Funktion)
   // "Folge uns auf Instagram"-Hinweis
   { const _fSz = Math.round(Math.min(W,H)*0.013);
     ctx.fillStyle='rgba(255,255,255,0.45)';
@@ -1154,6 +1218,21 @@ async function zeichneA3Vollbild(canvasId, e) {
     ctx.fillText(pt, ovalX+ovalW+16, ovalY+10);
   }
 
+  // Athletenname
+  const _athV = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet'&&n.trim()!=='').join(', ');
+  if (_athV) {
+    const _yV = y + (platz ? 70 : 10);
+    ctx.fillStyle='#fff'; ctx.font='bold italic 28px Montserrat, Arial, sans-serif';
+    ctx.textAlign='left'; ctx.textBaseline='top';
+    ctx.fillText(_athV.toUpperCase(), 60, _yV, W-120);
+  }
+  // Datum
+  const _datumV = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'}) : '';
+  if (_datumV) {
+    const _yDV = y + (platz ? 70 : 10) + (_athV ? 36 : 0);
+    ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.font='14px Montserrat, Arial, sans-serif';
+    ctx.textAlign='left'; ctx.fillText(_datumV, 60, _yDV);
+  }
   // Footer
   ctx.fillStyle='rgba(0,51,102,0.85)'; ctx.fillRect(0, H-50, W, 50);
   ctx.fillStyle='#fff'; ctx.font='13px Montserrat, Arial, sans-serif';
