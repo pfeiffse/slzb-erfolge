@@ -388,15 +388,14 @@ async function zeichnePosterLandscape(ctx, e, bild, meta) {
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
   // Athletenname: aus beteiligte oder Titel
-  const _ath = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet').join(', ');
-  const _nm = _ath || titel;
-  const teile = _nm.trim().split(' ');
+  const _ath = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet'&&n.trim()!=='').join(', ');
+  const teile = _ath ? _ath.trim().split(' ') : [];
   const vorname = teile.length>1 ? teile.slice(0,-1).join(' ') : '';
-  const nachname = teile.length>1 ? teile[teile.length-1] : titel;
+  const nachname = teile.length>0 ? teile[teile.length-1] : '';
   zeichneSlzbKarte(ctx, W, H, {
     subtitle: e.wettbewerbText || sportart,
-    vorname: vorname || null, nachname,
-    titel: teile.length===1 ? _nm : null,
+    vorname: vorname || null, nachname: nachname || null,
+    titel: null,
     platz, medaille,
     zusatz: [e.disziplin, e.ebene].filter(Boolean).join(' · '),
     wettbewerb: e.wettbewerbText,
@@ -422,15 +421,14 @@ async function zeichnePosterPortrait(ctx, e, bild, meta) {
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
   // Athletenname: aus beteiligte oder Titel
-  const _ath = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet').join(', ');
-  const _nm = _ath || titel;
-  const teile = _nm.trim().split(' ');
+  const _ath = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet'&&n.trim()!=='').join(', ');
+  const teile = _ath ? _ath.trim().split(' ') : [];
   const vorname = teile.length>1 ? teile.slice(0,-1).join(' ') : '';
-  const nachname = teile.length>1 ? teile[teile.length-1] : titel;
+  const nachname = teile.length>0 ? teile[teile.length-1] : '';
   zeichneSlzbKarte(ctx, W, H, {
     subtitle: e.wettbewerbText || sportart,
-    vorname: vorname || null, nachname,
-    titel: teile.length===1 ? _nm : null,
+    vorname: vorname || null, nachname: nachname || null,
+    titel: null,
     platz, medaille,
     zusatz: [e.disziplin, e.ebene].filter(Boolean).join(' · '),
     wettbewerb: e.wettbewerbText,
@@ -458,17 +456,16 @@ async function zeichnePosterKeinBild(ctx, e) {
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
 
   // Athletenname: aus beteiligte oder Titel
-  const _ath = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet').join(', ');
-  const _nm = _ath || titel;
-  const teile = _nm.trim().split(' ');
+  const _ath = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet'&&n.trim()!=='').join(', ');
+  const teile = _ath ? _ath.trim().split(' ') : [];
   const vorname = teile.length>1 ? teile.slice(0,-1).join(' ') : '';
-  const nachname = teile.length>1 ? teile[teile.length-1] : titel;
+  const nachname = teile.length>0 ? teile[teile.length-1] : '';
 
   zeichneSlzbKarte(ctx, W, H, {
     subtitle: e.wettbewerbText || sportart,
     vorname: vorname || null,
     nachname: nachname,
-    titel: teile.length===1 ? _nm : null,
+    titel: null,
     platz, medaille,
     zusatz: [e.disziplin, e.ebene].filter(Boolean).join(' · '),
     wettbewerb: e.wettbewerbText,
@@ -900,15 +897,14 @@ async function zeichneSocialBeitragLandscape(ctx, e, bild, meta, W, H) {
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
   const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
   // Athletenname: aus beteiligte oder Titel
-  const _athletS = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet').join(', ');
-  const _nameS = _athletS || titel;
-  const teile = _nameS.trim().split(' ');
+  const _athletS = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet'&&n.trim()!=='').join(', ');
+  const teile = _athletS ? _athletS.trim().split(' ') : [];
   const vorname = teile.length>1 ? teile.slice(0,-1).join(' ') : '';
-  const nachname = teile.length>1 ? teile[teile.length-1] : _nameS;
+  const nachname = teile.length>0 ? teile[teile.length-1] : '';
   zeichneSlzbHintergrundMitFallback(ctx, W, H, bild, 'rot', sportart);
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
-  zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname, titel: teile.length===1?titel:null, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
+  zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname: nachname||null, titel: nachname?null:titel, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
   // "Folge uns auf Instagram"-Hinweis
   { const _fSz = Math.round(Math.min(W,H)*0.013);
     ctx.fillStyle='rgba(255,255,255,0.45)';
@@ -927,15 +923,14 @@ async function zeichneSocialBeitragPortrait(ctx, e, bild, meta, W, H) {
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
   const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
   // Athletenname: aus beteiligte oder Titel
-  const _athletS = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet').join(', ');
-  const _nameS = _athletS || titel;
-  const teile = _nameS.trim().split(' ');
+  const _athletS = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet'&&n.trim()!=='').join(', ');
+  const teile = _athletS ? _athletS.trim().split(' ') : [];
   const vorname = teile.length>1 ? teile.slice(0,-1).join(' ') : '';
-  const nachname = teile.length>1 ? teile[teile.length-1] : _nameS;
+  const nachname = teile.length>0 ? teile[teile.length-1] : '';
   zeichneSlzbHintergrundMitFallback(ctx, W, H, bild, 'rot', sportart);
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
-  zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname, titel: teile.length===1?titel:null, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
+  zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname: nachname||null, titel: nachname?null:titel, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
   // "Folge uns auf Instagram"-Hinweis
   { const _fSz = Math.round(Math.min(W,H)*0.013);
     ctx.fillStyle='rgba(255,255,255,0.45)';
@@ -959,7 +954,7 @@ async function zeichneSocialBeitragKeinBild(ctx, e, W, H) {
   zeichneSlzbHintergrund(ctx, W, H, null);
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
-  zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname, titel: teile.length===1?titel:null, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
+  zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname: nachname||null, titel: nachname?null:titel, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
   // "Folge uns auf Instagram"-Hinweis
   { const _fSz = Math.round(Math.min(W,H)*0.013);
     ctx.fillStyle='rgba(255,255,255,0.45)';
@@ -978,15 +973,14 @@ async function zeichneSocialStory(ctx, e, bild, meta, W, H) {
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
   const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
   // Athletenname: aus beteiligte oder Titel
-  const _athletS = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet').join(', ');
-  const _nameS = _athletS || titel;
-  const teile = _nameS.trim().split(' ');
+  const _athletS = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet'&&n.trim()!=='').join(', ');
+  const teile = _athletS ? _athletS.trim().split(' ') : [];
   const vorname = teile.length>1 ? teile.slice(0,-1).join(' ') : '';
-  const nachname = teile.length>1 ? teile[teile.length-1] : _nameS;
+  const nachname = teile.length>0 ? teile[teile.length-1] : '';
   zeichneSlzbHintergrundMitFallback(ctx, W, H, bild, 'rot', sportart);
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
-  zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname, titel: teile.length===1?titel:null, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
+  zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname: nachname||null, titel: nachname?null:titel, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
   // "Folge uns auf Instagram"-Hinweis
   { const _fSz = Math.round(Math.min(W,H)*0.013);
     ctx.fillStyle='rgba(255,255,255,0.45)';
