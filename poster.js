@@ -1100,9 +1100,15 @@ async function zeichneA3Split(canvasId, e) {
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
 
-  // Text rechts
+  // Text rechts – mit Glasmorphismus-Hintergrund für Lesbarkeit
   const TX = FOTO_W + 50;
   const TW = W - TX - 50;
+  // Halbtransparenter Hintergrund für Textspalte
+  ctx.save();
+  ctx.globalAlpha = 0.45;
+  ctx.fillStyle = '#0a0a1e';
+  ctx.fillRect(FOTO_W, 0, W - FOTO_W, H);
+  ctx.restore();
   const FOOTER_H = 60;
   const nutzH = H - 80 - FOOTER_H;
   const tSz = querTitelFontSize(titel, TW, ctx);
@@ -1204,53 +1210,105 @@ async function zeichneA3Vollbild(canvasId, e) {
   ctx.fillStyle='#fff'; ctx.textAlign='right';
   ctx.fillText('#SLZBerlin', W-20, 30);
 
-  // Text unten links
-  let y = H*0.20;
-  ctx.fillStyle='#E2001A'; ctx.font='bold 16px Montserrat, Arial, sans-serif';
-  ctx.textAlign='left'; ctx.textBaseline='top';
-  ctx.fillText(sportart.toUpperCase(), 60, y); y+=24;
-  ctx.fillStyle='rgba(226,0,26,0.8)'; ctx.fillRect(60, y, 60, 3); y+=14;
+  // Glasmorphismus-Karte unten (garantiert lesbarer Text)
+  const CARD_PAD = 50;
+  const CARD_X = 50;
+  const CARD_W = W - 100;
+  const FOOTER_H_V = 55;
 
+  // Athletenname + Datum vorbereiten
+  const _athV = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet'&&n.trim()!=='').join(', ');
+  const _datumV = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'}) : '';
+
+  // Kartenhöhe dynamisch berechnen
   const woerter = titel.toUpperCase().split(' ');
   const mid = Math.ceil(woerter.length/2);
-  ctx.font='bold italic 80px Montserrat, Arial, sans-serif';
-  ctx.fillStyle='#fff';
-  ctx.fillText(woerter.slice(0,mid).join(' '), 60, y, W-120); y+=90;
-  ctx.fillStyle='#E2001A';
-  if (woerter.slice(mid).length) { ctx.fillText(woerter.slice(mid).join(' '), 60, y, W-120); y+=90; }
+  const tSz = 72;
+  let cardH = CARD_PAD; // oben
+  cardH += 20 + 8; // Sportart
+  cardH += tSz + 8; // Titel Z1
+  if (woerter.slice(mid).length) cardH += tSz + 8; // Titel Z2
+  if (platz) cardH += 66 + 12; // Oval
+  if (_athV) cardH += 34 + 6; // Athlet
+  if (_datumV) cardH += 22; // Datum
+  cardH += CARD_PAD; // unten
+  cardH = Math.min(cardH, H - 80 - FOOTER_H_V - 20);
 
+  const CARD_Y = H - FOOTER_H_V - cardH - 10;
+
+  // Glasmorphismus-Hintergrund
+  ctx.save();
+  ctx.globalAlpha = 0.82;
+  ctx.fillStyle = '#0a0a1e';
+  slzbRoundRect(ctx, CARD_X, CARD_Y, CARD_W, cardH, 16); ctx.fill();
+  ctx.globalAlpha = 1;
+  // Linker Akzentstreifen
+  ctx.fillStyle = '#E2001A';
+  slzbRoundRect(ctx, CARD_X, CARD_Y, 5, cardH, [8,0,0,8]); ctx.fill();
+  // Dünner weißer Rahmen
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 1;
+  slzbRoundRect(ctx, CARD_X, CARD_Y, CARD_W, cardH, 16); ctx.stroke();
+  ctx.restore();
+
+  // Text in der Karte
+  let y = CARD_Y + CARD_PAD;
+  const TX = CARD_X + 30;
+  const TW = CARD_W - 60;
+
+  // Sportart
+  ctx.fillStyle='#E2001A'; ctx.font='bold 16px Montserrat, Arial, sans-serif';
+  ctx.textAlign='left'; ctx.textBaseline='top';
+  ctx.fillText(sportart.toUpperCase(), TX, y); y+=20;
+  if (e.wettbewerbText) {
+    ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.font='12px Montserrat, Arial, sans-serif';
+    ctx.fillText(e.wettbewerbText.toUpperCase(), TX, y); y+=16;
+  }
+  y+=8;
+
+  // Titel
+  ctx.font=`bold italic ${tSz}px Montserrat, Arial, sans-serif`;
+  ctx.fillStyle='#fff';
+  ctx.fillText(woerter.slice(0,mid).join(' '), TX, y, TW); y+=tSz+8;
+  if (woerter.slice(mid).length) {
+    ctx.fillStyle='#E2001A';
+    ctx.fillText(woerter.slice(mid).join(' '), TX, y, TW); y+=tSz+8;
+  }
+
+  // Platzierung
   if (platz) {
-    const ovalW=110, ovalH=56, ovalX=60, ovalY=y;
-    ctx.fillStyle=mColor; slzbRoundRect(ctx,ovalX,ovalY,ovalW,ovalH,28); ctx.fill();
-    ctx.fillStyle='#fff'; ctx.font='bold italic 36px Montserrat, Arial, sans-serif';
+    y+=4;
+    const ovalW=100, ovalH=52, ovalX=TX;
+    ctx.fillStyle=mColor; slzbRoundRect(ctx,ovalX,y,ovalW,ovalH,26); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.font='bold italic 32px Montserrat, Arial, sans-serif';
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(String(platz), ovalX+ovalW/2, ovalY+ovalH/2);
+    ctx.fillText(String(platz), ovalX+ovalW/2, y+ovalH/2);
     const pt = platz===1?'1. PLATZ':platz===2?'2. PLATZ':platz===3?'3. PLATZ':`${platz}. PLATZ`;
-    ctx.fillStyle='#fff'; ctx.font='bold italic 28px Montserrat, Arial, sans-serif';
+    ctx.fillStyle='#fff'; ctx.font='bold italic 26px Montserrat, Arial, sans-serif';
     ctx.textAlign='left'; ctx.textBaseline='top';
-    ctx.fillText(pt, ovalX+ovalW+16, ovalY+10);
+    ctx.fillText(pt, ovalX+ovalW+14, y+10);
+    y+=ovalH+12;
   }
 
   // Athletenname
-  const _athV = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet'&&n.trim()!=='').join(', ');
   if (_athV) {
-    const _yV = y + (platz ? 70 : 10);
-    ctx.fillStyle='#fff'; ctx.font='bold italic 28px Montserrat, Arial, sans-serif';
+    ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.font='bold italic 26px Montserrat, Arial, sans-serif';
     ctx.textAlign='left'; ctx.textBaseline='top';
-    ctx.fillText(_athV.toUpperCase(), 60, _yV, W-120);
+    ctx.fillText(_athV.toUpperCase(), TX, y, TW); y+=34;
   }
+
   // Datum
-  const _datumV = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'}) : '';
   if (_datumV) {
-    const _yDV = y + (platz ? 70 : 10) + (_athV ? 36 : 0);
-    ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.font='14px Montserrat, Arial, sans-serif';
-    ctx.textAlign='left'; ctx.fillText(_datumV, 60, _yDV);
+    ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.font='13px Montserrat, Arial, sans-serif';
+    ctx.textAlign='left'; ctx.fillText(_datumV, TX, y);
   }
+
   // Footer
-  ctx.fillStyle='rgba(0,51,102,0.85)'; ctx.fillRect(0, H-50, W, 50);
-  ctx.fillStyle='#fff'; ctx.font='13px Montserrat, Arial, sans-serif';
+  ctx.fillStyle='rgba(0,51,102,0.92)'; ctx.fillRect(0, H-FOOTER_H_V, W, FOOTER_H_V);
+  ctx.fillStyle='#E2001A'; ctx.fillRect(0, H-FOOTER_H_V, W, 2);
+  ctx.fillStyle='#fff'; ctx.font='bold 14px Montserrat, Arial, sans-serif';
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText('Schul- und Leistungssportzentrum Berlin · #SLZBerlin', W/2, H-25);
+  ctx.fillText('Schul- und Leistungssportzentrum Berlin · #SLZBerlin', W/2, H-FOOTER_H_V+28);
 }
 
 // ── MULTI-BILD LAYOUTS ────────────────────────────────────────
