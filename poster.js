@@ -657,14 +657,31 @@ function zeichneA3Wasserzeichen(ctx, W, H, sportartName, offsetX=0, offsetY=90) 
 // ── A3-Header: groß und gut lesbar für Aushang ───────────────────────────────
 
 // ── Druckerrand für A3-Ausdrucke ─────────────────────────────
-// Zeichnet einen weißen Rand (~7mm) damit Drucker nichts abschneidet
+// Zeichnet einen weißen Rand (~7mm) ZUERST als Hintergrund
+// Muss VOR dem Inhalt aufgerufen werden!
 function zeichneDruckerrand(ctx, W, H) {
-  const RAND = 28; // ~7mm bei A3 (1587px = 420mm → 1px ≈ 0.265mm)
+  // Kein nachträgliches Überzeichnen mehr – Rand wird als Clip-Region gesetzt
+  // Diese Funktion ist jetzt ein No-Op; der Rand wird durch zeichneA3Hintergrund gesetzt
+}
+
+// Setzt Clip-Region für A3 mit Druckerrand (vor dem Zeichnen aufrufen)
+function setzeA3DruckerrandClip(ctx, W, H) {
+  const RAND = 28; // ~7mm
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(RAND, RAND, W - 2*RAND, H - 2*RAND);
+  ctx.clip();
+}
+
+// Weißen Rand am Ende sauber zeichnen (nach restore)
+function zeichneA3DruckerrandFinal(ctx, W, H) {
+  ctx.restore(); // Clip aufheben
+  const RAND = 28;
   ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, W, RAND);        // oben
-  ctx.fillRect(0, H-RAND, W, RAND);   // unten
-  ctx.fillRect(0, 0, RAND, H);        // links
-  ctx.fillRect(W-RAND, 0, RAND, H);   // rechts
+  ctx.fillRect(0, 0, W, RAND);
+  ctx.fillRect(0, H-RAND, W, RAND);
+  ctx.fillRect(0, 0, RAND, H);
+  ctx.fillRect(W-RAND, 0, RAND, H);
 }
 
 function zeichneA3Header(ctx, W, e) {
@@ -723,6 +740,7 @@ async function zeichneA3Landscape(canvas, e, bild, meta) {
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
 
   ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+  setzeA3DruckerrandClip(ctx, W, H); // Druckerrand-Clip
 
   // Großer A3-Header (gut lesbar im Vorbeigehen)
   const HEADER_H_L = zeichneA3Header(ctx, W, e);
@@ -784,7 +802,7 @@ async function zeichneA3Landscape(canvas, e, bild, meta) {
     ctx.textAlign='center'; ctx.fillText(_datumL2, W/2, y);
   }
   zeichneA3Footer(ctx, W, H, meta);
-  zeichneDruckerrand(ctx, W, H);
+  zeichneA3DruckerrandFinal(ctx, W, H);
 }
 
 // A3 Layout B: Hochformat-Bild → Bild links, Text rechts
@@ -799,6 +817,7 @@ async function zeichneA3Portrait(canvas, e, bild, meta) {
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
 
   ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+  setzeA3DruckerrandClip(ctx, W, H); // Druckerrand-Clip
 
   // Großer A3-Header (gut lesbar im Vorbeigehen)
   const HEADER_H_P = zeichneA3Header(ctx, W, e);
@@ -871,7 +890,7 @@ async function zeichneA3Portrait(canvas, e, bild, meta) {
   }
 
   zeichneA3Footer(ctx, W, H, meta);
-  zeichneDruckerrand(ctx, W, H);
+  zeichneA3DruckerrandFinal(ctx, W, H);
 }
 
 // A3 Layout C: Kein Bild → Volltext
@@ -886,6 +905,7 @@ async function zeichneA3KeinBild(canvas, e) {
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
 
   ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+  setzeA3DruckerrandClip(ctx, W, H); // Druckerrand-Clip
   // Wasserzeichen-Silhouette (sehr hell, druckfreundlich)
   zeichneA3Wasserzeichen(ctx, W, H, sportart, 0, 120);
 
@@ -942,7 +962,7 @@ async function zeichneA3KeinBild(canvas, e) {
     ctx.textAlign='center'; ctx.fillText(_datumK, W/2, _yDK);
   }
   zeichneA3Footer(ctx, W, H, null);
-  zeichneDruckerrand(ctx, W, H);
+  zeichneA3DruckerrandFinal(ctx, W, H);
 }
 
 function zeichneA3Footer(ctx, W, H, meta) {
@@ -1011,7 +1031,7 @@ async function zeichneSocialBeitragLandscape(ctx, e, bild, meta, W, H) {
     ctx.fillText('📸 Folge uns auf Instagram: @slzberlin', W-Math.round(W*0.03), H-Math.round(H*0.025));
   }
   zeichneSlzbFooterNeu(ctx, W, H);
-  zeichneDruckerrand(ctx, W, H);
+  zeichneA3DruckerrandFinal(ctx, W, H);
 }
 
 // Social Beitrag: Hochformat-Bild (Vollhintergrund)
@@ -1112,6 +1132,7 @@ async function zeichneA3Split(canvasId, e) {
 
   // Hintergrund (Basis-Funktion mit Fallback)
   zeichneSlzbHintergrundMitFallback(ctx, W, H, bild, 'rot', sportart);
+  setzeA3DruckerrandClip(ctx, W, H); // Druckerrand-Clip
 
   // Bild links 55%
   const FOTO_W = Math.round(W*0.55);
@@ -1197,7 +1218,7 @@ async function zeichneA3Split(canvasId, e) {
     ctx.fillText('📸 Folge uns auf Instagram: @slzberlin', W-Math.round(W*0.03), H-Math.round(H*0.025));
   }
   zeichneSlzbFooterNeu(ctx, W, H);
-  zeichneDruckerrand(ctx, W, H);
+  zeichneA3DruckerrandFinal(ctx, W, H);
 }
 
 // ── A3 VARIANTE 3: Vollbild mit Overlay ──────────────────────
@@ -1219,6 +1240,7 @@ async function zeichneA3Vollbild(canvasId, e) {
 
   // Hintergrund
   ctx.fillStyle='#1B1C1F'; ctx.fillRect(0,0,W,H);
+  setzeA3DruckerrandClip(ctx, W, H); // Druckerrand-Clip
 
   // Vollbild-Foto
   if (bild) {
@@ -1334,7 +1356,7 @@ async function zeichneA3Vollbild(canvasId, e) {
   ctx.fillStyle='#fff'; ctx.font='bold 14px Montserrat, Arial, sans-serif';
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText('Schul- und Leistungssportzentrum Berlin  ·  #SLZBerlin', W/2, H-FOOTER_H_V/2);
-  zeichneDruckerrand(ctx, W, H);
+  zeichneA3DruckerrandFinal(ctx, W, H);
 }
 
 // ── MULTI-BILD LAYOUTS ────────────────────────────────────────
