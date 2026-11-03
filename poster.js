@@ -665,23 +665,19 @@ function zeichneDruckerrand(ctx, W, H) {
 }
 
 // Setzt Clip-Region für A3 mit Druckerrand (vor dem Zeichnen aufrufen)
-function setzeA3DruckerrandClip(ctx, W, H) {
-  const RAND = 28; // ~7mm
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(RAND, RAND, W - 2*RAND, H - 2*RAND);
-  ctx.clip();
-}
+function setzeA3DruckerrandClip(ctx, W, H) { /* nicht mehr verwendet */ }
 
 // Weißen Rand am Ende sauber zeichnen (nach restore)
 function zeichneA3DruckerrandFinal(ctx, W, H) {
-  ctx.restore(); // Clip aufheben
-  const RAND = 28;
+  // Druckerrand: dünne weiße Linie am äußersten Rand
+  // Inhalt hat bereits 60px Sicherheitsabstand (MARGIN in zeichneA3Header)
+  // Druckerrand liegt innerhalb dieses Abstands → kein Inhalt wird abgeschnitten
+  const RAND = 20;
   ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, W, RAND);
-  ctx.fillRect(0, H-RAND, W, RAND);
-  ctx.fillRect(0, 0, RAND, H);
-  ctx.fillRect(W-RAND, 0, RAND, H);
+  ctx.fillRect(0, 0, W, RAND);        // oben
+  ctx.fillRect(0, H-RAND, W, RAND);   // unten  
+  ctx.fillRect(0, 0, RAND, H);        // links
+  ctx.fillRect(W-RAND, 0, RAND, H);   // rechts
 }
 
 function zeichneA3Header(ctx, W, e) {
@@ -740,7 +736,6 @@ async function zeichneA3Landscape(canvas, e, bild, meta) {
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
 
   ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
-  setzeA3DruckerrandClip(ctx, W, H); // Druckerrand-Clip
 
   // Großer A3-Header (gut lesbar im Vorbeigehen)
   const HEADER_H_L = zeichneA3Header(ctx, W, e);
@@ -817,7 +812,6 @@ async function zeichneA3Portrait(canvas, e, bild, meta) {
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
 
   ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
-  setzeA3DruckerrandClip(ctx, W, H); // Druckerrand-Clip
 
   // Großer A3-Header (gut lesbar im Vorbeigehen)
   const HEADER_H_P = zeichneA3Header(ctx, W, e);
@@ -905,7 +899,6 @@ async function zeichneA3KeinBild(canvas, e) {
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
 
   ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
-  setzeA3DruckerrandClip(ctx, W, H); // Druckerrand-Clip
   // Wasserzeichen-Silhouette (sehr hell, druckfreundlich)
   zeichneA3Wasserzeichen(ctx, W, H, sportart, 0, 120);
 
@@ -1132,7 +1125,6 @@ async function zeichneA3Split(canvasId, e) {
 
   // Hintergrund (Basis-Funktion mit Fallback)
   zeichneSlzbHintergrundMitFallback(ctx, W, H, bild, 'rot', sportart);
-  setzeA3DruckerrandClip(ctx, W, H); // Druckerrand-Clip
 
   // Bild links 55%
   const FOTO_W = Math.round(W*0.55);
@@ -1240,7 +1232,6 @@ async function zeichneA3Vollbild(canvasId, e) {
 
   // Hintergrund
   ctx.fillStyle='#1B1C1F'; ctx.fillRect(0,0,W,H);
-  setzeA3DruckerrandClip(ctx, W, H); // Druckerrand-Clip
 
   // Vollbild-Foto
   if (bild) {
