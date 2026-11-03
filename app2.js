@@ -406,8 +406,31 @@ async function statusWechselUI(erfolgId,statusNeu) {
   const kommentar=document.getElementById('status-kommentar')?.value||'';
   const result=await DB.statusWechsel(erfolgId,statusNeu,kommentar);
   if(!result.ok){toast('Fehler beim Statuswechsel','danger');return;}
-  APP._erfolgeCache=null; // Cache leeren
+  APP._erfolgeCache=null;
   toast(`Status → ${statusNeu}`,'success');
+
+  // Push-Benachrichtigung an Melder senden
+  const PUSH_STATUS = ['Freigegeben','Veröffentlicht','Rückfrage an Melder',
+    'Wegen Einwilligung gesperrt','Archiviert','Teilweise freigegeben'];
+  if (PUSH_STATUS.includes(statusNeu)) {
+    try {
+      const erfolg = await DB.getErfolgById(erfolgId);
+      if (erfolg?.melderId && erfolg.melderId !== Auth.id()) {
+        // Nur wenn Melder != aktueller Nutzer (kein Push an sich selbst)
+        await Backend.invoke('notify-status-change', {
+          userId:    erfolg.melderId,
+          titel:     erfolg.titel,
+          status:    statusNeu,
+          erfolgId:  erfolgId,
+          kommentar: kommentar || null,
+        });
+      }
+    } catch(pushErr) {
+      console.warn('[Push] Benachrichtigung fehlgeschlagen:', pushErr.message);
+      // Kein Fehler für den Nutzer – Push ist optional
+    }
+  }
+
   navigateTo('erfolg-detail',{currentErfolgId:erfolgId});
 }
 
@@ -1239,6 +1262,17 @@ function renderMeinProfil() {
             🔑 Passwort ändern
           </button>
         </div>
+      </div>
+    </div>
+    <div class=\"card mt-4\">
+      <div class=\"card-header\"><h2>\ud83d\udd14 Benachrichtigungen</h2></div>
+      <div class=\"card-body\">
+        <p class=\"text-sm text-muted mb-3\">Erhalte eine Push-Benachrichtigung auf diesem Ger\u00e4t wenn deine Meldungen freigegeben oder kommentiert werden.</p>
+        <div style=\"display:flex;gap:12px;flex-wrap:wrap\">
+          <button class=\"btn btn-primary btn-sm\" onclick=\"aktivierePush()\">\ud83d\udd14 Benachrichtigungen aktivieren</button>
+          <button class=\"btn btn-ghost btn-sm\" onclick=\"deaktivierePush()\">\ud83d\udd15 Deaktivieren</button>
+        </div>
+        <p class=\"text-xs text-muted mt-2\">Hinweis: Auf dem iPhone nur in Safari m\u00f6glich, wenn die App zum Homescreen hinzugef\u00fcgt wurde.</p>
       </div>
     </div>
   </div>`;

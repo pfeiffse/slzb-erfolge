@@ -197,6 +197,85 @@ function initApp() {
   document.getElementById('topbar-subtitle').textContent =
     `Angemeldet als: ${Auth.name()} (${Auth.rolle()})`;
   navigateTo('dashboard');
+  // Push-Benachrichtigungen initialisieren
+  setTimeout(initPushNotifications, 3000);
+}
+
+// ── Push-Benachrichtigungen ──────────────────────────────────
+const VAPID_PUBLIC_KEY = 'BAWC0AkL9JN6A1bWdIISWuBXDndCvVP2cG9IL_JzdkFiWasxx9Uek49YXkJfayy3vWqGl8m-sdBhzS8DYcDm9sg';
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+}
+
+async function initPushNotifications() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  if (!Auth.id()) return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const existing = await reg.pushManager.getSubscription();
+    if (existing) { await speicherePushSubscription(existing); return; }
+    const bereitsGefragt = localStorage.getItem('slzb_push_asked');
+    if (bereitsGefragt) return;
+    setTimeout(fragePushErlaubnis, 2000);
+  } catch(e) { console.warn('[Push] Init:', e.message); }
+}
+
+async function fragePushErlaubnis() {
+  localStorage.setItem('slzb_push_asked', '1');
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:9999;'
+    + 'background:#003366;color:#fff;border-radius:16px;padding:20px 24px;max-width:340px;width:90%;'
+    + 'box-shadow:0 8px 32px rgba(0,0,0,.4);font-family:Montserrat,sans-serif;animation:slideUp .3s ease';
+  overlay.innerHTML = `
+    <div style='font-size:1.5rem;margin-bottom:8px'>&#128276;</div>
+    <div style='font-weight:700;margin-bottom:6px'>Benachrichtigungen aktivieren?</div>
+    <div style='font-size:.82rem;opacity:.85;margin-bottom:16px'>Erhalte eine Nachricht wenn deine Meldungen freigegeben oder kommentiert werden.</div>
+    <div style='display:flex;gap:10px'>
+      <button id='push-ja' style='flex:1;background:#E2001A;color:#fff;border:none;border-radius:8px;padding:10px;font-weight:700;cursor:pointer'>Ja, aktivieren</button>
+      <button id='push-nein' style='flex:1;background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:8px;padding:10px;cursor:pointer'>Nein danke</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  document.getElementById('push-ja').onclick = async () => { overlay.remove(); await aktivierePush(); };
+  document.getElementById('push-nein').onclick = () => overlay.remove();
+  setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 10000);
+}
+
+async function aktivierePush() {
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') { toast('Benachrichtigungen wurden abgelehnt.', 'warning'); return; }
+    const reg = await navigator.serviceWorker.ready;
+    const subscription = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+    });
+    await speicherePushSubscription(subscription);
+    toast('🔔 Benachrichtigungen aktiviert!', 'success');
+  } catch(e) { console.warn('[Push] Aktivierung:', e.message); toast('Benachrichtigungen konnten nicht aktiviert werden.', 'warning'); }
+}
+
+async function speicherePushSubscription(subscription) {
+  try {
+    await Backend.client.from('push_subscriptions').upsert({
+      user_id: Auth.id(), subscription: JSON.stringify(subscription),
+      user_agent: navigator.userAgent.slice(0,200), updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' });
+  } catch(e) { console.warn('[Push] Speichern:', e.message); }
+}
+
+async function deaktivierePush() {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) await sub.unsubscribe();
+    await Backend.client.from('push_subscriptions').delete().eq('user_id', Auth.id());
+    localStorage.removeItem('slzb_push_asked');
+    toast('🔕 Benachrichtigungen deaktiviert.', 'info');
+  } catch(e) { toast('Fehler beim Deaktivieren.', 'danger'); }
 }
 
 // ── Dashboard ────────────────────────────────────────────────
