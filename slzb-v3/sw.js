@@ -4,28 +4,29 @@
 // ============================================================
 
 const CACHE_NAME = 'slzb-erfolge-v3';
-const CACHE_VERSION = '1.0.0';
+const CACHE_VERSION = '1.1.0';
 const FULL_CACHE_NAME = `${CACHE_NAME}-${CACHE_VERSION}`;
 
 // Dateien die beim Installieren gecacht werden (App-Shell)
+const BASE_URL = '/slzb-erfolge/slzb-v3/';
 const APP_SHELL = [
-  './',
-  './index.html',
-  './style.css',
-  './app.js',
-  './app2.js',
-  './backend.js',
-  './config.js',
-  './data.js',
-  './poster.js',
-  './termine.js',
-  './user-admin.js',
-  './supabase.min.js',
-  './slzb-sport-erfolge-logo.png',
-  './slzb-logo.png',
-  './manifest.json',
-  './icons/icon-192x192.png',
-  './icons/icon-512x512.png',
+  BASE_URL,
+  BASE_URL + 'index.html',
+  BASE_URL + 'style.css',
+  BASE_URL + 'app.js',
+  BASE_URL + 'app2.js',
+  BASE_URL + 'backend.js',
+  BASE_URL + 'config.js',
+  BASE_URL + 'data.js',
+  BASE_URL + 'poster.js',
+  BASE_URL + 'termine.js',
+  BASE_URL + 'user-admin.js',
+  BASE_URL + 'supabase.min.js',
+  BASE_URL + 'slzb-sport-erfolge-logo.png',
+  BASE_URL + 'slzb-logo.png',
+  BASE_URL + 'manifest.json',
+  BASE_URL + 'icons/icon-192x192.png',
+  BASE_URL + 'icons/icon-512x512.png',
 ];
 
 // ── Installation ──────────────────────────────────────────────

@@ -1,11 +1,18 @@
 # GitHub Pages Konfiguration
-# Stellt sicher dass JS/CSS korrekt ausgeliefert werden
-
 plugins: []
 
-# MIME-Types explizit setzen
+# Alle relevanten Dateitypen einschließen
 include:
   - "*.js"
   - "*.css"
   - "*.html"
   - "*.sql"
+  - "*.json"
+  - "*.png"
+  - "sw.js"
+  - "manifest.json"
+
+# Jekyll nicht auf JS/JSON anwenden
+exclude:
+  - "node_modules"
+  - "*.md"

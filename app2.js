@@ -409,26 +409,22 @@ async function statusWechselUI(erfolgId,statusNeu) {
   APP._erfolgeCache=null;
   toast(`Status → ${statusNeu}`,'success');
 
-  // Push-Benachrichtigung an Melder senden
-  const PUSH_STATUS = ['Freigegeben','Veröffentlicht','Rückfrage an Melder',
-    'Wegen Einwilligung gesperrt','Archiviert','Teilweise freigegeben'];
-  if (PUSH_STATUS.includes(statusNeu)) {
-    try {
-      const erfolg = await DB.getErfolgById(erfolgId);
-      if (erfolg?.melderId && erfolg.melderId !== Auth.id()) {
-        // Nur wenn Melder != aktueller Nutzer (kein Push an sich selbst)
+  // Push-Benachrichtigung senden
+  try {
+    const erfolg = await DB.getErfolgById(erfolgId);
+    if (erfolg) {
+      // An Melder: bei Statusänderungen die ihn betreffen
+      const PUSH_AN_MELDER = ['Freigegeben','Veröffentlicht','Rückfrage an Melder',
+        'Wegen Einwilligung gesperrt','Archiviert','Teilweise freigegeben'];
+      if (PUSH_AN_MELDER.includes(statusNeu) && erfolg.melderId && erfolg.melderId !== Auth.id()) {
         await Backend.invoke('notify-status-change', {
-          userId:    erfolg.melderId,
-          titel:     erfolg.titel,
-          status:    statusNeu,
-          erfolgId:  erfolgId,
-          kommentar: kommentar || null,
-        });
+          userId: erfolg.melderId, titel: erfolg.titel,
+          status: statusNeu, erfolgId, kommentar: kommentar||null,
+        }).catch(e => console.warn('[Push→Melder]', e.message));
       }
-    } catch(pushErr) {
-      console.warn('[Push] Benachrichtigung fehlgeschlagen:', pushErr.message);
-      // Kein Fehler für den Nutzer – Push ist optional
     }
+  } catch(pushErr) {
+    console.warn('[Push] Fehler:', pushErr.message);
   }
 
   navigateTo('erfolg-detail',{currentErfolgId:erfolgId});
@@ -5096,5 +5092,35 @@ async function renderPosterEntwuerfeInTab(erfolgId) {
     container.innerHTML = html;
   } catch(err) {
     container.innerHTML = `<p class="text-muted text-sm">Fehler: ${esc(err.message)}</p>`;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// PUSH AN REDAKTION: Neue Meldung eingereicht
+// ══════════════════════════════════════════════════════════════
+async function sendeRedaktionsPush(erfolgId, titel) {
+  try {
+    // Alle Redakteure/ÖA/Admin aus profiles laden
+    const { data: redakteure } = await Backend.client
+      .from('profiles')
+      .select('user_id')
+      .in('role', ['redaktion', 'oea', 'admin'])
+      .eq('active', true);
+
+    if (!redakteure?.length) return;
+
+    // Push an jeden Redakteur (außer dem Melder selbst)
+    for (const r of redakteure) {
+      if (r.user_id === Auth.id()) continue; // Kein Push an sich selbst
+      await Backend.invoke('notify-status-change', {
+        userId:   r.user_id,
+        titel:    titel,
+        status:   '📥 Neue Meldung eingereicht',
+        erfolgId: erfolgId,
+        kommentar: `Von: ${Auth.name()}`,
+      }).catch(e => console.warn('[Push→Redaktion]', e.message));
+    }
+  } catch(e) {
+    console.warn('[Push→Redaktion] Fehler:', e.message);
   }
 }

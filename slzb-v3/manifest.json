@@ -2,38 +2,92 @@
   "name": "SLZB-Erfolge",
   "short_name": "SLZB",
   "description": "Sportliche Erfolge des Schul- und Leistungssportzentrums Berlin erfassen und veröffentlichen",
-  "start_url": "./",
-  "scope": "./",
+  "start_url": "/slzb-erfolge/slzb-v3/",
+  "scope": "/slzb-erfolge/slzb-v3/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#003366",
   "theme_color": "#003366",
   "lang": "de",
-  "categories": ["education", "sports"],
+  "categories": [
+    "education",
+    "sports"
+  ],
   "icons": [
-    { "src": "icons/icon-72x72.png",   "sizes": "72x72",   "type": "image/png", "purpose": "any maskable" },
-    { "src": "icons/icon-96x96.png",   "sizes": "96x96",   "type": "image/png", "purpose": "any maskable" },
-    { "src": "icons/icon-128x128.png", "sizes": "128x128", "type": "image/png", "purpose": "any maskable" },
-    { "src": "icons/icon-144x144.png", "sizes": "144x144", "type": "image/png", "purpose": "any maskable" },
-    { "src": "icons/icon-152x152.png", "sizes": "152x152", "type": "image/png", "purpose": "any maskable" },
-    { "src": "icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "icons/icon-384x384.png", "sizes": "384x384", "type": "image/png", "purpose": "any maskable" },
-    { "src": "icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    {
+      "src": "/slzb-erfolge/slzb-v3/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/slzb-erfolge/slzb-v3/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/slzb-erfolge/slzb-v3/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/slzb-erfolge/slzb-v3/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/slzb-erfolge/slzb-v3/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/slzb-erfolge/slzb-v3/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/slzb-erfolge/slzb-v3/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/slzb-erfolge/slzb-v3/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ],
   "shortcuts": [
     {
       "name": "Neue Meldung",
       "short_name": "Neu",
       "description": "Neue Erfolgsmeldung erstellen",
-      "url": "./?action=neue-meldung",
-      "icons": [{ "src": "icons/icon-96x96.png", "sizes": "96x96" }]
+      "url": "/slzb-erfolge/slzb-v3/?action=neue-meldung",
+      "icons": [
+        {
+          "src": "/slzb-erfolge/slzb-v3/icons/icon-96x96.png",
+          "sizes": "96x96"
+        }
+      ]
     },
     {
       "name": "Kalender",
       "short_name": "Kalender",
       "description": "Veranstaltungskalender öffnen",
-      "url": "./?action=kalender",
-      "icons": [{ "src": "icons/icon-96x96.png", "sizes": "96x96" }]
+      "url": "/slzb-erfolge/slzb-v3/?action=kalender",
+      "icons": [
+        {
+          "src": "/slzb-erfolge/slzb-v3/icons/icon-96x96.png",
+          "sizes": "96x96"
+        }
+      ]
     }
-  ]
+  ],
+  "id": "/slzb-erfolge/slzb-v3/"
 }
