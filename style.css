@@ -624,7 +624,8 @@ tbody tr.clickable { cursor: pointer; }
   .page-header { margin-bottom: 14px; }
 
   /* Grids: immer 1 Spalte */
-  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .grid-4 { grid-template-columns: repeat(2, 1fr); } /* Dashboard: 2 Spalten */
   .form-row.cols-2, .form-row.cols-3, .form-row.cols-4 { grid-template-columns: 1fr; }
 
   /* Modals: von unten */
@@ -662,7 +663,8 @@ tbody tr.clickable { cursor: pointer; }
   /* Tabellen scrollbar */
   .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
-  /* Stat-Cards: 2 Spalten */
+  /* Stat-Cards und grid-4: 2 Spalten auf Mobile */
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
   .grid-4.stat-grid { grid-template-columns: repeat(2, 1fr); }
 
   /* Formulare */
