@@ -680,18 +680,18 @@ function zeichneA3DruckerrandFinal(ctx, W, H) {
   ctx.fillRect(W-RAND, 0, RAND, H);   // rechts
 }
 
-function zeichneA3Header(ctx, W, e) {
+function zeichneA3Header(ctx, W, e, transparent=false) {
   const HEADER_H = 120;
   const MARGIN = 60; // Sicherheitsabstand für Einspannrahmen (~15mm bei A3)
   const sportart = e.sportartText || SLZB_DB.getSportart(e.sportartId)?.name || '';
   const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'}) : '';
 
-  // Blauer Header-Balken
-  ctx.fillStyle = SLZB_COLORS.blue;
+  // Blauer Header-Balken (bei Vollbild halbtransparent)
+  ctx.fillStyle = transparent ? 'rgba(0,51,102,0.55)' : SLZB_COLORS.blue;
   ctx.fillRect(0, 0, W, HEADER_H);
 
   // Logo (korrekte Ratio) – mit Sicherheitsabstand und vertikalem Abstand
-  const TOP = 18; // Abstand von oben (Druckerrand + Luft)
+  const TOP = 28; // Abstand von oben (Druckerrand + Luft)
   let logoEndX = MARGIN;
   if (_slzbLogo) {
     const _lRatio = _slzbLogo.width / _slzbLogo.height;
@@ -1247,7 +1247,7 @@ async function zeichneA3Vollbild(canvasId, e) {
   }
 
   // Zentraler A3-Header (konsistent mit allen anderen Varianten)
-  const HEADER_H_V = zeichneA3Header(ctx, W, e);
+  const HEADER_H_V = zeichneA3Header(ctx, W, e, true); // transparent für Vollbild
 
   // Glasmorphismus-Karte unten (garantiert lesbarer Text)
   const CARD_PAD = 50;
