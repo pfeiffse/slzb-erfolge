@@ -655,6 +655,18 @@ function zeichneA3Wasserzeichen(ctx, W, H, sportartName, offsetX=0, offsetY=90) 
 
 
 // ── A3-Header: groß und gut lesbar für Aushang ───────────────────────────────
+
+// ── Druckerrand für A3-Ausdrucke ─────────────────────────────
+// Zeichnet einen weißen Rand (~7mm) damit Drucker nichts abschneidet
+function zeichneDruckerrand(ctx, W, H) {
+  const RAND = 28; // ~7mm bei A3 (1587px = 420mm → 1px ≈ 0.265mm)
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, W, RAND);        // oben
+  ctx.fillRect(0, H-RAND, W, RAND);   // unten
+  ctx.fillRect(0, 0, RAND, H);        // links
+  ctx.fillRect(W-RAND, 0, RAND, H);   // rechts
+}
+
 function zeichneA3Header(ctx, W, e) {
   const HEADER_H = 120;
   const MARGIN = 60; // Sicherheitsabstand für Einspannrahmen (~15mm bei A3)
@@ -772,6 +784,7 @@ async function zeichneA3Landscape(canvas, e, bild, meta) {
     ctx.textAlign='center'; ctx.fillText(_datumL2, W/2, y);
   }
   zeichneA3Footer(ctx, W, H, meta);
+  zeichneDruckerrand(ctx, W, H);
 }
 
 // A3 Layout B: Hochformat-Bild → Bild links, Text rechts
@@ -858,6 +871,7 @@ async function zeichneA3Portrait(canvas, e, bild, meta) {
   }
 
   zeichneA3Footer(ctx, W, H, meta);
+  zeichneDruckerrand(ctx, W, H);
 }
 
 // A3 Layout C: Kein Bild → Volltext
@@ -928,6 +942,7 @@ async function zeichneA3KeinBild(canvas, e) {
     ctx.textAlign='center'; ctx.fillText(_datumK, W/2, _yDK);
   }
   zeichneA3Footer(ctx, W, H, null);
+  zeichneDruckerrand(ctx, W, H);
 }
 
 function zeichneA3Footer(ctx, W, H, meta) {
@@ -996,6 +1011,7 @@ async function zeichneSocialBeitragLandscape(ctx, e, bild, meta, W, H) {
     ctx.fillText('📸 Folge uns auf Instagram: @slzberlin', W-Math.round(W*0.03), H-Math.round(H*0.025));
   }
   zeichneSlzbFooterNeu(ctx, W, H);
+  zeichneDruckerrand(ctx, W, H);
 }
 
 // Social Beitrag: Hochformat-Bild (Vollhintergrund)
@@ -1181,6 +1197,7 @@ async function zeichneA3Split(canvasId, e) {
     ctx.fillText('📸 Folge uns auf Instagram: @slzberlin', W-Math.round(W*0.03), H-Math.round(H*0.025));
   }
   zeichneSlzbFooterNeu(ctx, W, H);
+  zeichneDruckerrand(ctx, W, H);
 }
 
 // ── A3 VARIANTE 3: Vollbild mit Overlay ──────────────────────
@@ -1317,6 +1334,7 @@ async function zeichneA3Vollbild(canvasId, e) {
   ctx.fillStyle='#fff'; ctx.font='bold 14px Montserrat, Arial, sans-serif';
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText('Schul- und Leistungssportzentrum Berlin  ·  #SLZBerlin', W/2, H-FOOTER_H_V/2);
+  zeichneDruckerrand(ctx, W, H);
 }
 
 // ── MULTI-BILD LAYOUTS ────────────────────────────────────────
