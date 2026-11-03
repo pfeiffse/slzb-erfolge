@@ -601,20 +601,143 @@ tbody tr.clickable { cursor: pointer; }
 .import-row-warn { background: #FFFBEB; }
 
 /* ── Responsive ────────────────────────────────────────── */
+/* ── Tablet (≤900px) ─────────────────────────────────────── */
 @media (max-width: 900px) {
-  .sidebar { transform: translateX(-100%); }
-  .sidebar.open { transform: translateX(0); }
+  .sidebar { transform: translateX(-100%); transition: transform .25s ease; }
+  .sidebar.open { transform: translateX(0); box-shadow: 4px 0 24px rgba(0,0,0,.3); }
   .main-content { margin-left: 0; }
   .grid-4 { grid-template-columns: repeat(2, 1fr); }
   .grid-3 { grid-template-columns: repeat(2, 1fr); }
   .form-row.cols-3, .form-row.cols-4 { grid-template-columns: 1fr 1fr; }
+  /* Hamburger-Button einblenden */
+  .hamburger-btn { display: flex !important; }
+  /* Sidebar-Overlay */
+  .sidebar-overlay { display: block; }
+  .sidebar-overlay.active { opacity: 1; pointer-events: all; }
 }
+
+/* ── Smartphone (≤600px) ─────────────────────────────────── */
 @media (max-width: 600px) {
-  .page { padding: 16px; }
+  /* Grundlayout */
+  .page { padding: 12px; }
+  .page-header h1 { font-size: 1.15rem; }
+  .page-header { margin-bottom: 14px; }
+
+  /* Grids: immer 1 Spalte */
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
   .form-row.cols-2, .form-row.cols-3, .form-row.cols-4 { grid-template-columns: 1fr; }
-  .modal { max-width: 100%; margin: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+
+  /* Modals: von unten */
+  .modal {
+    max-width: 100%;
+    width: 100%;
+    margin: 0;
+    border-radius: 16px 16px 0 0;
+    max-height: 92vh;
+    overflow-y: auto;
+  }
   .modal-overlay { align-items: flex-end; padding: 0; }
+  .modal-xl { max-width: 100%; }
+
+  /* Topbar kompakter */
+  .topbar { padding: 0 12px; height: 52px; }
+  .topbar-subtitle { display: none; }
+  .topbar-title { font-size: .95rem; }
+
+  /* Buttons: volle Breite auf Mobile */
+  .card-footer { flex-wrap: wrap; gap: 8px; }
+  .card-footer .btn { flex: 1; min-width: 120px; }
+
+  /* Tabs scrollbar */
+  .tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab-btn { white-space: nowrap; flex-shrink: 0; }
+
+  /* Tabellen scrollbar */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Stat-Cards: 2 Spalten */
+  .grid-4.stat-grid { grid-template-columns: repeat(2, 1fr); }
+
+  /* Formulare */
+  input, select, textarea {
+    font-size: 16px !important; /* Verhindert iOS-Zoom */
+  }
+
+  /* Karten-Abstände */
+  .card-body { padding: 14px; }
+  .card-header { padding: 12px 14px; }
+
+  /* Nav-Items größer für Touch */
+  .nav-item { padding: 12px 20px; font-size: .9rem; }
+
+  /* Poster-Editor kompakter */
+  #poster-editor { padding: 10px; }
+  #poster-editor .form-group label { font-size: .68rem; }
+
+  /* Bottom-Padding für PWA (Home-Indicator) */
+  .main-content { padding-bottom: env(safe-area-inset-bottom, 0px); }
+}
+
+/* ── Sehr kleine Geräte (≤380px) ────────────────────────── */
+@media (max-width: 380px) {
+  .page { padding: 10px; }
+  .stat-card { padding: 12px; }
+  .stat-value { font-size: 1.4rem; }
+  .btn { padding: 8px 12px; font-size: .8rem; }
+}
+
+/* ── Hamburger-Button (standardmäßig versteckt) ─────────── */
+.hamburger-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px; height: 36px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 8px;
+  color: var(--slzb-primary);
+  flex-shrink: 0;
+}
+.hamburger-btn:hover { background: var(--slzb-bg); }
+.hamburger-btn span {
+  display: block;
+  width: 20px; height: 2px;
+  background: currentColor;
+  border-radius: 2px;
+  transition: all .2s;
+  position: relative;
+}
+.hamburger-btn span::before,
+.hamburger-btn span::after {
+  content: '';
+  position: absolute;
+  width: 20px; height: 2px;
+  background: currentColor;
+  border-radius: 2px;
+  transition: all .2s;
+}
+.hamburger-btn span::before { top: -6px; }
+.hamburger-btn span::after  { top: 6px; }
+
+/* ── Sidebar-Overlay ─────────────────────────────────────── */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.5);
+  z-index: 99;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s;
 }
 
 /* ── Utilities ─────────────────────────────────────────── */

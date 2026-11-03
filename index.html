@@ -105,10 +105,11 @@
 </div>
 <!-- Haupt-App -->
 <div id="app" style="display:none">
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
 <aside class="sidebar" id="sidebar"></aside>
 <div class="main-content">
 <header class="topbar">
-<button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+<button class="mobile-menu-btn" onclick="toggleSidebar()" style="display:none;align-items:center;justify-content:center;width:40px;height:40px;background:none;border:none;cursor:pointer;font-size:1.5rem;color:var(--slzb-primary);border-radius:8px;padding:0;flex-shrink:0" id="hamburger-btn">☰</button>
 <div style="flex:1">
 <div class="topbar-title">SLZB-Erfolge</div>
 <div class="topbar-subtitle" id="topbar-subtitle">Schul- und Leistungssportzentrum Berlin</div>
@@ -177,7 +178,15 @@ function showApp() {
   document.getElementById('app').style.display = 'flex';
 }
 function toggleSidebar() {
-  document.getElementById('sidebar').classList.toggle('open');
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  const isOpen = sidebar.classList.toggle('open');
+  if (overlay) {
+    overlay.classList.toggle('active', isOpen);
+  }
+  // Hamburger-Button einblenden auf Mobile
+  const btn = document.getElementById('hamburger-btn');
+  if (btn && window.innerWidth <= 900) btn.style.display = 'flex';
 }
 
 // ── Login ────────────────────────────────────────────────────
@@ -252,6 +261,34 @@ async function startApp() {
 }
 
 document.addEventListener('DOMContentLoaded', startApp);
+
+// Mobile: Hamburger-Button einblenden
+function initMobile() {
+  const btn = document.getElementById('hamburger-btn');
+  if (btn && window.innerWidth <= 900) btn.style.display = 'flex';
+  // Sidebar bei Resize schließen
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 900) {
+      document.getElementById('sidebar')?.classList.remove('open');
+      document.getElementById('sidebar-overlay')?.classList.remove('active');
+    } else {
+      if (btn) btn.style.display = 'flex';
+    }
+  });
+  // Swipe-Geste: von links nach rechts öffnet Sidebar
+  let touchStartX = 0;
+  document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const sidebar = document.getElementById('sidebar');
+    if (dx > 60 && touchStartX < 30 && !sidebar?.classList.contains('open')) {
+      toggleSidebar(); // Swipe von links öffnet Sidebar
+    } else if (dx < -60 && sidebar?.classList.contains('open')) {
+      toggleSidebar(); // Swipe nach links schließt Sidebar
+    }
+  }, { passive: true });
+}
+document.addEventListener('DOMContentLoaded', initMobile);
 </script>
 </body>
 </html>
