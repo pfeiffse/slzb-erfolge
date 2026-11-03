@@ -690,37 +690,38 @@ function zeichneA3Header(ctx, W, e) {
   ctx.fillStyle = SLZB_COLORS.blue;
   ctx.fillRect(0, 0, W, HEADER_H);
 
-  // Logo (korrekte Ratio) – mit Sicherheitsabstand
+  // Logo (korrekte Ratio) – mit Sicherheitsabstand und vertikalem Abstand
+  const TOP = 18; // Abstand von oben (Druckerrand + Luft)
   let logoEndX = MARGIN;
   if (_slzbLogo) {
     const _lRatio = _slzbLogo.width / _slzbLogo.height;
-    const _lH = 90; const _lW = Math.round(_lH * _lRatio);
-    ctx.drawImage(_slzbLogo, MARGIN, 15, _lW, _lH);
+    const _lH = 88; const _lW = Math.round(_lH * _lRatio);
+    ctx.drawImage(_slzbLogo, MARGIN, TOP, _lW, _lH);
     logoEndX = MARGIN + _lW + 20;
   }
 
   // Roter Trennstrich
   ctx.fillStyle = '#E2001A';
-  ctx.fillRect(logoEndX, 20, 4, 80);
+  ctx.fillRect(logoEndX, TOP + 4, 4, 80);
   logoEndX += 16;
 
   // Schulname – groß und fett
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 32px Montserrat, Arial, sans-serif';
   ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-  ctx.fillText('Schul- und Leistungssportzentrum Berlin', logoEndX, 18);
+  ctx.fillText('Schul- und Leistungssportzentrum Berlin', logoEndX, TOP + 4);
 
   // Sportart + Datum – zweite Zeile
   ctx.font = 'bold 22px Montserrat, Arial, sans-serif';
   ctx.fillStyle = '#E2001A';
   const zeile2 = [sportart.toUpperCase(), datum].filter(Boolean).join('  ·  ');
-  ctx.fillText(zeile2, logoEndX, 60);
+  ctx.fillText(zeile2, logoEndX, TOP + 50);
 
   // Hashtag rechts – mit Sicherheitsabstand
   ctx.font = 'bold italic 26px Montserrat, Arial, sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.85)';
   ctx.textAlign = 'right';
-  ctx.fillText('#SLZBerlin', W - MARGIN, 45);
+  ctx.fillText('#SLZBerlin', W - MARGIN, TOP + 30);
 
   return HEADER_H;
 }
