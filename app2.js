@@ -5560,11 +5560,12 @@ async function zeigeNachwuchsSiegerPosterFuerVoting(kandidatId) {
 async function zeigeVotingKandidatenAuswahl() {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
+  overlay.style.zIndex = '10000'; // Über dem Erstellen-Modal
   const modal = document.createElement('div');
   modal.className = 'modal modal-xl';
   modal.innerHTML = '<div class="modal-body" style="text-align:center;padding:40px"><div class="spinner"></div><p>Lade Meldungen...</p></div>';
   overlay.appendChild(modal);
-  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  // Kein Schließen bei Klick auf Overlay (verhindert versehentliches Schließen)
   document.body.appendChild(overlay);
 
   try {
