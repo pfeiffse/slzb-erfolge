@@ -1593,9 +1593,10 @@ async function uploadPosterBild(dateiInput, kategorie='poster') {
     .from('achievement-media')
     .upload(pfad, datei, { cacheControl:'3600', upsert:false, contentType:datei.type });
   if (uploadError) { toast('Upload-Fehler: '+uploadError.message,'danger'); return null; }
-  const { data: signed } = await Backend.client.storage
-    .from('achievement-media').createSignedUrl(uploadData.path||pfad, 3600);
-  return signed?.signedUrl || null;
+  // Public URL (Bucket ist öffentlich)
+  const { data: pubData } = Backend.client.storage
+    .from('achievement-media').getPublicUrl(uploadData.path||pfad);
+  return pubData?.publicUrl || null;
 }
 
 // Hilfsfunktion: Datei-Input mit Vorschau-Thumbnail
@@ -5319,16 +5320,11 @@ async function speichereVoting(status) {
           } else { console.warn('Bild-Upload:', upErr.message); }
         } catch(imgErr) { console.warn('Bild-Upload:', imgErr.message); }
       } else if (bildInput?.dataset?.storagePath) {
-        // Bild aus Meldung: storage_path direkt nutzen → Signed URL (30 Tage)
-        try {
-          const sp = bildInput.dataset.storagePath;
-          const bucket = bildInput.dataset.storageBucket || 'achievement-media';
-          const { data: signedData } = await Backend.client.storage
-            .from(bucket).createSignedUrl(sp, 30 * 24 * 3600);
-          bildUrl = signedData?.signedUrl || null;
-        } catch(e) {
-          bildUrl = bildInput.dataset.vorhandeneUrl || null;
-        }
+        // Bild aus Meldung: Public URL (Bucket ist öffentlich)
+        const sp = bildInput.dataset.storagePath;
+        const bucket = bildInput.dataset.storageBucket || 'achievement-media';
+        const { data: pubData } = Backend.client.storage.from(bucket).getPublicUrl(sp);
+        bildUrl = pubData?.publicUrl || null;
       } else if (bildInput?.dataset?.vorhandeneUrl) {
         bildUrl = bildInput.dataset.vorhandeneUrl;
       }
@@ -5640,10 +5636,10 @@ async function zeigeVotingKandidatenAuswahl() {
     const storagePathMap = {};
     for (const m of (medien||[])) {
       if (!medienMap[m.achievement_id] && m.storage_path) {
-        // Signed URL für privaten Bucket (1 Stunde gültig)
-        const { data: signedData } = await Backend.client.storage
-          .from('achievement-media').createSignedUrl(m.storage_path, 3600);
-        medienMap[m.achievement_id] = signedData?.signedUrl || null;
+        // Public URL (Bucket ist jetzt öffentlich)
+        const { data: pubData } = Backend.client.storage
+          .from('achievement-media').getPublicUrl(m.storage_path);
+        medienMap[m.achievement_id] = pubData?.publicUrl || null;
         storagePathMap[m.achievement_id] = m.storage_path;
       }
     }

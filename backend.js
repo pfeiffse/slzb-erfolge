@@ -248,10 +248,10 @@ const DB = {
     const bilder = await Promise.all(data.map(async (b) => {
       let signedUrl = null;
       try {
-        const { data: urlData } = await Backend.client.storage
+        const { data: urlData } = Backend.client.storage
           .from('achievement-media')
-          .createSignedUrl(b.storage_path, 3600);
-        signedUrl = urlData?.signedUrl || null;
+          .getPublicUrl(b.storage_path);
+        signedUrl = urlData?.publicUrl || null;
       } catch(e) { console.warn('Signed URL:', e.message); }
       return {
         id:           b.id,
