@@ -216,21 +216,22 @@
 <div class="footer">SLZB Berlin · Abstimmung ist anonym · Einmal pro Gerät</div>
 </div>
 <!-- Supabase -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/db.min.js"></script>
 <script src="config.js"></script>
 <script>
 // ── Supabase Init ─────────────────────────────────────────────
 const cfg = window.SLZB_CONFIG || {};
-// Supabase kann als window.supabase oder window.supabase.createClient verfügbar sein
-const _sb = window.supabase || window.Supabase;
-const supabase = (_sb?.createClient || _sb?.default?.createClient)(cfg.supabaseUrl, cfg.supabaseAnonKey);
+// Supabase Client initialisieren
+const _sbLib = window.supabase || window.Supabase;
+const _sbCreate = _sbLib?.createClient || _sbLib?.default?.createClient;
+const db = _sbCreate(cfg.supabaseUrl, cfg.supabaseAnonKey);
 
 // ── Realtime-Kanal ────────────────────────────────────────────
 let _realtimeChannel = null;
 let _aktuelleKampagneId = null;
 
 function starteRealtime(kampagneId) {
-  if (_realtimeChannel) supabase.removeChannel(_realtimeChannel);
+  if (_realtimeChannel) db.removeChannel(_realtimeChannel);
   _aktuelleKampagneId = kampagneId;
   _realtimeChannel = supabase
     .channel('voting-live-' + kampagneId)
@@ -244,7 +245,7 @@ function starteRealtime(kampagneId) {
 
 // Nur Stimmen neu laden und Balken animieren (ohne ganzes HTML neu zu rendern)
 async function aktualisiereErgebnis(kampagneId) {
-  const { data: alleStimmen } = await supabase.from('voting_votes')
+  const { data: alleStimmen } = await db.from('voting_votes')
     .select('candidate_id').eq('campaign_id', kampagneId);
   const stimmenMap = {};
   (alleStimmen||[]).forEach(s => { stimmenMap[s.candidate_id] = (stimmenMap[s.candidate_id]||0) + 1; });
@@ -310,11 +311,11 @@ async function ladeAbstimmung() {
     // Kampagne laden (mit ID oder aktive Kampagne)
     let kampagne;
     if (kampagneId) {
-      const { data } = await supabase.from('voting_campaigns').select('*').eq('id', kampagneId).single();
+      const { data } = await db.from('voting_campaigns').select('*').eq('id', kampagneId).single();
       kampagne = data;
     } else {
       // Aktive Kampagne suchen
-      const { data } = await supabase.from('voting_campaigns')
+      const { data } = await db.from('voting_campaigns')
         .select('*').eq('status', 'aktiv')
         .order('erstellt_am', { ascending: false }).limit(1).single();
       kampagne = data;
@@ -333,20 +334,20 @@ async function ladeAbstimmung() {
 
     // Auto-Ende: Wenn end_at überschritten, Status auf beendet setzen
     if (kampagne.end_at && new Date(kampagne.end_at) < new Date() && kampagne.status === 'aktiv') {
-      await supabase.from('voting_campaigns').update({ status: 'beendet' }).eq('id', kampagneId);
+      await db.from('voting_campaigns').update({ status: 'beendet' }).eq('id', kampagneId);
       kampagne.status = 'beendet';
     }
 
     // Kandidaten laden
-    const { data: kandidaten } = await supabase.from('voting_candidates')
+    const { data: kandidaten } = await db.from('voting_candidates')
       .select('*').eq('campaign_id', kampagneId).order('reihenfolge');
 
     // Meine Stimme prüfen
-    const { data: meineStimme } = await supabase.from('voting_votes')
+    const { data: meineStimme } = await db.from('voting_votes')
       .select('candidate_id').eq('campaign_id', kampagneId).eq('voter_token', voterToken).maybeSingle();
 
     // Stimmen zählen
-    const { data: alleStimmen } = await supabase.from('voting_votes')
+    const { data: alleStimmen } = await db.from('voting_votes')
       .select('candidate_id').eq('campaign_id', kampagneId);
 
     const stimmenMap = {};
@@ -444,7 +445,7 @@ async function ladeAbstimmung() {
 }
 
 // ── Abstimmen ─────────────────────────────────────────────────
-async function abstimmen(kandidatId, kampagneId) {
+window.abstimmen = async function abstimmen(kandidatId, kampagneId) {
   const voterToken = getVoterToken();
 
   // Karte visuell markieren
@@ -456,7 +457,7 @@ async function abstimmen(kandidatId, kampagneId) {
   document.querySelectorAll('.vote-btn').forEach(b => b.disabled = true);
 
   try {
-    const { error } = await supabase.from('voting_votes').insert([{
+    const { error } = await db.from('voting_votes').insert([{
       campaign_id:  kampagneId,
       candidate_id: kandidatId,
       voter_token:  voterToken,
@@ -499,7 +500,7 @@ function zeigeMeldung(text, typ) {
 
 
 // ── Tab-Navigation ────────────────────────────────────────────
-function zeigeTab(tab) {
+window.zeigeTab = function zeigeTab(tab) {
   const appDiv    = document.getElementById('app');
   const archivDiv = document.getElementById('archiv-app');
   const btnA = document.getElementById('tab-aktuell');
@@ -514,7 +515,7 @@ function zeigeTab(tab) {
     if (btnA) { btnA.style.background='rgba(255,255,255,0.05)'; btnA.style.borderColor='rgba(255,255,255,0.15)'; btnA.style.color='rgba(255,255,255,0.6)'; }
     ladeArchiv();
   }
-}
+};
 
 // ── Archiv-Ansicht ────────────────────────────────────────────
 async function ladeArchiv() {
@@ -533,9 +534,9 @@ async function ladeArchiv() {
     let html = '<h2 style="text-align:center;margin-bottom:20px;font-size:1.3rem">📚 Vergangene Abstimmungen</h2>';
 
     for (const k of kampagnen) {
-      const { data: kandidaten } = await supabase.from('voting_candidates')
+      const { data: kandidaten } = await db.from('voting_candidates')
         .select('*').eq('campaign_id', k.id).order('reihenfolge');
-      const { data: stimmen } = await supabase.from('voting_votes')
+      const { data: stimmen } = await db.from('voting_votes')
         .select('candidate_id').eq('campaign_id', k.id);
 
       const sm = {};
