@@ -5318,34 +5318,23 @@ async function speichereVoting(status) {
             bildUrl = urlData?.publicUrl || null;
           } else { console.warn('Bild-Upload:', upErr.message); }
         } catch(imgErr) { console.warn('Bild-Upload:', imgErr.message); }
-      } else if (bildInput?.dataset?.vorhandeneUrl) {
-        // Bild aus Meldung: in öffentlichen Bucket kopieren
+      } else if (bildInput?.dataset?.storagePath) {
+        // Bild aus Meldung: storage_path direkt nutzen → Signed URL (30 Tage)
         try {
-          const srcUrl = bildInput.dataset.vorhandeneUrl;
-          const resp = await fetch(srcUrl, {
-            headers: { 'Authorization': `Bearer ${(await Backend.session())?.access_token||''}`,
-                       'apikey': window.SLZB_CONFIG?.supabaseAnonKey||'' }
-          });
-          if (resp.ok) {
-            const blob = await resp.blob();
-            const ext = blob.type.includes('png') ? 'png' : 'jpg';
-            const pfad = `voting/${kampagne.id}_${i}_${Date.now()}.${ext}`;
-            const { error: upErr } = await Backend.client.storage
-              .from('poster-exports')
-              .upload(pfad, blob, { contentType: blob.type, upsert: true });
-            if (!upErr) {
-              const { data: urlData } = Backend.client.storage.from('poster-exports').getPublicUrl(pfad);
-              bildUrl = urlData?.publicUrl || null;
-            }
-          } else {
-            // Fallback: URL direkt verwenden
-            bildUrl = srcUrl;
-          }
+          const sp = bildInput.dataset.storagePath;
+          const bucket = bildInput.dataset.storageBucket || 'achievement-media';
+          const { data: signedData } = await Backend.client.storage
+            .from(bucket).createSignedUrl(sp, 30 * 24 * 3600);
+          bildUrl = signedData?.signedUrl || null;
         } catch(e) {
-          // Fallback: URL direkt verwenden
-          bildUrl = bildInput.dataset.vorhandeneUrl;
+          bildUrl = bildInput.dataset.vorhandeneUrl || null;
         }
+      } else if (bildInput?.dataset?.vorhandeneUrl) {
+        bildUrl = bildInput.dataset.vorhandeneUrl;
       }
+      // storage_path für spätere Signed URL Generierung
+      const storagePath = bildInput?.dataset?.storagePath || null;
+      const storageBucket = bildInput?.dataset?.storageBucket || 'achievement-media';
       await Backend.client.from('voting_candidates').insert([{
         campaign_id: kampagne.id,
         name,
@@ -5353,6 +5342,8 @@ async function speichereVoting(status) {
         erfolg:   document.getElementById(`v-erfolg-${i}`)?.value?.trim() || '',
         klasse:   document.getElementById(`v-klasse-${i}`)?.value?.trim() || null,
         bild_url: bildUrl,
+        storage_path: storagePath,
+        storage_bucket: storageBucket,
         reihenfolge: i,
       }]);
     }
@@ -5646,12 +5637,14 @@ async function zeigeVotingKandidatenAuswahl() {
       .limit(ids.length) : { data: [] };
 
     const medienMap = {};
+    const storagePathMap = {};
     for (const m of (medien||[])) {
       if (!medienMap[m.achievement_id] && m.storage_path) {
         // Signed URL für privaten Bucket (1 Stunde gültig)
         const { data: signedData } = await Backend.client.storage
           .from('achievement-media').createSignedUrl(m.storage_path, 3600);
         medienMap[m.achievement_id] = signedData?.signedUrl || null;
+        storagePathMap[m.achievement_id] = m.storage_path;
       }
     }
 
@@ -5712,7 +5705,7 @@ async function zeigeVotingKandidatenAuswahl() {
   }
 }
 
-function toggleVotingKandidat(id, name, sport, titel, erfolg, bildUrl) {
+function toggleVotingKandidat(id, name, sport, titel, erfolg, bildUrl, storagePath, storageBucket) {
   const auswahl = window._votingAuswahl || [];
   const idx = auswahl.findIndex(k => k.id === id);
   const card = document.getElementById(`vk-${id}`);
@@ -5725,7 +5718,7 @@ function toggleVotingKandidat(id, name, sport, titel, erfolg, bildUrl) {
     if (check) { check.textContent = ''; check.style.background = ''; check.style.borderColor = 'var(--slzb-border)'; }
   } else {
     if (auswahl.length >= 3) { toast('Maximal 3 Kandidaten auswählbar', 'warning'); return; }
-    auswahl.push({ id, name, sport, titel, erfolg, bildUrl });
+    auswahl.push({ id, name, sport, titel, erfolg, bildUrl, storagePath, storageBucket });
     if (card) card.style.borderColor = 'var(--slzb-primary)';
     if (check) { check.textContent = '✓'; check.style.background = 'var(--slzb-primary)'; check.style.color = '#fff'; check.style.borderColor = 'var(--slzb-primary)'; }
   }
@@ -5754,6 +5747,11 @@ function uebernehmeVotingKandidaten() {
     // Bild-URL als data-Attribut speichern (da input[type=file] keine URL akzeptiert)
     if (bildEl && k.bildUrl) {
       bildEl.dataset.vorhandeneUrl = k.bildUrl;
+      // storage_path für direkte Signed URL Generierung
+      if (k.storagePath) {
+        bildEl.dataset.storagePath = k.storagePath;
+        bildEl.dataset.storageBucket = k.storageBucket || 'achievement-media';
+      }
       // Vorschau anzeigen
       const preview = document.getElementById(`v-bild-preview-${nr}`);
       const img = document.getElementById(`v-bild-img-${nr}`);

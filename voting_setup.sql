@@ -81,3 +81,8 @@ CREATE POLICY "voting_votes_select" ON voting_votes FOR SELECT TO anon, authenti
 
 -- Kontrolle
 SELECT tablename FROM pg_tables WHERE tablename LIKE 'voting_%' ORDER BY tablename;
+
+-- Spalte für storage_path hinzufügen (für Signed URL Generierung)
+ALTER TABLE voting_candidates
+  ADD COLUMN IF NOT EXISTS storage_path TEXT,
+  ADD COLUMN IF NOT EXISTS storage_bucket TEXT DEFAULT 'achievement-media';
