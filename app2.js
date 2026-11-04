@@ -5124,3 +5124,388 @@ async function sendeRedaktionsPush(erfolgId, titel) {
     console.warn('[Push→Redaktion] Fehler:', e.message);
   }
 }
+
+// ══════════════════════════════════════════════════════════════
+// SPORTLER/IN DES MONATS – ABSTIMMUNG
+// ══════════════════════════════════════════════════════════════
+
+// ── Abstimmungs-Verwaltung (Admin/Redaktion) ──────────────────
+async function renderVotingVerwaltung() {
+  const { data: kampagnen } = await Backend.client
+    .from('voting_campaigns')
+    .select('*')
+    .order('erstellt_am', { ascending: false });
+
+  const statusBadgeV = (s) => ({
+    entwurf: '<span class="badge badge-entwurf">Entwurf</span>',
+    aktiv:   '<span class="badge badge-freigegeben">🗳️ Aktiv</span>',
+    beendet: '<span class="badge badge-archiviert">Beendet</span>',
+  }[s] || s);
+
+  return `<div class="page">
+    <div class="page-header flex items-center gap-3">
+      <h1>🏆 Sportler/in des Monats</h1>
+      ${Auth.canDo('bearbeiten') ? `<button class="btn btn-primary btn-sm" onclick="zeigeVotingErstellen()">+ Neue Abstimmung</button>` : ''}
+    </div>
+
+    ${!kampagnen?.length ? `<div class="alert alert-info"><span class="alert-icon">ℹ️</span>
+      <span>Noch keine Abstimmungen. Erstelle die erste!</span></div>` :
+    `<div class="grid grid-2 mb-4">
+      ${kampagnen.map(k => `<div class="card">
+        <div class="card-body">
+          <div class="flex items-center gap-2 mb-2">
+            ${statusBadgeV(k.status)}
+            <strong>${esc(k.titel)}</strong>
+          </div>
+          <div class="text-sm text-muted mb-3">
+            ${k.start_at ? `${fmtDT(k.start_at)} – ${fmtDT(k.end_at)}` : 'Kein Zeitraum'}
+          </div>
+          <div class="flex gap-2" style="flex-wrap:wrap">
+            <button class="btn btn-outline btn-sm" onclick="zeigeVotingAbstimmung('${k.id}')">🗳️ Abstimmung öffnen</button>
+            ${Auth.canDo('bearbeiten') ? `
+              <button class="btn btn-ghost btn-sm" onclick="zeigeVotingErgebnis('${k.id}')">📊 Ergebnis</button>
+              <button class="btn btn-ghost btn-sm" onclick="toggleVotingStatus('${k.id}','${k.status}')">
+                ${k.status==='aktiv'?'⏹️ Beenden':'▶️ Aktivieren'}
+              </button>` : ''}
+          </div>
+        </div>
+      </div>`).join('')}
+    </div>`}
+  </div>`;
+}
+
+// ── Neue Abstimmung erstellen ─────────────────────────────────
+function zeigeVotingErstellen() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal modal-xl';
+  const heute = new Date().toISOString().slice(0,16);
+  const inEinerWoche = new Date(Date.now()+7*24*60*60*1000).toISOString().slice(0,16);
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>🏆 Neue Abstimmung erstellen</h3>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group mb-3">
+        <label>Titel <span class="required">*</span></label>
+        <input type="text" id="v-titel" value="Sportler/in des Monats ${new Date().toLocaleDateString('de-DE',{month:'long',year:'numeric'})}"
+          style="width:100%">
+      </div>
+      <div class="form-row cols-2 mb-3">
+        <div class="form-group">
+          <label>Start</label>
+          <input type="datetime-local" id="v-start" value="${heute}" style="width:100%">
+        </div>
+        <div class="form-group">
+          <label>Ende</label>
+          <input type="datetime-local" id="v-end" value="${inEinerWoche}" style="width:100%">
+        </div>
+      </div>
+      <div class="form-group mb-4">
+        <label>Beschreibung (optional)</label>
+        <textarea id="v-beschreibung" rows="2" style="width:100%" placeholder="z.B. Wähle deinen Favoriten für November 2026"></textarea>
+      </div>
+
+      <h3 style="margin-bottom:12px">👤 Kandidaten (max. 3)</h3>
+      ${[1,2,3].map(i => `
+        <div class="card mb-3" style="border:2px solid var(--slzb-border)">
+          <div class="card-body">
+            <div style="font-weight:700;margin-bottom:10px;color:var(--slzb-primary)">Kandidat ${i}</div>
+            <div class="form-row cols-2">
+              <div class="form-group">
+                <label>Name ${i===1?'<span class="required">*</span>':''}</label>
+                <input type="text" id="v-name-${i}" placeholder="z.B. Max Mustermann" style="width:100%">
+              </div>
+              <div class="form-group">
+                <label>Sportart</label>
+                <input type="text" id="v-sport-${i}" placeholder="z.B. Judo" style="width:100%">
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label>Erfolg <span class="text-muted text-xs">(kurz, max. 100 Zeichen)</span></label>
+                <input type="text" id="v-erfolg-${i}" placeholder="z.B. 🥇 1. Platz Berliner Meisterschaft" style="width:100%" maxlength="100">
+              </div>
+              <div class="form-group">
+                <label>Klasse</label>
+                <input type="text" id="v-klasse-${i}" placeholder="z.B. 10a" style="width:100%">
+              </div>
+              <div class="form-group">
+                <label>Foto-URL (optional)</label>
+                <input type="url" id="v-bild-${i}" placeholder="https://..." style="width:100%">
+              </div>
+            </div>
+          </div>
+        </div>`).join('')}
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
+      <button class="btn btn-outline" onclick="speichereVoting('entwurf')">💾 Als Entwurf</button>
+      <button class="btn btn-primary" onclick="speichereVoting('aktiv')">▶️ Sofort aktivieren</button>
+    </div>`;
+
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+async function speichereVoting(status) {
+  const titel = document.getElementById('v-titel')?.value?.trim();
+  const name1 = document.getElementById('v-name-1')?.value?.trim();
+  if (!titel || !name1) { toast('Titel und mindestens Kandidat 1 sind Pflicht', 'warning'); return; }
+
+  try {
+    // Kampagne anlegen
+    const { data: kampagne, error: kErr } = await Backend.client
+      .from('voting_campaigns')
+      .insert([{
+        titel,
+        monat: new Date().toISOString().slice(0,7),
+        beschreibung: document.getElementById('v-beschreibung')?.value?.trim() || null,
+        status,
+        start_at: document.getElementById('v-start')?.value || null,
+        end_at:   document.getElementById('v-end')?.value   || null,
+        erstellt_von: Auth.id(),
+      }])
+      .select('id').single();
+    if (kErr) throw new Error(kErr.message);
+
+    // Kandidaten anlegen
+    for (let i = 1; i <= 3; i++) {
+      const name = document.getElementById(`v-name-${i}`)?.value?.trim();
+      if (!name) continue;
+      await Backend.client.from('voting_candidates').insert([{
+        campaign_id: kampagne.id,
+        name,
+        sportart: document.getElementById(`v-sport-${i}`)?.value?.trim() || null,
+        erfolg:   document.getElementById(`v-erfolg-${i}`)?.value?.trim() || '',
+        klasse:   document.getElementById(`v-klasse-${i}`)?.value?.trim() || null,
+        bild_url: document.getElementById(`v-bild-${i}`)?.value?.trim()  || null,
+        reihenfolge: i,
+      }]);
+    }
+
+    document.querySelector('.modal-overlay')?.remove();
+    toast(`✅ Abstimmung ${status==='aktiv'?'gestartet':'gespeichert'}!`, 'success');
+    navigateTo('voting');
+  } catch(e) {
+    toast('Fehler: ' + e.message, 'danger');
+  }
+}
+
+// ── Abstimmungsseite (für SuS) ────────────────────────────────
+async function zeigeVotingAbstimmung(kampagneId) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal modal-xl';
+  modal.innerHTML = '<div class="modal-body" style="text-align:center;padding:40px"><div class="spinner"></div><p>Lade Abstimmung...</p></div>';
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+
+  try {
+    const { data: k } = await Backend.client.from('voting_campaigns').select('*').eq('id', kampagneId).single();
+    const { data: kandidaten } = await Backend.client.from('voting_candidates')
+      .select('*').eq('campaign_id', kampagneId).order('reihenfolge');
+    const { count: gesamtStimmen } = await Backend.client.from('voting_votes')
+      .select('*', { count: 'exact', head: true }).eq('campaign_id', kampagneId);
+
+    // Prüfe ob bereits abgestimmt
+    const voterToken = getVoterToken();
+    const { data: meineStimme } = await Backend.client.from('voting_votes')
+      .select('candidate_id').eq('campaign_id', kampagneId).eq('voter_token', voterToken).maybeSingle();
+
+    const istBeendet = k.status === 'beendet' || (k.end_at && new Date(k.end_at) < new Date());
+    const zeigeErgebnis = istBeendet || k.ergebnis_sichtbar || meineStimme;
+
+    // Stimmen pro Kandidat laden wenn Ergebnis sichtbar
+    let stimmenMap = {};
+    if (zeigeErgebnis) {
+      const { data: stimmen } = await Backend.client.from('voting_votes')
+        .select('candidate_id').eq('campaign_id', kampagneId);
+      (stimmen||[]).forEach(s => { stimmenMap[s.candidate_id] = (stimmenMap[s.candidate_id]||0) + 1; });
+    }
+
+    const maxStimmen = Math.max(...Object.values(stimmenMap), 1);
+
+    modal.innerHTML = `
+      <div class="modal-header" style="background:var(--slzb-primary);color:#fff">
+        <div>
+          <h3 style="color:#fff;margin:0">🏆 ${esc(k.titel)}</h3>
+          ${k.beschreibung ? `<p style="color:rgba(255,255,255,.8);font-size:.85rem;margin:4px 0 0">${esc(k.beschreibung)}</p>` : ''}
+          ${k.end_at && !istBeendet ? `<p style="color:#E2001A;font-size:.8rem;margin:4px 0 0">⏰ Endet: ${fmtDT(k.end_at)}</p>` : ''}
+          ${istBeendet ? '<p style="color:#C9A227;font-size:.8rem;margin:4px 0 0">✅ Abstimmung beendet</p>' : ''}
+        </div>
+        <button class="btn btn-ghost btn-sm" style="color:#fff" onclick="this.closest('.modal-overlay').remove()">✕</button>
+      </div>
+      <div class="modal-body">
+        ${meineStimme ? `<div class="alert alert-success mb-3"><span class="alert-icon">✅</span>
+          <span>Du hast bereits abgestimmt. ${zeigeErgebnis ? 'Hier ist das aktuelle Ergebnis:' : 'Das Ergebnis wird nach Ende der Abstimmung bekannt gegeben.'}</span></div>` : ''}
+        ${istBeendet ? `<div class="alert alert-info mb-3"><span class="alert-icon">🏆</span>
+          <span>Die Abstimmung ist beendet. Insgesamt ${gesamtStimmen||0} Stimmen abgegeben.</span></div>` : ''}
+
+        <div class="grid grid-3" style="gap:16px">
+          ${(kandidaten||[]).map(k2 => {
+            const stimmen = stimmenMap[k2.id] || 0;
+            const prozent = gesamtStimmen ? Math.round(stimmen/gesamtStimmen*100) : 0;
+            const istGewinner = zeigeErgebnis && stimmen === maxStimmen && stimmen > 0;
+            const meineWahl = meineStimme?.candidate_id === k2.id;
+
+            return `<div class="card" style="border:2px solid ${meineWahl?'var(--slzb-primary)':istGewinner&&zeigeErgebnis?'#C9A227':'var(--slzb-border)'};
+              position:relative;overflow:hidden;transition:transform .2s"
+              ${!meineStimme && !istBeendet ? `onclick="abstimmen('${kampagneId}','${k2.id}')" style="cursor:pointer"` : ''}>
+              ${istGewinner && zeigeErgebnis ? '<div style="position:absolute;top:8px;right:8px;font-size:1.5rem">🏆</div>' : ''}
+              ${meineWahl ? '<div style="position:absolute;top:8px;left:8px;background:var(--slzb-primary);color:#fff;font-size:.7rem;padding:2px 8px;border-radius:10px">Deine Wahl</div>' : ''}
+              <div style="height:180px;background:#f0f4f8;overflow:hidden">
+                ${k2.bild_url
+                  ? `<img src="${esc(k2.bild_url)}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentNode.innerHTML='<div style=\\'display:flex;align-items:center;justify-content:center;height:100%;font-size:3rem\\'>🏃</div>'">`
+                  : '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:3rem">🏃</div>'}
+              </div>
+              <div class="card-body">
+                <div style="font-weight:700;font-size:1rem;margin-bottom:4px">${esc(k2.name)}</div>
+                ${k2.sportart ? `<div style="font-size:.78rem;color:var(--slzb-primary);font-weight:600;margin-bottom:4px">${esc(k2.sportart)}${k2.klasse?' · '+esc(k2.klasse):''}</div>` : ''}
+                <div style="font-size:.82rem;color:#444;margin-bottom:10px">${esc(k2.erfolg)}</div>
+                ${zeigeErgebnis ? `
+                  <div style="background:#f0f4f8;border-radius:6px;overflow:hidden;height:8px;margin-bottom:4px">
+                    <div style="height:100%;background:${istGewinner?'#C9A227':'var(--slzb-primary)'};width:${prozent}%;transition:width 1s ease;border-radius:6px"></div>
+                  </div>
+                  <div style="font-size:.78rem;color:var(--slzb-muted)">${stimmen} Stimme${stimmen!==1?'n':''} (${prozent}%)</div>
+                ` : (!meineStimme && !istBeendet ? `
+                  <button class="btn btn-primary w-full btn-sm" onclick="abstimmen('${kampagneId}','${k2.id}')">
+                    👍 Für ${esc(k2.name.split(' ')[0])} stimmen
+                  </button>` : '')}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+
+        ${!meineStimme && !istBeendet ? `
+          <p class="text-muted text-xs text-center mt-3">
+            Du kannst einmal abstimmen. Die Abstimmung ist anonym.
+          </p>` : ''}
+      </div>`;
+
+  } catch(e) {
+    modal.innerHTML = `<div class="modal-body"><div class="alert alert-danger">${esc(e.message)}</div></div>`;
+  }
+}
+
+// ── Abstimmen ─────────────────────────────────────────────────
+async function abstimmen(kampagneId, kandidatId) {
+  const voterToken = getVoterToken();
+  try {
+    const { error } = await Backend.client.from('voting_votes').insert([{
+      campaign_id:  kampagneId,
+      candidate_id: kandidatId,
+      voter_token:  voterToken,
+    }]);
+    if (error) {
+      if (error.code === '23505') { toast('Du hast bereits abgestimmt!', 'warning'); }
+      else throw new Error(error.message);
+      return;
+    }
+    toast('✅ Stimme abgegeben! Danke für deine Teilnahme.', 'success');
+    // Modal neu laden mit Ergebnis
+    document.querySelector('.modal-overlay')?.remove();
+    setTimeout(() => zeigeVotingAbstimmung(kampagneId), 300);
+  } catch(e) {
+    toast('Fehler: ' + e.message, 'danger');
+  }
+}
+
+// ── Ergebnis anzeigen (Admin) ─────────────────────────────────
+async function zeigeVotingErgebnis(kampagneId) {
+  const { data: k } = await Backend.client.from('voting_campaigns').select('*').eq('id', kampagneId).single();
+  const { data: kandidaten } = await Backend.client.from('voting_candidates')
+    .select('*').eq('campaign_id', kampagneId).order('reihenfolge');
+  const { data: stimmen } = await Backend.client.from('voting_votes')
+    .select('candidate_id').eq('campaign_id', kampagneId);
+
+  const stimmenMap = {};
+  (stimmen||[]).forEach(s => { stimmenMap[s.candidate_id] = (stimmenMap[s.candidate_id]||0) + 1; });
+  const gesamt = stimmen?.length || 0;
+
+  const sorted = [...(kandidaten||[])].sort((a,b) => (stimmenMap[b.id]||0) - (stimmenMap[a.id]||0));
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.innerHTML = `
+    <div class="modal-header"><h3>📊 Ergebnis: ${esc(k.titel)}</h3>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="text-muted mb-3">Gesamt: <strong>${gesamt} Stimmen</strong></p>
+      ${sorted.map((k2, idx) => {
+        const s = stimmenMap[k2.id] || 0;
+        const pct = gesamt ? Math.round(s/gesamt*100) : 0;
+        return `<div style="margin-bottom:16px">
+          <div class="flex items-center gap-2 mb-1">
+            <span style="font-size:1.2rem">${idx===0?'🥇':idx===1?'🥈':'🥉'}</span>
+            <strong>${esc(k2.name)}</strong>
+            <span class="text-muted text-sm">${s} Stimmen (${pct}%)</span>
+          </div>
+          <div style="background:#f0f4f8;border-radius:6px;height:12px;overflow:hidden">
+            <div style="height:100%;background:${idx===0?'#C9A227':idx===1?'#BFC8D2':'#C2783A'};width:${pct}%;border-radius:6px"></div>
+          </div>
+        </div>`;
+      }).join('')}
+      <div class="flex gap-2 mt-4">
+        <button class="btn btn-outline btn-sm" onclick="toggleErgebnisSichtbar('${kampagneId}',${!k.ergebnis_sichtbar})">
+          ${k.ergebnis_sichtbar ? '🔒 Ergebnis verbergen' : '👁️ Ergebnis veröffentlichen'}
+        </button>
+        ${sorted[0] ? `<button class="btn btn-primary btn-sm" onclick="this.closest('.modal-overlay').remove();zeigeNachwuchsSiegerPosterFuerVoting('${sorted[0].id}')">
+          🏆 Sieger-Poster erstellen
+        </button>` : ''}
+      </div>
+    </div>`;
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+// ── Hilfsfunktionen ───────────────────────────────────────────
+function getVoterToken() {
+  let token = localStorage.getItem('slzb_voter_token');
+  if (!token) {
+    token = 'v_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem('slzb_voter_token', token);
+  }
+  return token;
+}
+
+async function toggleVotingStatus(kampagneId, aktuellerStatus) {
+  const neuerStatus = aktuellerStatus === 'aktiv' ? 'beendet' : 'aktiv';
+  if (!confirm(`Abstimmung ${neuerStatus === 'aktiv' ? 'aktivieren' : 'beenden'}?`)) return;
+  await Backend.client.from('voting_campaigns').update({ status: neuerStatus }).eq('id', kampagneId);
+  toast(`Abstimmung ${neuerStatus === 'aktiv' ? 'gestartet' : 'beendet'}`, 'success');
+  navigateTo('voting');
+}
+
+async function toggleErgebnisSichtbar(kampagneId, sichtbar) {
+  await Backend.client.from('voting_campaigns').update({ ergebnis_sichtbar: sichtbar }).eq('id', kampagneId);
+  toast(sichtbar ? '👁️ Ergebnis ist jetzt öffentlich sichtbar' : '🔒 Ergebnis verborgen', 'success');
+  document.querySelector('.modal-overlay')?.remove();
+}
+
+// Sieger-Poster aus Voting-Kandidat erstellen
+async function zeigeNachwuchsSiegerPosterFuerVoting(kandidatId) {
+  const { data: k } = await Backend.client.from('voting_candidates').select('*').eq('id', kandidatId).single();
+  if (!k) return;
+  // Nachwuchssportler-Sieger-Poster mit Kandidaten-Daten
+  const fakeErfolg = {
+    id: kandidatId,
+    titel: k.name,
+    sportartText: k.sportart || '',
+    beteiligte: [{ anzeigename: k.name }],
+    bilder: k.bild_url ? [{ signedUrl: k.bild_url }] : [],
+    datum: new Date().toISOString().slice(0,10),
+    kurzinfo: k.erfolg,
+  };
+  // Öffne Nachwuchswahl-Sieger-Modal
+  window._nwSiegerKandidat = fakeErfolg;
+  zeigeNachwuchswahlModal();
+}
