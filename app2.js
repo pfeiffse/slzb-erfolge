@@ -5209,7 +5209,12 @@ function zeigeVotingErstellen() {
         <textarea id="v-beschreibung" rows="2" style="width:100%" placeholder="z.B. Wähle deinen Favoriten für November 2026"></textarea>
       </div>
 
-      <h3 style="margin-bottom:12px">👤 Kandidaten (max. 3)</h3>
+      <h3 style="margin-bottom:8px">👤 Kandidaten (max. 3)</h3>
+      <div class="alert alert-info mb-3" style="display:flex;align-items:center;gap:12px">
+        <span class="alert-icon">💡</span>
+        <span>Kandidaten manuell eintragen oder aus freigegebenen Meldungen auswählen.</span>
+        <button class="btn btn-outline btn-sm" style="white-space:nowrap;flex-shrink:0" onclick="zeigeVotingKandidatenAuswahl()">📋 Aus Meldungen wählen</button>
+      </div>
       ${[1,2,3].map(i => `
         <div class="card mb-3" style="border:2px solid var(--slzb-border)">
           <div class="card-body">
@@ -5296,9 +5301,11 @@ async function speichereVoting(status) {
     for (let i = 1; i <= 3; i++) {
       const name = document.getElementById(`v-name-${i}`)?.value?.trim();
       if (!name) continue;
-      // Bild hochladen falls vorhanden
+      // Bild hochladen falls vorhanden (oder vorhandene URL aus Meldung nutzen)
       let bildUrl = null;
       const bildInput = document.getElementById(`v-bild-${i}`);
+      // Vorhandene URL aus Meldungs-Auswahl
+      if (bildInput?.dataset?.vorhandeneUrl) bildUrl = bildInput.dataset.vorhandeneUrl;
       if (bildInput?.files?.[0]) {
         try {
           const file = bildInput.files[0];
@@ -5545,4 +5552,167 @@ async function zeigeNachwuchsSiegerPosterFuerVoting(kandidatId) {
   // Öffne Nachwuchswahl-Sieger-Modal
   window._nwSiegerKandidat = fakeErfolg;
   zeigeNachwuchswahlModal();
+}
+
+// ══════════════════════════════════════════════════════════════
+// VOTING: Kandidaten aus Meldungen auswählen
+// ══════════════════════════════════════════════════════════════
+async function zeigeVotingKandidatenAuswahl() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal modal-xl';
+  modal.innerHTML = '<div class="modal-body" style="text-align:center;padding:40px"><div class="spinner"></div><p>Lade Meldungen...</p></div>';
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+
+  try {
+    // Freigegebene Meldungen der letzten 90 Tage laden
+    const seit = new Date(Date.now() - 90*24*60*60*1000).toISOString();
+    const { data: meldungen } = await Backend.client
+      .from('achievements')
+      .select('id, title, sport_id, placement, medal, event_date, reporter_name, deleted_at')
+      .in('status', ['Freigegeben', 'Veröffentlicht'])
+      .gte('event_date', seit.slice(0,10))
+      .is('deleted_at', null)
+      .order('event_date', { ascending: false })
+      .limit(50);
+
+    // Beteiligte laden
+    const ids = (meldungen||[]).map(m => m.id);
+    const { data: beteiligte } = ids.length ? await Backend.client
+      .from('achievement_participants')
+      .select('achievement_id, participant_role')
+      .in('achievement_id', ids) : { data: [] };
+
+    const betMap = {};
+    (beteiligte||[]).forEach(b => {
+      if (!betMap[b.achievement_id]) betMap[b.achievement_id] = [];
+      if (b.participant_role && b.participant_role !== 'Athlet') betMap[b.achievement_id].push(b.participant_role);
+    });
+
+    // Bilder laden
+    const { data: medien } = ids.length ? await Backend.client
+      .from('achievement_media')
+      .select('achievement_id, storage_path')
+      .in('achievement_id', ids)
+      .limit(ids.length) : { data: [] };
+
+    const medienMap = {};
+    for (const m of (medien||[])) {
+      if (!medienMap[m.achievement_id] && m.storage_path) {
+        const { data: url } = Backend.client.storage.from('achievement-media').getPublicUrl(m.storage_path);
+        medienMap[m.achievement_id] = url?.publicUrl || null;
+      }
+    }
+
+    // Ausgewählte Kandidaten tracken
+    window._votingAuswahl = [];
+
+    const medailleText = (m) => ({Gold:'🥇',Silber:'🥈',Bronze:'🥉'}[m]||'');
+    const platzText = (p) => p ? `${p}. Platz` : '';
+
+    modal.innerHTML = `
+      <div class="modal-header">
+        <div>
+          <h3>📋 Kandidaten aus Meldungen wählen</h3>
+          <p style="font-size:.82rem;color:var(--slzb-muted);margin:4px 0 0">Wähle bis zu 3 Kandidaten aus freigegebenen Meldungen der letzten 90 Tage.</p>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="voting-auswahl-zaehler" style="background:var(--slzb-primary);color:#fff;padding:8px 16px;border-radius:8px;margin-bottom:12px;font-weight:700">
+          0 von 3 ausgewählt
+        </div>
+        ${!meldungen?.length ? '<div class="alert alert-warning">Keine freigegebenen Meldungen der letzten 90 Tage gefunden.</div>' :
+        `<div style="display:flex;flex-direction:column;gap:8px">
+          ${meldungen.map(m => {
+            const athleten = betMap[m.id]?.join(', ') || '–';
+            const sport = SLZB_DB.getSportart(m.sport_id)?.name || '';
+            const erfolg = [medailleText(m.medal), platzText(m.placement)].filter(Boolean).join(' ') || 'Teilnahme';
+            const bildUrl = medienMap[m.id] || null;
+            const datum = m.event_date ? new Date(m.event_date).toLocaleDateString('de-DE',{day:'2-digit',month:'short',year:'numeric'}) : '';
+
+            return `<div class="card voting-kandidat-card" id="vk-${m.id}"
+              style="cursor:pointer;border:2px solid var(--slzb-border);transition:all .15s"
+              onclick="toggleVotingKandidat('${m.id}','${esc(athleten)}','${esc(sport)}','${esc(m.title||'')}','${esc(erfolg)}','${esc(bildUrl||'')}')">
+              <div class="card-body" style="display:flex;align-items:center;gap:12px;padding:12px">
+                <div style="width:48px;height:48px;border-radius:8px;overflow:hidden;flex-shrink:0;background:#f0f4f8">
+                  ${bildUrl
+                    ? `<img src="${esc(bildUrl)}" style="width:100%;height:100%;object-fit:cover">`
+                    : '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:1.5rem">🏃</div>'}
+                </div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-weight:700;font-size:.9rem">${esc(athleten)}</div>
+                  <div style="font-size:.78rem;color:var(--slzb-primary)">${esc(sport)}${datum?' · '+datum:''}</div>
+                  <div style="font-size:.78rem;color:#444">${esc(m.title||'')} – ${erfolg}</div>
+                </div>
+                <div id="vk-check-${m.id}" style="width:24px;height:24px;border-radius:50%;border:2px solid var(--slzb-border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.8rem"></div>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>`}
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
+        <button class="btn btn-primary" onclick="uebernehmeVotingKandidaten()">✅ Auswahl übernehmen</button>
+      </div>`;
+
+  } catch(e) {
+    modal.innerHTML = `<div class="modal-body"><div class="alert alert-danger">${esc(e.message)}</div></div>`;
+  }
+}
+
+function toggleVotingKandidat(id, name, sport, titel, erfolg, bildUrl) {
+  const auswahl = window._votingAuswahl || [];
+  const idx = auswahl.findIndex(k => k.id === id);
+  const card = document.getElementById(`vk-${id}`);
+  const check = document.getElementById(`vk-check-${id}`);
+
+  if (idx >= 0) {
+    // Abwählen
+    auswahl.splice(idx, 1);
+    if (card) card.style.borderColor = 'var(--slzb-border)';
+    if (check) { check.textContent = ''; check.style.background = ''; check.style.borderColor = 'var(--slzb-border)'; }
+  } else {
+    if (auswahl.length >= 3) { toast('Maximal 3 Kandidaten auswählbar', 'warning'); return; }
+    auswahl.push({ id, name, sport, titel, erfolg, bildUrl });
+    if (card) card.style.borderColor = 'var(--slzb-primary)';
+    if (check) { check.textContent = '✓'; check.style.background = 'var(--slzb-primary)'; check.style.color = '#fff'; check.style.borderColor = 'var(--slzb-primary)'; }
+  }
+
+  window._votingAuswahl = auswahl;
+  const zaehler = document.getElementById('voting-auswahl-zaehler');
+  if (zaehler) zaehler.textContent = `${auswahl.length} von 3 ausgewählt`;
+}
+
+function uebernehmeVotingKandidaten() {
+  const auswahl = window._votingAuswahl || [];
+  if (!auswahl.length) { toast('Bitte mindestens einen Kandidaten auswählen', 'warning'); return; }
+
+  auswahl.forEach((k, i) => {
+    const nr = i + 1;
+    const nameEl   = document.getElementById(`v-name-${nr}`);
+    const sportEl  = document.getElementById(`v-sport-${nr}`);
+    const erfolgEl = document.getElementById(`v-erfolg-${nr}`);
+    // Bild-URL in ein verstecktes Feld schreiben (wird beim Speichern genutzt)
+    const bildEl   = document.getElementById(`v-bild-${nr}`);
+
+    if (nameEl)   nameEl.value   = k.name !== '–' ? k.name : '';
+    if (sportEl)  sportEl.value  = k.sport || '';
+    if (erfolgEl) erfolgEl.value = k.titel ? `${k.titel} – ${k.erfolg}` : k.erfolg;
+
+    // Bild-URL als data-Attribut speichern (da input[type=file] keine URL akzeptiert)
+    if (bildEl && k.bildUrl) {
+      bildEl.dataset.vorhandeneUrl = k.bildUrl;
+      // Vorschau anzeigen
+      const preview = document.getElementById(`v-bild-preview-${nr}`);
+      const img = document.getElementById(`v-bild-img-${nr}`);
+      if (preview && img) { img.src = k.bildUrl; preview.style.display = 'block'; }
+    }
+  });
+
+  document.querySelector('.modal-overlay')?.remove();
+  toast(`✅ ${auswahl.length} Kandidaten übernommen`, 'success');
 }
