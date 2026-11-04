@@ -5714,6 +5714,8 @@ function uebernehmeVotingKandidaten() {
     }
   });
 
-  document.querySelector('.modal-overlay')?.remove();
+  // Nur das Auswahl-Modal entfernen (nicht das Erstellen-Modal)
+  const alleOverlays = document.querySelectorAll('.modal-overlay');
+  alleOverlays.forEach(o => { if (o.style.zIndex === '10000') o.remove(); });
   toast(`✅ ${auswahl.length} Kandidaten übernommen`, 'success');
 }
