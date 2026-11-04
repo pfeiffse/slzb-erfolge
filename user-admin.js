@@ -116,7 +116,7 @@ async function ladeNutzerverwaltung() {
           <td class="text-sm">${esc(u.email)}</td>
           <td>
             <select id="role-${u.id}" ${u.id===Auth.id()?'disabled title="Eigene Rolle kann nicht geändert werden"':''}>
-              ${['trainer','redaktion','oea','datenschutz','admin'].map(r=>
+              ${['schueler','trainer','mitarbeiter','redaktion','oea','datenschutz','admin'].map(r=>
                 `<option value="${r}"${u.role===r?' selected':''}>${UserAdmin.roleLabel(r)}</option>`
               ).join('')}
             </select>
