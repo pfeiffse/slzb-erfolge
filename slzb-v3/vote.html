@@ -210,6 +210,65 @@
 const cfg = window.SLZB_CONFIG || {};
 const supabase = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
 
+// ── Realtime-Kanal ────────────────────────────────────────────
+let _realtimeChannel = null;
+let _aktuelleKampagneId = null;
+
+function starteRealtime(kampagneId) {
+  if (_realtimeChannel) supabase.removeChannel(_realtimeChannel);
+  _aktuelleKampagneId = kampagneId;
+  _realtimeChannel = supabase
+    .channel('voting-live-' + kampagneId)
+    .on('postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'voting_votes',
+        filter: `campaign_id=eq.${kampagneId}` },
+      () => aktualisiereErgebnis(kampagneId)
+    )
+    .subscribe();
+}
+
+// Nur Stimmen neu laden und Balken animieren (ohne ganzes HTML neu zu rendern)
+async function aktualisiereErgebnis(kampagneId) {
+  const { data: alleStimmen } = await supabase.from('voting_votes')
+    .select('candidate_id').eq('campaign_id', kampagneId);
+  const stimmenMap = {};
+  (alleStimmen||[]).forEach(s => { stimmenMap[s.candidate_id] = (stimmenMap[s.candidate_id]||0) + 1; });
+  const gesamt = alleStimmen?.length || 0;
+  const maxStimmen = Math.max(...Object.values(stimmenMap), 1);
+
+  // Balken animieren
+  document.querySelectorAll('[data-kandidat-id]').forEach(el => {
+    const kid = el.dataset.kandidatId;
+    const stimmen = stimmenMap[kid] || 0;
+    const prozent = gesamt ? Math.round(stimmen/gesamt*100) : 0;
+    const istGewinner = stimmen === maxStimmen && stimmen > 0;
+
+    const fill = el.querySelector('.ergebnis-fill');
+    const txt  = el.querySelector('.ergebnis-text');
+    const badge = el.querySelector('.badge-gewinner');
+
+    if (fill) { fill.style.width = prozent + '%'; fill.className = 'ergebnis-fill' + (istGewinner?' gold':''); }
+    if (txt)  txt.textContent = stimmen + ' Stimme' + (stimmen!==1?'n':'') + ' · ' + prozent + '%';
+
+    // Gewinner-Badge
+    document.querySelectorAll('.badge-gewinner').forEach(b => b.remove());
+    if (istGewinner) {
+      const b = document.createElement('div');
+      b.className = 'badge-gewinner';
+      b.textContent = '🏆 Führend';
+      el.appendChild(b);
+    }
+  });
+
+  // Gesamt-Stimmen aktualisieren
+  const gesamtEl = document.getElementById('gesamt-stimmen');
+  if (gesamtEl) gesamtEl.textContent = `Insgesamt ${gesamt} Stimme${gesamt!==1?'n':''} abgegeben`;
+
+  // Live-Indikator pulsieren
+  const live = document.getElementById('live-indicator');
+  if (live) { live.style.transform = 'scale(1.3)'; setTimeout(() => live.style.transform = 'scale(1)', 300); }
+}
+
 // ── Voter Token (anonym, einmal pro Gerät) ────────────────────
 function getVoterToken() {
   let t = localStorage.getItem('slzb_voter_token');
@@ -256,6 +315,12 @@ async function ladeAbstimmung() {
     }
 
     kampagneId = kampagne.id;
+
+    // Auto-Ende: Wenn end_at überschritten, Status auf beendet setzen
+    if (kampagne.end_at && new Date(kampagne.end_at) < new Date() && kampagne.status === 'aktiv') {
+      await supabase.from('voting_campaigns').update({ status: 'beendet' }).eq('id', kampagneId);
+      kampagne.status = 'beendet';
+    }
 
     // Kandidaten laden
     const { data: kandidaten } = await supabase.from('voting_candidates')
@@ -316,7 +381,7 @@ async function ladeAbstimmung() {
             ${!meineStimme && !istBeendet ? `onclick="abstimmen('${k.id}','${kampagneId}')"` : ''}>
             ${meineWahl ? '<div class="badge-meine-wahl">✓ Deine Wahl</div>' : ''}
             ${istGewinner && zeigeErgebnis && !meineWahl ? '<div class="badge-gewinner">🏆 Führend</div>' : ''}
-            <div class="kandidat-inner">
+            <div class="kandidat-inner" data-kandidat-id="${k.id}">
               <div class="kandidat-foto">
                 ${k.bild_url
                   ? `<img src="${esc(k.bild_url)}" alt="${esc(k.name)}" loading="lazy"
@@ -346,7 +411,15 @@ async function ladeAbstimmung() {
       ${!meineStimme && !istBeendet ? `<p style="text-align:center;font-size:.75rem;opacity:.5;margin-top:16px">
         Die Abstimmung ist anonym. Du kannst einmal pro Gerät abstimmen.
       </p>` : ''}
+
+      <div style="text-align:center;margin-top:16px;display:flex;align-items:center;justify-content:center;gap:6px">
+        <span id="live-indicator" style="width:8px;height:8px;border-radius:50%;background:#00c853;display:inline-block;transition:transform .3s"></span>
+        <span style="font-size:.72rem;opacity:.5">Live-Ergebnisse</span>
+      </div>
     `;
+
+    // Realtime starten für Live-Updates
+    starteRealtime(kampagneId);
 
   } catch(e) {
     app.innerHTML = `<div class="status-box warning">

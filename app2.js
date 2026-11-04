@@ -5301,23 +5301,50 @@ async function speichereVoting(status) {
     for (let i = 1; i <= 3; i++) {
       const name = document.getElementById(`v-name-${i}`)?.value?.trim();
       if (!name) continue;
-      // Bild hochladen falls vorhanden (oder vorhandene URL aus Meldung nutzen)
+      // Bild hochladen in öffentlichen Bucket (für vote.html ohne Login)
       let bildUrl = null;
       const bildInput = document.getElementById(`v-bild-${i}`);
-      // Vorhandene URL aus Meldungs-Auswahl
-      if (bildInput?.dataset?.vorhandeneUrl) bildUrl = bildInput.dataset.vorhandeneUrl;
+
       if (bildInput?.files?.[0]) {
+        // Neues Bild hochgeladen
         try {
           const file = bildInput.files[0];
-          const pfad = `${Auth.id()}/voting_${kampagne.id}_${i}_${Date.now()}.${file.name.split('.').pop()}`;
+          const pfad = `voting/${kampagne.id}_${i}_${Date.now()}.${file.name.split('.').pop()}`;
           const { error: upErr } = await Backend.client.storage
             .from('poster-exports')
             .upload(pfad, file, { contentType: file.type, upsert: true });
           if (!upErr) {
             const { data: urlData } = Backend.client.storage.from('poster-exports').getPublicUrl(pfad);
             bildUrl = urlData?.publicUrl || null;
-          }
+          } else { console.warn('Bild-Upload:', upErr.message); }
         } catch(imgErr) { console.warn('Bild-Upload:', imgErr.message); }
+      } else if (bildInput?.dataset?.vorhandeneUrl) {
+        // Bild aus Meldung: in öffentlichen Bucket kopieren
+        try {
+          const srcUrl = bildInput.dataset.vorhandeneUrl;
+          const resp = await fetch(srcUrl, {
+            headers: { 'Authorization': `Bearer ${(await Backend.session())?.access_token||''}`,
+                       'apikey': window.SLZB_CONFIG?.supabaseAnonKey||'' }
+          });
+          if (resp.ok) {
+            const blob = await resp.blob();
+            const ext = blob.type.includes('png') ? 'png' : 'jpg';
+            const pfad = `voting/${kampagne.id}_${i}_${Date.now()}.${ext}`;
+            const { error: upErr } = await Backend.client.storage
+              .from('poster-exports')
+              .upload(pfad, blob, { contentType: blob.type, upsert: true });
+            if (!upErr) {
+              const { data: urlData } = Backend.client.storage.from('poster-exports').getPublicUrl(pfad);
+              bildUrl = urlData?.publicUrl || null;
+            }
+          } else {
+            // Fallback: URL direkt verwenden
+            bildUrl = srcUrl;
+          }
+        } catch(e) {
+          // Fallback: URL direkt verwenden
+          bildUrl = bildInput.dataset.vorhandeneUrl;
+        }
       }
       await Backend.client.from('voting_candidates').insert([{
         campaign_id: kampagne.id,
@@ -5524,6 +5551,24 @@ function getVoterToken() {
 async function toggleVotingStatus(kampagneId, aktuellerStatus) {
   const neuerStatus = aktuellerStatus === 'aktiv' ? 'beendet' : 'aktiv';
   if (!confirm(`Abstimmung ${neuerStatus === 'aktiv' ? 'aktivieren' : 'beenden'}?`)) return;
+
+  // Beim Aktivieren: andere aktive Abstimmungen automatisch beenden
+  if (neuerStatus === 'aktiv') {
+    const { data: aktive } = await Backend.client
+      .from('voting_campaigns')
+      .select('id,titel')
+      .eq('status', 'aktiv')
+      .neq('id', kampagneId);
+    if (aktive?.length) {
+      const namen = aktive.map(k => `"${k.titel}"`).join(', ');
+      if (!confirm(`⚠️ Folgende Abstimmungen werden automatisch beendet:\n${namen}\n\nTrotzdem aktivieren?`)) return;
+      await Backend.client.from('voting_campaigns')
+        .update({ status: 'beendet' })
+        .eq('status', 'aktiv')
+        .neq('id', kampagneId);
+    }
+  }
+
   await Backend.client.from('voting_campaigns').update({ status: neuerStatus }).eq('id', kampagneId);
   toast(`Abstimmung ${neuerStatus === 'aktiv' ? 'gestartet' : 'beendet'}`, 'success');
   navigateTo('voting');
