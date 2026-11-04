@@ -221,10 +221,21 @@
 <script>
 // ── Supabase Init ─────────────────────────────────────────────
 const cfg = window.SLZB_CONFIG || {};
-// Supabase Client initialisieren
-const _sbLib = window.supabase || window.Supabase;
-const _sbCreate = _sbLib?.createClient || _sbLib?.default?.createClient;
-const db = _sbCreate(cfg.supabaseUrl, cfg.supabaseAnonKey);
+// Supabase Client initialisieren (UMD: window.supabase.createClient)
+let db;
+try {
+  if (window.supabase?.createClient) {
+    db = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+  } else if (window.supabase?.default?.createClient) {
+    db = window.supabase.default.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+  } else if (typeof createClient !== "undefined") {
+    db = createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+  } else {
+    throw new Error("Supabase konnte nicht geladen werden");
+  }
+} catch(initErr) {
+  document.getElementById("app").innerHTML = '<div class="status-box warning">❌ Verbindungsfehler: ' + initErr.message + '</div>';
+}
 
 // ── Realtime-Kanal ────────────────────────────────────────────
 let _realtimeChannel = null;
