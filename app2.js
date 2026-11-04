@@ -5162,7 +5162,7 @@ async function renderVotingVerwaltung() {
           </div>
           <div class="flex gap-2" style="flex-wrap:wrap">
             <button class="btn btn-outline btn-sm" onclick="zeigeVotingAbstimmung('${k.id}')">🗳️ Abstimmung öffnen</button>
-            ${Auth.canDo('bearbeiten') ? `
+            <button class=\"btn btn-primary btn-sm\" onclick=\"zeigeVotingLink('${k.id}')\" style=\"background:#003366\">\ud83d\udd17 Link & QR</button>\n            ${Auth.canDo('bearbeiten') ? `
               <button class="btn btn-ghost btn-sm" onclick="zeigeVotingErgebnis('${k.id}')">📊 Ergebnis</button>
               <button class="btn btn-ghost btn-sm" onclick="toggleVotingStatus('${k.id}','${k.status}')">
                 ${k.status==='aktiv'?'⏹️ Beenden':'▶️ Aktivieren'}
@@ -5718,4 +5718,59 @@ function uebernehmeVotingKandidaten() {
   const alleOverlays = document.querySelectorAll('.modal-overlay');
   alleOverlays.forEach(o => { if (o.style.zIndex === '10000') o.remove(); });
   toast(`✅ ${auswahl.length} Kandidaten übernommen`, 'success');
+}
+
+// ── Voting: Link & QR-Code anzeigen ──────────────────────────
+function zeigeVotingLink(kampagneId) {
+  const BASE = 'https://pfeiffse.github.io/slzb-erfolge/slzb-v3/vote.html';
+  const link = `${BASE}?id=${kampagneId}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(link)}&bgcolor=003366&color=ffffff&margin=10`;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.maxWidth = '420px';
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>🔗 Abstimmungslink teilen</h3>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <div class="modal-body" style="text-align:center">
+      <p class="text-muted text-sm mb-3">Teile diesen Link mit den Schülern – kein Login nötig!</p>
+
+      <!-- QR-Code -->
+      <div style="background:#003366;padding:16px;border-radius:12px;display:inline-block;margin-bottom:16px">
+        <img src="${qrUrl}" alt="QR-Code" style="width:200px;height:200px;display:block;border-radius:8px">
+      </div>
+
+      <!-- Link -->
+      <div style="background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:10px 14px;margin-bottom:16px;word-break:break-all;font-size:.8rem;text-align:left;font-family:monospace">
+        ${link}
+      </div>
+
+      <div class="flex gap-2" style="justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" onclick="navigator.clipboard.writeText('${link}').then(()=>toast('✅ Link kopiert!','success'))">
+          📋 Link kopieren
+        </button>
+        <a href="${link}" target="_blank" class="btn btn-outline btn-sm">
+          🔗 Link öffnen
+        </a>
+        <button class="btn btn-ghost btn-sm" onclick="
+          const a=document.createElement('a');
+          a.href='${qrUrl.replace('200x200','400x400')}';
+          a.download='SLZB-Abstimmung-QR.png';
+          a.click()">
+          ⬇️ QR herunterladen
+        </button>
+      </div>
+
+      <p class="text-muted text-xs mt-3">
+        💡 QR-Code ausdrucken und aushängen – Schüler scannen und stimmen direkt ab.
+      </p>
+    </div>`;
+
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
 }

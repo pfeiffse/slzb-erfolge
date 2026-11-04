@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+
+<html lang="de">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0" name="viewport"/>
+<title>SLZB – Sportler/in des Monats</title>
+<meta content="#003366" name="theme-color"/>
+<meta content="Wähle deinen Favoriten für den Sportler/in des Monats" name="description"/>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: linear-gradient(135deg, #003366 0%, #001F4D 60%, #0a0a2e 100%);
+    min-height: 100vh;
+    color: #fff;
+    padding: 0 0 40px;
+  }
+
+  /* Header */
+  .header {
+    background: rgba(0,0,0,0.3);
+    backdrop-filter: blur(10px);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .header img { height: 44px; width: auto; border-radius: 8px; }
+  .header-text h1 { font-size: 1rem; font-weight: 700; }
+  .header-text p { font-size: .75rem; opacity: .7; }
+
+  /* Container */
+  .container { max-width: 680px; margin: 0 auto; padding: 24px 16px; }
+
+  /* Kampagnen-Titel */
+  .kampagne-header {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+  .kampagne-header .emoji { font-size: 3rem; margin-bottom: 8px; }
+  .kampagne-header h2 { font-size: 1.5rem; font-weight: 800; margin-bottom: 6px; }
+  .kampagne-header p { font-size: .88rem; opacity: .75; }
+  .timer {
+    display: inline-block;
+    background: rgba(226,0,26,0.2);
+    border: 1px solid rgba(226,0,26,0.4);
+    color: #ff6b6b;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: .8rem;
+    font-weight: 600;
+    margin-top: 8px;
+  }
+
+  /* Kandidaten-Karten */
+  .kandidaten { display: flex; flex-direction: column; gap: 14px; }
+
+  .kandidat-card {
+    background: rgba(255,255,255,0.08);
+    border: 2px solid rgba(255,255,255,0.15);
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all .2s ease;
+    position: relative;
+  }
+  .kandidat-card:hover { background: rgba(255,255,255,0.13); transform: translateY(-2px); }
+  .kandidat-card.ausgewaehlt {
+    border-color: #E2001A;
+    background: rgba(226,0,26,0.15);
+    box-shadow: 0 0 0 3px rgba(226,0,26,0.3);
+  }
+  .kandidat-card.gewinner {
+    border-color: #C9A227;
+    background: rgba(201,162,39,0.15);
+  }
+
+  .kandidat-inner { display: flex; gap: 0; }
+
+  .kandidat-foto {
+    width: 120px;
+    min-height: 140px;
+    flex-shrink: 0;
+    background: rgba(0,0,0,0.3);
+    overflow: hidden;
+  }
+  .kandidat-foto img {
+    width: 100%; height: 100%;
+    object-fit: cover; display: block;
+  }
+  .kandidat-foto .kein-foto {
+    display: flex; align-items: center; justify-content: center;
+    height: 100%; font-size: 3rem; min-height: 140px;
+  }
+
+  .kandidat-info { flex: 1; padding: 16px; }
+  .kandidat-name { font-size: 1.1rem; font-weight: 800; margin-bottom: 4px; }
+  .kandidat-sport {
+    font-size: .78rem; font-weight: 600;
+    color: #7eb3ff; margin-bottom: 6px;
+  }
+  .kandidat-erfolg { font-size: .85rem; opacity: .85; line-height: 1.4; margin-bottom: 12px; }
+
+  .vote-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #E2001A; color: #fff;
+    border: none; border-radius: 8px;
+    padding: 8px 18px; font-size: .85rem; font-weight: 700;
+    cursor: pointer; transition: all .15s;
+    font-family: inherit;
+  }
+  .vote-btn:hover { background: #c0001a; transform: scale(1.03); }
+  .vote-btn:disabled { background: rgba(255,255,255,0.2); cursor: default; transform: none; }
+
+  /* Ergebnis-Balken */
+  .ergebnis-bar {
+    margin-top: 10px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 6px; height: 8px; overflow: hidden;
+  }
+  .ergebnis-fill {
+    height: 100%; border-radius: 6px;
+    background: linear-gradient(90deg, #E2001A, #ff4444);
+    transition: width 1s ease;
+  }
+  .ergebnis-fill.gold { background: linear-gradient(90deg, #C9A227, #f0c040); }
+  .ergebnis-text { font-size: .75rem; opacity: .7; margin-top: 4px; }
+
+  /* Badges */
+  .badge-meine-wahl {
+    position: absolute; top: 10px; right: 10px;
+    background: #E2001A; color: #fff;
+    font-size: .68rem; font-weight: 700;
+    padding: 3px 10px; border-radius: 12px;
+  }
+  .badge-gewinner {
+    position: absolute; top: 10px; right: 10px;
+    background: #C9A227; color: #000;
+    font-size: .68rem; font-weight: 700;
+    padding: 3px 10px; border-radius: 12px;
+  }
+
+  /* Status-Meldungen */
+  .status-box {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 12px; padding: 16px 20px;
+    margin-bottom: 20px; text-align: center;
+    font-size: .9rem;
+  }
+  .status-box.success { border-color: rgba(0,200,83,0.4); background: rgba(0,200,83,0.1); }
+  .status-box.warning { border-color: rgba(226,0,26,0.4); background: rgba(226,0,26,0.1); }
+
+  /* Gesamt-Stimmen */
+  .gesamt-stimmen {
+    text-align: center; margin-top: 20px;
+    font-size: .82rem; opacity: .6;
+  }
+
+  /* Spinner */
+  .spinner-wrap { text-align: center; padding: 60px 20px; }
+  .spinner {
+    width: 40px; height: 40px; border-radius: 50%;
+    border: 3px solid rgba(255,255,255,0.2);
+    border-top-color: #fff;
+    animation: spin .8s linear infinite;
+    margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Footer */
+  .footer {
+    text-align: center; margin-top: 32px;
+    font-size: .75rem; opacity: .4;
+  }
+
+  /* Mobile */
+  @media (max-width: 480px) {
+    .kandidat-foto { width: 90px; }
+    .kandidat-name { font-size: 1rem; }
+    .kampagne-header h2 { font-size: 1.25rem; }
+  }
+</style>
+</head>
+<body>
+<div class="header">
+<img alt="SLZB" onerror="this.style.display='none'" src="slzb-sport-erfolge-logo.png?expires=1796400002&amp;signature=8d0f305fbcc199480d2b394b6460ee9267dffedba2e242050c0478e2c58aeb12&amp;kid=prod-250922"/>
+<div class="header-text">
+<h1>SLZB-Erfolge</h1>
+<p>Schul- und Leistungssportzentrum Berlin</p>
+</div>
+</div>
+<div class="container">
+<div id="app">
+<div class="spinner-wrap">
+<div class="spinner"></div>
+<p>Abstimmung wird geladen...</p>
+</div>
+</div>
+<div class="footer">SLZB Berlin · Abstimmung ist anonym · Einmal pro Gerät</div>
+</div>
+<!-- Supabase -->
+<script src="supabase.min.js"></script>
+<script src="config.js"></script>
+<script>
+// ── Supabase Init ─────────────────────────────────────────────
+const cfg = window.SLZB_CONFIG || {};
+const supabase = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+
+// ── Voter Token (anonym, einmal pro Gerät) ────────────────────
+function getVoterToken() {
+  let t = localStorage.getItem('slzb_voter_token');
+  if (!t) {
+    t = 'v_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem('slzb_voter_token', t);
+  }
+  return t;
+}
+
+// ── Kampagnen-ID aus URL ──────────────────────────────────────
+function getKampagneId() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('id') || null;
+}
+
+// ── Hauptlogik ────────────────────────────────────────────────
+async function ladeAbstimmung() {
+  const app = document.getElementById('app');
+  const voterToken = getVoterToken();
+  let kampagneId = getKampagneId();
+
+  try {
+    // Kampagne laden (mit ID oder aktive Kampagne)
+    let kampagne;
+    if (kampagneId) {
+      const { data } = await supabase.from('voting_campaigns').select('*').eq('id', kampagneId).single();
+      kampagne = data;
+    } else {
+      // Aktive Kampagne suchen
+      const { data } = await supabase.from('voting_campaigns')
+        .select('*').eq('status', 'aktiv')
+        .order('erstellt_am', { ascending: false }).limit(1).single();
+      kampagne = data;
+    }
+
+    if (!kampagne) {
+      app.innerHTML = `<div class="status-box warning">
+        <div style="font-size:2rem;margin-bottom:8px">🏆</div>
+        <strong>Keine aktive Abstimmung</strong><br>
+        <span style="font-size:.85rem;opacity:.8">Aktuell läuft keine Abstimmung. Schau später wieder vorbei!</span>
+      </div>`;
+      return;
+    }
+
+    kampagneId = kampagne.id;
+
+    // Kandidaten laden
+    const { data: kandidaten } = await supabase.from('voting_candidates')
+      .select('*').eq('campaign_id', kampagneId).order('reihenfolge');
+
+    // Meine Stimme prüfen
+    const { data: meineStimme } = await supabase.from('voting_votes')
+      .select('candidate_id').eq('campaign_id', kampagneId).eq('voter_token', voterToken).maybeSingle();
+
+    // Stimmen zählen
+    const { data: alleStimmen } = await supabase.from('voting_votes')
+      .select('candidate_id').eq('campaign_id', kampagneId);
+
+    const stimmenMap = {};
+    (alleStimmen||[]).forEach(s => { stimmenMap[s.candidate_id] = (stimmenMap[s.candidate_id]||0) + 1; });
+    const gesamt = alleStimmen?.length || 0;
+
+    const istBeendet = kampagne.status === 'beendet' || (kampagne.end_at && new Date(kampagne.end_at) < new Date());
+    const zeigeErgebnis = istBeendet || kampagne.ergebnis_sichtbar || !!meineStimme;
+    const maxStimmen = Math.max(...Object.values(stimmenMap), 1);
+
+    // Timer berechnen
+    let timerText = '';
+    if (kampagne.end_at && !istBeendet) {
+      const diff = new Date(kampagne.end_at) - new Date();
+      const tage = Math.floor(diff / 86400000);
+      const std  = Math.floor((diff % 86400000) / 3600000);
+      const min  = Math.floor((diff % 3600000) / 60000);
+      if (tage > 0) timerText = `⏰ Noch ${tage} Tag${tage!==1?'e':''} ${std}h`;
+      else if (std > 0) timerText = `⏰ Noch ${std}h ${min}min`;
+      else timerText = `⏰ Noch ${min} Minuten`;
+    }
+
+    // HTML rendern
+    app.innerHTML = `
+      <div class="kampagne-header">
+        <div class="emoji">🏆</div>
+        <h2>${esc(kampagne.titel)}</h2>
+        ${kampagne.beschreibung ? `<p>${esc(kampagne.beschreibung)}</p>` : ''}
+        ${timerText ? `<div class="timer">${timerText}</div>` : ''}
+        ${istBeendet ? '<div class="timer" style="color:#C9A227;border-color:rgba(201,162,39,0.4);background:rgba(201,162,39,0.1)">✅ Abstimmung beendet</div>' : ''}
+      </div>
+
+      ${meineStimme ? `<div class="status-box success">
+        ✅ <strong>Du hast bereits abgestimmt!</strong>
+        ${zeigeErgebnis ? ' Hier ist das aktuelle Ergebnis:' : ' Das Ergebnis wird nach Ende der Abstimmung bekannt gegeben.'}
+      </div>` : ''}
+
+      <div class="kandidaten" id="kandidaten-liste">
+        ${(kandidaten||[]).map(k => {
+          const stimmen = stimmenMap[k.id] || 0;
+          const prozent = gesamt ? Math.round(stimmen/gesamt*100) : 0;
+          const istGewinner = zeigeErgebnis && stimmen === maxStimmen && stimmen > 0;
+          const meineWahl = meineStimme?.candidate_id === k.id;
+
+          return `<div class="kandidat-card ${meineWahl?'ausgewaehlt':''} ${istGewinner&&zeigeErgebnis?'gewinner':''}"
+            id="karte-${k.id}"
+            ${!meineStimme && !istBeendet ? `onclick="abstimmen('${k.id}','${kampagneId}')"` : ''}>
+            ${meineWahl ? '<div class="badge-meine-wahl">✓ Deine Wahl</div>' : ''}
+            ${istGewinner && zeigeErgebnis && !meineWahl ? '<div class="badge-gewinner">🏆 Führend</div>' : ''}
+            <div class="kandidat-inner">
+              <div class="kandidat-foto">
+                ${k.bild_url
+                  ? `<img src="${esc(k.bild_url)}" alt="${esc(k.name)}" loading="lazy"
+                      onerror="this.parentNode.innerHTML='<div class=kein-foto>🏃</div>'">`
+                  : '<div class="kein-foto">🏃</div>'}
+              </div>
+              <div class="kandidat-info">
+                <div class="kandidat-name">${esc(k.name)}</div>
+                ${k.sportart ? `<div class="kandidat-sport">${esc(k.sportart)}${k.klasse?' · Klasse '+esc(k.klasse):''}</div>` : ''}
+                <div class="kandidat-erfolg">${esc(k.erfolg)}</div>
+                ${!meineStimme && !istBeendet
+                  ? `<button class="vote-btn" onclick="event.stopPropagation();abstimmen('${k.id}','${kampagneId}')">
+                      👍 Für ${esc(k.name.split(' ')[0])} stimmen
+                    </button>`
+                  : zeigeErgebnis ? `
+                    <div class="ergebnis-bar">
+                      <div class="ergebnis-fill ${istGewinner?'gold':''}" style="width:${prozent}%"></div>
+                    </div>
+                    <div class="ergebnis-text">${stimmen} Stimme${stimmen!==1?'n':''} · ${prozent}%</div>` : ''}
+              </div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+
+      ${zeigeErgebnis && gesamt > 0 ? `<div class="gesamt-stimmen">Insgesamt ${gesamt} Stimme${gesamt!==1?'n':''} abgegeben</div>` : ''}
+      ${!meineStimme && !istBeendet ? `<p style="text-align:center;font-size:.75rem;opacity:.5;margin-top:16px">
+        Die Abstimmung ist anonym. Du kannst einmal pro Gerät abstimmen.
+      </p>` : ''}
+    `;
+
+  } catch(e) {
+    app.innerHTML = `<div class="status-box warning">
+      ❌ <strong>Fehler:</strong> ${e.message}
+    </div>`;
+  }
+}
+
+// ── Abstimmen ─────────────────────────────────────────────────
+async function abstimmen(kandidatId, kampagneId) {
+  const voterToken = getVoterToken();
+
+  // Karte visuell markieren
+  document.querySelectorAll('.kandidat-card').forEach(c => c.style.opacity = '0.5');
+  const karte = document.getElementById(`karte-${kandidatId}`);
+  if (karte) { karte.style.opacity = '1'; karte.style.borderColor = '#E2001A'; }
+
+  // Alle Buttons deaktivieren
+  document.querySelectorAll('.vote-btn').forEach(b => b.disabled = true);
+
+  try {
+    const { error } = await supabase.from('voting_votes').insert([{
+      campaign_id:  kampagneId,
+      candidate_id: kandidatId,
+      voter_token:  voterToken,
+    }]);
+
+    if (error) {
+      if (error.code === '23505') {
+        zeigeMeldung('Du hast bereits abgestimmt!', 'warning');
+      } else {
+        throw new Error(error.message);
+      }
+      await ladeAbstimmung();
+      return;
+    }
+
+    // Erfolg-Animation
+    zeigeMeldung('✅ Danke für deine Stimme!', 'success');
+    setTimeout(ladeAbstimmung, 1000);
+
+  } catch(e) {
+    zeigeMeldung('Fehler: ' + e.message, 'warning');
+    await ladeAbstimmung();
+  }
+}
+
+// ── Hilfsfunktionen ───────────────────────────────────────────
+function esc(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function zeigeMeldung(text, typ) {
+  const el = document.createElement('div');
+  el.className = `status-box ${typ}`;
+  el.style.cssText = 'position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:999;min-width:280px;animation:fadeIn .3s ease';
+  el.textContent = text;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// ── Start ─────────────────────────────────────────────────────
+ladeAbstimmung();
+</script>
+</body>
+</html>
