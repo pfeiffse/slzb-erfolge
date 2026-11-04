@@ -232,7 +232,7 @@ let _aktuelleKampagneId = null;
 function starteRealtime(kampagneId) {
   if (_realtimeChannel) db.removeChannel(_realtimeChannel);
   _aktuelleKampagneId = kampagneId;
-  _realtimeChannel = supabase
+  _realtimeChannel = db
     .channel('voting-live-' + kampagneId)
     .on('postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'voting_votes',
@@ -521,7 +521,7 @@ async function ladeArchiv() {
   const archivDiv = document.getElementById('archiv-app');
   archivDiv.innerHTML = '<div class="spinner-wrap"><div class="spinner"></div><p>Lade Archiv...</p></div>';
   try {
-    const { data: kampagnen } = await supabase
+    const { data: kampagnen } = await db
       .from('voting_campaigns').select('*').eq('status','beendet')
       .order('end_at', { ascending: false });
 
