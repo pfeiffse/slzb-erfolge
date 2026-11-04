@@ -1231,7 +1231,7 @@ function renderMeinProfil() {
           <table style="width:100%;font-size:.85rem">
             <tr><td class="text-muted" style="padding:6px 0;width:40%">Name</td><td><strong>${esc(Auth.name())}</strong></td></tr>
             <tr><td class="text-muted" style="padding:6px 0">E-Mail</td><td>${esc(Auth.email())}</td></tr>
-            <tr><td class="text-muted" style="padding:6px 0">Rolle</td><td><span class="badge badge-info">${esc({trainer:'Trainer/Melder',redaktion:'Redaktion',oea:'Öffentlichkeitsarbeit',datenschutz:'Datenschutz',admin:'Administrator'}[Auth.rolle()]||Auth.rolle())}</span></td></tr>
+            <tr><td class="text-muted" style="padding:6px 0">Rolle</td><td><span class="badge badge-info">${esc({schueler:'Schüler/in',trainer:'Trainer/Melder',mitarbeiter:'Mitarbeiter',redaktion:'Redaktion',oea:'Öffentlichkeitsarbeit',datenschutz:'Datenschutz',admin:'Administrator'}[Auth.rolle()]||Auth.rolle())}</span></td></tr>
           </table>
         </div>
       </div>
@@ -5232,8 +5232,12 @@ function zeigeVotingErstellen() {
                 <input type="text" id="v-klasse-${i}" placeholder="z.B. 10a" style="width:100%">
               </div>
               <div class="form-group">
-                <label>Foto-URL (optional)</label>
-                <input type="url" id="v-bild-${i}" placeholder="https://..." style="width:100%">
+                <label>Foto <span class="text-muted text-xs">(optional)</span></label>
+                <input type="file" id="v-bild-${i}" accept="image/jpeg,image/png,image/webp"
+                  style="width:100%;background:#f8f9fa;border:1px solid var(--slzb-border);border-radius:6px;padding:6px">
+                <div id="v-bild-preview-${i}" style="margin-top:6px;display:none">
+                  <img id="v-bild-img-${i}" style="max-height:80px;border-radius:6px;object-fit:cover">
+                </div>
               </div>
             </div>
           </div>
@@ -5248,6 +5252,23 @@ function zeigeVotingErstellen() {
   overlay.appendChild(modal);
   overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
   document.body.appendChild(overlay);
+
+  // Bild-Vorschau für alle 3 Kandidaten
+  [1,2,3].forEach(i => {
+    const input = document.getElementById(`v-bild-${i}`);
+    if (!input) return;
+    input.addEventListener('change', () => {
+      const file = input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        const preview = document.getElementById(`v-bild-preview-${i}`);
+        const img = document.getElementById(`v-bild-img-${i}`);
+        if (preview && img) { img.src = e.target.result; preview.style.display = 'block'; }
+      };
+      reader.readAsDataURL(file);
+    });
+  });
 }
 
 async function speichereVoting(status) {
@@ -5275,13 +5296,29 @@ async function speichereVoting(status) {
     for (let i = 1; i <= 3; i++) {
       const name = document.getElementById(`v-name-${i}`)?.value?.trim();
       if (!name) continue;
+      // Bild hochladen falls vorhanden
+      let bildUrl = null;
+      const bildInput = document.getElementById(`v-bild-${i}`);
+      if (bildInput?.files?.[0]) {
+        try {
+          const file = bildInput.files[0];
+          const pfad = `${Auth.id()}/voting_${kampagne.id}_${i}_${Date.now()}.${file.name.split('.').pop()}`;
+          const { error: upErr } = await Backend.client.storage
+            .from('poster-exports')
+            .upload(pfad, file, { contentType: file.type, upsert: true });
+          if (!upErr) {
+            const { data: urlData } = Backend.client.storage.from('poster-exports').getPublicUrl(pfad);
+            bildUrl = urlData?.publicUrl || null;
+          }
+        } catch(imgErr) { console.warn('Bild-Upload:', imgErr.message); }
+      }
       await Backend.client.from('voting_candidates').insert([{
         campaign_id: kampagne.id,
         name,
         sportart: document.getElementById(`v-sport-${i}`)?.value?.trim() || null,
         erfolg:   document.getElementById(`v-erfolg-${i}`)?.value?.trim() || '',
         klasse:   document.getElementById(`v-klasse-${i}`)?.value?.trim() || null,
-        bild_url: document.getElementById(`v-bild-${i}`)?.value?.trim()  || null,
+        bild_url: bildUrl,
         reihenfolge: i,
       }]);
     }

@@ -7,8 +7,8 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
-type Role = 'trainer' | 'redaktion' | 'oea' | 'datenschutz' | 'admin'
-const roles: Role[] = ['trainer', 'redaktion', 'oea', 'datenschutz', 'admin']
+type Role = 'schueler' | 'trainer' | 'mitarbeiter' | 'redaktion' | 'oea' | 'datenschutz' | 'admin'
+const roles: Role[] = ['schueler', 'trainer', 'mitarbeiter', 'redaktion', 'oea', 'datenschutz', 'admin']
 
 const json = (body: unknown, status = 200) =>
   Response.json(body, { status, headers: corsHeaders })

@@ -26,7 +26,7 @@ function renderNutzerverwaltung() {
             <input type="text" id="nu-anzeige" placeholder="Vorname Nachname"></div>
           <div class="form-group"><label>Rolle <span class="required">*</span></label>
             <select id="nu-rolle">
-              <option value="trainer">Trainer/Melder</option>
+              <option value="schueler">Schüler/in</option><option value="trainer">Trainer/Melder</option>
               <option value="redaktion">Redaktion</option>
               <option value="oea">Öffentlichkeitsarbeit</option>
               <option value="datenschutz">Datenschutz</option>
