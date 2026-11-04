@@ -216,12 +216,14 @@
 <div class="footer">SLZB Berlin · Abstimmung ist anonym · Einmal pro Gerät</div>
 </div>
 <!-- Supabase -->
-<script src="supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
 <script>
 // ── Supabase Init ─────────────────────────────────────────────
 const cfg = window.SLZB_CONFIG || {};
-const supabase = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+// Supabase kann als window.supabase oder window.supabase.createClient verfügbar sein
+const _sb = window.supabase || window.Supabase;
+const supabase = (_sb?.createClient || _sb?.default?.createClient)(cfg.supabaseUrl, cfg.supabaseAnonKey);
 
 // ── Realtime-Kanal ────────────────────────────────────────────
 let _realtimeChannel = null;
