@@ -5648,8 +5648,10 @@ async function zeigeVotingKandidatenAuswahl() {
     const medienMap = {};
     for (const m of (medien||[])) {
       if (!medienMap[m.achievement_id] && m.storage_path) {
-        const { data: url } = Backend.client.storage.from('achievement-media').getPublicUrl(m.storage_path);
-        medienMap[m.achievement_id] = url?.publicUrl || null;
+        // Signed URL für privaten Bucket (1 Stunde gültig)
+        const { data: signedData } = await Backend.client.storage
+          .from('achievement-media').createSignedUrl(m.storage_path, 3600);
+        medienMap[m.achievement_id] = signedData?.signedUrl || null;
       }
     }
 
