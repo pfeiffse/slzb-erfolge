@@ -5133,47 +5133,64 @@ async function sendeRedaktionsPush(erfolgId, titel) {
 // ── Abstimmungs-Verwaltung (Admin/Redaktion) ──────────────────
 async function renderVotingVerwaltung() {
   const { data: kampagnen } = await Backend.client
-    .from('voting_campaigns')
-    .select('*')
-    .order('erstellt_am', { ascending: false });
+    .from('voting_campaigns').select('*').order('erstellt_am', { ascending: false });
 
-  const statusBadgeV = (s) => ({
-    entwurf: '<span class="badge badge-entwurf">Entwurf</span>',
-    aktiv:   '<span class="badge badge-freigegeben">🗳️ Aktiv</span>',
-    beendet: '<span class="badge badge-archiviert">Beendet</span>',
+  // Stimmenanzahl laden
+  const stimmenMap = {};
+  if (kampagnen?.length) {
+    const { data: stimmen } = await Backend.client.from('voting_votes').select('campaign_id');
+    (stimmen||[]).forEach(s => { stimmenMap[s.campaign_id] = (stimmenMap[s.campaign_id]||0)+1; });
+  }
+
+  const statusBadge = (s) => ({
+    entwurf: '<span class=\"badge badge-entwurf\">📝 Entwurf</span>',
+    aktiv:   '<span class=\"badge badge-freigegeben\">🗳️ Aktiv</span>',
+    beendet: '<span class=\"badge badge-archiviert\">✅ Beendet</span>',
   }[s] || s);
 
-  return `<div class="page">
-    <div class="page-header flex items-center gap-3">
-      <h1>🏆 Sportler/in des Monats</h1>
-      ${Auth.canDo('bearbeiten') ? `<button class="btn btn-primary btn-sm" onclick="zeigeVotingErstellen()">+ Neue Abstimmung</button>` : ''}
-    </div>
-
-    ${!kampagnen?.length ? `<div class="alert alert-info"><span class="alert-icon">ℹ️</span>
-      <span>Noch keine Abstimmungen. Erstelle die erste!</span></div>` :
-    `<div class="grid grid-2 mb-4">
-      ${kampagnen.map(k => `<div class="card">
-        <div class="card-body">
-          <div class="flex items-center gap-2 mb-2">
-            ${statusBadgeV(k.status)}
-            <strong>${esc(k.titel)}</strong>
-          </div>
-          <div class="text-sm text-muted mb-3">
-            ${k.start_at ? `${fmtDT(k.start_at)} – ${fmtDT(k.end_at)}` : 'Kein Zeitraum'}
-          </div>
-          <div class="flex gap-2" style="flex-wrap:wrap">
-            <button class="btn btn-outline btn-sm" onclick="zeigeVotingAbstimmung('${k.id}')">🗳️ Abstimmung öffnen</button>
-            <button class=\"btn btn-primary btn-sm\" onclick=\"zeigeVotingLink('${k.id}')\" style=\"background:#003366\">\ud83d\udd17 Link & QR</button>\n            ${Auth.canDo('bearbeiten') ? `
-              <button class="btn btn-ghost btn-sm" onclick="zeigeVotingErgebnis('${k.id}')">📊 Ergebnis</button>
-              <button class="btn btn-ghost btn-sm" onclick="toggleVotingStatus('${k.id}','${k.status}')">
-                ${k.status==='aktiv'?'⏹️ Beenden':'▶️ Aktivieren'}
-              </button>` : ''}
-          </div>
+  const karte = (k) => {
+    const st = stimmenMap[k.id] || 0;
+    const abgelaufen = k.end_at && new Date(k.end_at) < new Date() && k.status === 'aktiv';
+    const farbe = k.status==='aktiv'?'#00c853':k.status==='entwurf'?'#888':'#003366';
+    return `<div class=\"card\" style=\"border-left:4px solid ${farbe}\">
+      <div class=\"card-body\">
+        <div class=\"flex items-center gap-2 mb-1\">${statusBadge(k.status)}
+          ${abgelaufen?'<span class=\"badge\" style=\"background:#E2001A;color:#fff\">⏰ Abgelaufen</span>':''}
         </div>
-      </div>`).join('')}
-    </div>`}
+        <div style=\"font-weight:700;margin-bottom:4px\">${esc(k.titel)}</div>
+        <div class=\"text-sm text-muted mb-1\">${k.start_at?`${new Date(k.start_at).toLocaleDateString('de-DE')} – ${new Date(k.end_at).toLocaleDateString('de-DE')}`:'Kein Zeitraum'}</div>
+        <div class=\"text-sm mb-3\" style=\"color:var(--slzb-primary);font-weight:600\">${st} Stimme${st!==1?'n':''}</div>
+        <div class=\"flex gap-2\" style=\"flex-wrap:wrap\">
+          <button class=\"btn btn-outline btn-sm\" onclick=\"zeigeVotingAbstimmung('${k.id}')\">🗳️ Öffnen</button>
+          <button class=\"btn btn-ghost btn-sm\" onclick=\"zeigeVotingLink('${k.id}')\">🔗 Link</button>
+          ${Auth.canDo('bearbeiten')?`
+            <button class=\"btn btn-ghost btn-sm\" onclick=\"zeigeVotingErgebnis('${k.id}')\">📊 Ergebnis</button>
+            <button class=\"btn btn-ghost btn-sm\" onclick=\"toggleVotingStatus('${k.id}','${k.status}')\">
+              ${k.status==='aktiv'?'⏹️ Beenden':k.status==='entwurf'?'▶️ Aktivieren':'🔄 Reaktivieren'}
+            </button>
+            <button class=\"btn btn-ghost btn-sm\" onclick=\"loescheVotingKampagne('${k.id}','${esc(k.titel)}')\" style=\"color:#c0392b\">🗑️ Löschen</button>
+          `:''}
+        </div>
+      </div>
+    </div>`;
+  };
+
+  const aktive   = (kampagnen||[]).filter(k=>k.status==='aktiv');
+  const entwuerfe= (kampagnen||[]).filter(k=>k.status==='entwurf');
+  const beendete = (kampagnen||[]).filter(k=>k.status==='beendet');
+
+  return `<div class=\"page\">
+    <div class=\"page-header flex items-center gap-3\">
+      <h1>🏆 Sportler/in des Monats</h1>
+      ${Auth.canDo('bearbeiten')?`<button class=\"btn btn-primary btn-sm\" onclick=\"zeigeVotingErstellen()\">+ Neue Abstimmung</button>`:''}
+    </div>
+    ${!kampagnen?.length?`<div class=\"alert alert-info\"><span class=\"alert-icon\">ℹ️</span><span>Noch keine Abstimmungen.</span></div>`:''}
+    ${aktive.length?`<h3 style=\"margin-bottom:12px;color:#00c853\">🗳️ Aktive Abstimmung</h3><div class=\"grid grid-2 mb-4\">${aktive.map(karte).join('')}</div>`:''}
+    ${entwuerfe.length?`<h3 style=\"margin-bottom:12px;color:#888\">📝 Entwürfe</h3><div class=\"grid grid-2 mb-4\">${entwuerfe.map(karte).join('')}</div>`:''}
+    ${beendete.length?`<details><summary style=\"cursor:pointer;font-weight:700;margin-bottom:12px;color:var(--slzb-muted)\">✅ Beendete Abstimmungen (${beendete.length})</summary><div class=\"grid grid-2 mb-4\" style=\"margin-top:12px\">${beendete.map(karte).join('')}</div></details>`:''}
   </div>`;
 }
+
 
 // ── Neue Abstimmung erstellen ─────────────────────────────────
 function zeigeVotingErstellen() {
@@ -5823,4 +5840,22 @@ function zeigeVotingLink(kampagneId) {
   overlay.appendChild(modal);
   overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
   document.body.appendChild(overlay);
+}
+
+// ── Voting-Kampagne löschen ───────────────────────────────────
+async function loescheVotingKampagne(kampagneId, titel) {
+  if (!confirm(`Abstimmung "${titel}" wirklich löschen?\n\nAlle Kandidaten und Stimmen werden ebenfalls gelöscht.`)) return;
+  try {
+    // Stimmen löschen
+    await Backend.client.from('voting_votes').delete().eq('campaign_id', kampagneId);
+    // Kandidaten löschen
+    await Backend.client.from('voting_candidates').delete().eq('campaign_id', kampagneId);
+    // Kampagne löschen
+    const { error } = await Backend.client.from('voting_campaigns').delete().eq('id', kampagneId);
+    if (error) throw new Error(error.message);
+    toast('🗑️ Abstimmung gelöscht', 'success');
+    navigateTo('voting');
+  } catch(e) {
+    toast('Fehler: ' + e.message, 'danger');
+  }
 }
