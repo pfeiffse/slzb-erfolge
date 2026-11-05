@@ -5497,51 +5497,310 @@ async function zeigeVotingErgebnis(kampagneId) {
   const { data: kandidaten } = await Backend.client.from('voting_candidates')
     .select('*').eq('campaign_id', kampagneId).order('reihenfolge');
   const { data: stimmen } = await Backend.client.from('voting_votes')
-    .select('candidate_id').eq('campaign_id', kampagneId);
+    .select('candidate_id, abgestimmt_am').eq('campaign_id', kampagneId);
 
   const stimmenMap = {};
   (stimmen||[]).forEach(s => { stimmenMap[s.candidate_id] = (stimmenMap[s.candidate_id]||0) + 1; });
   const gesamt = stimmen?.length || 0;
-
   const sorted = [...(kandidaten||[])].sort((a,b) => (stimmenMap[b.id]||0) - (stimmenMap[a.id]||0));
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal modal-xl';
+  modal.style.maxWidth = '680px';
+
+  const farben = ['#C9A227','#BFC8D2','#C2783A','#0B63CE','#00a040'];
+
+  modal.innerHTML = `
+    <div class="modal-header" style="background:var(--slzb-primary);color:#fff">
+      <div>
+        <h3 style="color:#fff;margin:0">📊 Ergebnis: ${esc(k.titel)}</h3>
+        <p style="color:rgba(255,255,255,.7);font-size:.82rem;margin:4px 0 0">${gesamt} Stimmen abgegeben</p>
+      </div>
+      <button class="btn btn-ghost btn-sm" style="color:#fff" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Balkendiagramm -->
+      <div style="margin-bottom:24px">
+        <canvas id="voting-chart" height="200"></canvas>
+      </div>
+
+      <!-- Detaillierte Ergebnisse -->
+      <div style="margin-bottom:20px">
+        ${sorted.map((k2, idx) => {
+          const s = stimmenMap[k2.id] || 0;
+          const pct = gesamt ? Math.round(s/gesamt*100) : 0;
+          const medal = idx===0?'🥇':idx===1?'🥈':'🥉';
+          return `<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;
+            padding:12px;border-radius:10px;background:${idx===0?'rgba(201,162,39,0.1)':'var(--slzb-bg)'}">
+            ${k2.bild_url?`<img src="${esc(k2.bild_url)}" style="width:48px;height:48px;border-radius:8px;object-fit:cover;flex-shrink:0">`
+              :'<div style="width:48px;height:48px;border-radius:8px;background:#f0f4f8;display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0">🏃</div>'}
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700">${medal} ${esc(k2.name)}</div>
+              ${k2.sportart?`<div style="font-size:.78rem;color:var(--slzb-primary)">${esc(k2.sportart)}</div>`:''}
+              <div style="background:#f0f4f8;border-radius:4px;height:8px;margin-top:6px;overflow:hidden">
+                <div style="height:100%;border-radius:4px;width:${pct}%;background:${farben[idx]||'#888'};transition:width 1s ease"></div>
+              </div>
+              <div style="font-size:.75rem;color:var(--slzb-muted);margin-top:3px">${s} Stimme${s!==1?'n':''} · ${pct}%</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+
+      <!-- Aktionen -->
+      <div class="flex gap-2" style="flex-wrap:wrap;border-top:1px solid var(--slzb-border);padding-top:16px">
+        <button class="btn btn-outline btn-sm" onclick="toggleErgebnisSichtbar('${kampagneId}',${!k.ergebnis_sichtbar})">
+          ${k.ergebnis_sichtbar ? '🔒 Ergebnis verbergen' : '👁️ Ergebnis veröffentlichen'}
+        </button>
+        <button class="btn btn-outline btn-sm" onclick="exportiereVotingCSV('${kampagneId}')">
+          📥 CSV Export
+        </button>
+        <button class="btn btn-outline btn-sm" onclick="exportiereVotingPDF('${kampagneId}')">
+          🖨️ PDF Export
+        </button>
+        ${sorted[0] ? `
+          <button class="btn btn-primary btn-sm" onclick="zeigeVotingSiegerAusgaben('${sorted[0].id}','${kampagneId}')">
+            🏆 Sieger-Ausgaben erstellen
+          </button>` : ''}
+      </div>
+    </div>`;
+
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+
+  // Chart.js Balkendiagramm
+  setTimeout(() => {
+    const canvas = document.getElementById('voting-chart');
+    if (!canvas || !window.Chart) {
+      // Chart.js laden
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/chart.js@3/dist/chart.min.js';
+      script.onload = () => zeichneVotingChart(canvas, sorted, stimmenMap, gesamt, farben);
+      document.head.appendChild(script);
+    } else {
+      zeichneVotingChart(canvas, sorted, stimmenMap, gesamt, farben);
+    }
+  }, 100);
+}
+
+function zeichneVotingChart(canvas, sorted, stimmenMap, gesamt, farben) {
+  if (!canvas) return;
+  new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: sorted.map(k => k.name),
+      datasets: [{
+        label: 'Stimmen',
+        data: sorted.map(k => stimmenMap[k.id] || 0),
+        backgroundColor: sorted.map((_, i) => farben[i] || '#888'),
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const pct = gesamt ? Math.round(ctx.raw/gesamt*100) : 0;
+              return `${ctx.raw} Stimmen (${pct}%)`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+      }
+    }
+  });
+}
+
+// CSV Export
+async function exportiereVotingCSV(kampagneId) {
+  const { data: k } = await Backend.client.from('voting_campaigns').select('*').eq('id', kampagneId).single();
+  const { data: kandidaten } = await Backend.client.from('voting_candidates').select('*').eq('campaign_id', kampagneId);
+  const { data: stimmen } = await Backend.client.from('voting_votes').select('candidate_id, abgestimmt_am').eq('campaign_id', kampagneId);
+
+  const stimmenMap = {};
+  (stimmen||[]).forEach(s => { stimmenMap[s.candidate_id] = (stimmenMap[s.candidate_id]||0)+1; });
+  const gesamt = stimmen?.length || 0;
+  const sorted = [...(kandidaten||[])].sort((a,b) => (stimmenMap[b.id]||0)-(stimmenMap[a.id]||0));
+  let csv = 'Abstimmung;' + k.titel + '\n';
+  csv += 'Datum;' + new Date().toLocaleDateString('de-DE') + '\n';
+  csv += 'Gesamt Stimmen;' + gesamt + '\n\n';
+  csv += 'Platz;Name;Sportart;Stimmen;Prozent\n';
+  sorted.forEach((k2, idx) => {
+    const s = stimmenMap[k2.id] || 0;
+    const pct = gesamt ? Math.round(s/gesamt*100) : 0;
+    csv += `${idx+1};${k2.name};${k2.sportart||''};${s};${pct}%
+`;
+  });
+
+  const blob = new Blob(['﻿'+csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `SLZB_Abstimmung_${k.monat}_Ergebnis.csv`;
+  a.click();
+  toast('📥 CSV heruntergeladen', 'success');
+}
+
+// PDF Export (via Canvas → PNG → jsPDF)
+async function exportiereVotingPDF(kampagneId) {
+  const { data: k } = await Backend.client.from('voting_campaigns').select('*').eq('id', kampagneId).single();
+  const { data: kandidaten } = await Backend.client.from('voting_candidates').select('*').eq('campaign_id', kampagneId);
+  const { data: stimmen } = await Backend.client.from('voting_votes').select('candidate_id').eq('campaign_id', kampagneId);
+
+  const stimmenMap = {};
+  (stimmen||[]).forEach(s => { stimmenMap[s.candidate_id] = (stimmenMap[s.candidate_id]||0)+1; });
+  const gesamt = stimmen?.length || 0;
+  const sorted = [...(kandidaten||[])].sort((a,b) => (stimmenMap[b.id]||0)-(stimmenMap[a.id]||0));
+
+  // Canvas-Ergebnis-Poster erstellen
+  const canvas = document.createElement('canvas');
+  canvas.width = 1587; canvas.height = 1123;
+  const ctx = canvas.getContext('2d');
+  await ladeMontserrat(); await ladeLogo();
+
+  // Hintergrund
+  ctx.fillStyle = '#fff'; ctx.fillRect(0,0,1587,1123);
+  ctx.fillStyle = '#003366'; ctx.fillRect(0,0,1587,120);
+
+  // Logo
+  if (_slzbLogo) {
+    const r = _slzbLogo.width/_slzbLogo.height;
+    ctx.drawImage(_slzbLogo, 60, 15, 90*r, 90);
+  }
+
+  // Titel
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 28px Montserrat, Arial';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText('Schul- und Leistungssportzentrum Berlin', 200, 50);
+  ctx.fillStyle = '#E2001A'; ctx.font = 'bold 20px Montserrat, Arial';
+  ctx.fillText(`🏆 ${k.titel} · Ergebnis`, 200, 85);
+  ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '14px Montserrat, Arial';
+  ctx.textAlign = 'right';
+  ctx.fillText(`${gesamt} Stimmen · ${new Date().toLocaleDateString('de-DE')}`, 1527, 60);
+
+  // Balken
+  const farben = ['#C9A227','#BFC8D2','#C2783A','#0B63CE'];
+  const maxS = Math.max(...sorted.map(k2 => stimmenMap[k2.id]||0), 1);
+  const barW = 1467; const barH = 120; const startY = 180;
+
+  sorted.forEach((k2, idx) => {
+    const s = stimmenMap[k2.id] || 0;
+    const pct = gesamt ? Math.round(s/gesamt*100) : 0;
+    const y = startY + idx * (barH + 20);
+    const medal = idx===0?'🥇':idx===1?'🥈':'🥉';
+
+    // Hintergrund
+    ctx.fillStyle = idx===0?'rgba(201,162,39,0.1)':'#f8f9fa';
+    ctx.fillRect(60, y, barW, barH);
+
+    // Balken
+    const fillW = Math.round(barW * s / maxS);
+    ctx.fillStyle = farben[idx]||'#888';
+    ctx.fillRect(60, y+barH-20, fillW, 20);
+
+    // Text
+    ctx.fillStyle = '#1B1C1F'; ctx.font = 'bold 22px Montserrat, Arial';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillText(`${medal} ${k2.name}`, 80, y+12);
+    ctx.fillStyle = '#003366'; ctx.font = '16px Montserrat, Arial';
+    ctx.fillText(k2.sportart||'', 80, y+42);
+    ctx.fillStyle = '#333'; ctx.font = 'bold 32px Montserrat, Arial';
+    ctx.textAlign = 'right';
+    ctx.fillText(`${s} Stimmen (${pct}%)`, 1520, y+12);
+  });
+
+  // Footer
+  ctx.fillStyle = '#f0f0f0'; ctx.fillRect(0, 1063, 1587, 60);
+  ctx.fillStyle = '#003366'; ctx.fillRect(0, 1063, 1587, 3);
+  ctx.fillStyle = '#333'; ctx.font = '14px Montserrat, Arial';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('Schul- und Leistungssportzentrum Berlin · #SLZBerlin', 793, 1093);
+
+  // Download
+  const a = document.createElement('a');
+  a.download = `SLZB_Abstimmung_${k.monat}_Ergebnis.png`;
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+  toast('🖨️ Ergebnis-Grafik heruntergeladen', 'success');
+}
+
+// Sieger-Ausgaben (A3, Bildschirm, Social)
+async function zeigeVotingSiegerAusgaben(kandidatId, kampagneId) {
+  const { data: k2 } = await Backend.client.from('voting_candidates').select('*').eq('id', kandidatId).single();
+  const { data: kamp } = await Backend.client.from('voting_campaigns').select('*').eq('id', kampagneId).single();
+  const { data: stimmen } = await Backend.client.from('voting_votes').select('candidate_id').eq('campaign_id', kampagneId);
+  const stimmenMap = {};
+  (stimmen||[]).forEach(s => { stimmenMap[s.candidate_id] = (stimmenMap[s.candidate_id]||0)+1; });
+  const gesamt = stimmen?.length || 0;
+  const siegerStimmen = stimmenMap[kandidatId] || 0;
+  const pct = gesamt ? Math.round(siegerStimmen/gesamt*100) : 0;
+
+  // Fake-Erfolg-Objekt für Poster-Funktionen
+  const fakeErfolg = {
+    id: kandidatId,
+    titel: `${kamp.titel} – Sieger/in`,
+    sportartText: k2.sportart || '',
+    wettbewerbText: kamp.titel,
+    beteiligte: [{ anzeigename: k2.name }],
+    bilder: k2.bild_url ? [{ signedUrl: k2.bild_url }] : [],
+    datum: new Date().toISOString().slice(0,10),
+    kurzinfo: `${siegerStimmen} Stimmen · ${pct}% · ${gesamt} Stimmen gesamt`,
+    platzierung: 1,
+    medaille: 'Gold',
+    ebene: 'Schulebene',
+  };
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   const modal = document.createElement('div');
   modal.className = 'modal';
   modal.innerHTML = `
-    <div class="modal-header"><h3>📊 Ergebnis: ${esc(k.titel)}</h3>
+    <div class="modal-header"><h3>🏆 Sieger-Ausgaben: ${esc(k2.name)}</h3>
       <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
     </div>
     <div class="modal-body">
-      <p class="text-muted mb-3">Gesamt: <strong>${gesamt} Stimmen</strong></p>
-      ${sorted.map((k2, idx) => {
-        const s = stimmenMap[k2.id] || 0;
-        const pct = gesamt ? Math.round(s/gesamt*100) : 0;
-        return `<div style="margin-bottom:16px">
-          <div class="flex items-center gap-2 mb-1">
-            <span style="font-size:1.2rem">${idx===0?'🥇':idx===1?'🥈':'🥉'}</span>
-            <strong>${esc(k2.name)}</strong>
-            <span class="text-muted text-sm">${s} Stimmen (${pct}%)</span>
+      <p class="text-muted mb-3">Erstelle Ausgaben für den Sieger der Abstimmung.</p>
+      <div class="grid grid-3" style="gap:12px">
+        <div class="card text-center">
+          <div class="card-body">
+            <div style="font-size:2rem">📄</div>
+            <div class="font-bold mt-2">A3-Aushang</div>
+            <button class="btn btn-primary btn-sm mt-3 w-full" onclick="this.closest('.modal-overlay').remove();zeigeVotingSiegerPoster('a3')">Erstellen</button>
           </div>
-          <div style="background:#f0f4f8;border-radius:6px;height:12px;overflow:hidden">
-            <div style="height:100%;background:${idx===0?'#C9A227':idx===1?'#BFC8D2':'#C2783A'};width:${pct}%;border-radius:6px"></div>
+        </div>
+        <div class="card text-center">
+          <div class="card-body">
+            <div style="font-size:2rem">🖥️</div>
+            <div class="font-bold mt-2">Bildschirm</div>
+            <button class="btn btn-primary btn-sm mt-3 w-full" onclick="this.closest('.modal-overlay').remove();zeigeVotingSiegerPoster('bildschirm')">Erstellen</button>
           </div>
-        </div>`;
-      }).join('')}
-      <div class="flex gap-2 mt-4">
-        <button class="btn btn-outline btn-sm" onclick="toggleErgebnisSichtbar('${kampagneId}',${!k.ergebnis_sichtbar})">
-          ${k.ergebnis_sichtbar ? '🔒 Ergebnis verbergen' : '👁️ Ergebnis veröffentlichen'}
-        </button>
-        ${sorted[0] ? `<button class="btn btn-primary btn-sm" onclick="this.closest('.modal-overlay').remove();zeigeNachwuchsSiegerPosterFuerVoting('${sorted[0].id}')">
-          🏆 Sieger-Poster erstellen
-        </button>` : ''}
+        </div>
+        <div class="card text-center">
+          <div class="card-body">
+            <div style="font-size:2rem">📱</div>
+            <div class="font-bold mt-2">Social Media</div>
+            <button class="btn btn-primary btn-sm mt-3 w-full" onclick="this.closest('.modal-overlay').remove();zeigeVotingSiegerPoster('social')">Erstellen</button>
+          </div>
+        </div>
       </div>
     </div>`;
+
+  // Sieger-Daten für Poster-Funktionen vorbereiten
+  window._votingSieger = fakeErfolg;
+
   overlay.appendChild(modal);
   overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
   document.body.appendChild(overlay);
 }
+
 
 // ── Hilfsfunktionen ───────────────────────────────────────────
 function getVoterToken() {
@@ -5857,5 +6116,102 @@ async function loescheVotingKampagne(kampagneId, titel) {
     navigateTo('voting');
   } catch(e) {
     toast('Fehler: ' + e.message, 'danger');
+  }
+}
+
+// ── Voting-Sieger Poster-Ausgaben ─────────────────────────────
+async function zeigeVotingSiegerPoster(typ) {
+  const sieger = window._votingSieger;
+  if (!sieger) { toast('Kein Sieger-Objekt gefunden', 'danger'); return; }
+
+  // Temporären Eintrag in achievements simulieren für Poster-Funktionen
+  // Wir nutzen DB.getErfolgById-Ersatz über window-Variable
+  const fakeId = 'voting-sieger-' + Date.now();
+
+  // Poster-Funktionen mit fake Erfolg aufrufen
+  if (typ === 'a3') {
+    // Direkt A3-Canvas zeichnen
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const modal = document.createElement('div');
+    modal.className = 'modal modal-xl';
+    modal.innerHTML = `
+      <div class="modal-header">
+        <h3>📄 A3-Aushang – ${esc(sieger.beteiligte[0]?.anzeigename||'Sieger')}</h3>
+        <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
+      </div>
+      <div class="modal-body" style="background:#111;padding:16px">
+        <canvas id="sieger-a3-canvas" width="1587" height="1123"
+          style="max-width:100%;max-height:60vh;display:block;margin:0 auto;border-radius:8px"></canvas>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Schließen</button>
+        <button class="btn btn-primary" onclick="exportPosterPNG(window._votingSieger,'sieger-a3-canvas')">📥 PNG herunterladen</button>
+      </div>`;
+    overlay.appendChild(modal);
+    overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+    window._a3Erfolg = sieger;
+    setTimeout(async () => {
+      await ladeMontserrat(); await ladeLogo();
+      const canvas = document.getElementById('sieger-a3-canvas');
+      if (canvas) await zeichneA3Variante('sieger-a3-canvas', sieger, 1);
+    }, 100);
+
+  } else if (typ === 'bildschirm') {
+    window._screenErfolg = sieger;
+    window._bsErfolg = sieger;
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const modal = document.createElement('div');
+    modal.className = 'modal modal-xl';
+    modal.innerHTML = `
+      <div class="modal-header">
+        <h3>🖥️ Bildschirm – ${esc(sieger.beteiligte[0]?.anzeigename||'Sieger')}</h3>
+        <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
+      </div>
+      <div class="modal-body" style="background:#111;padding:16px">
+        <canvas id="sieger-bs-canvas" width="1080" height="1350"
+          style="max-width:100%;max-height:65vh;display:block;margin:0 auto;border-radius:8px"></canvas>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Schließen</button>
+        <button class="btn btn-primary" onclick="exportPosterPNG(window._votingSieger,'sieger-bs-canvas')">📥 PNG herunterladen</button>
+      </div>`;
+    overlay.appendChild(modal);
+    overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+    setTimeout(async () => {
+      await ladeMontserrat(); await ladeLogo();
+      await zeichneSLZBPoster('sieger-bs-canvas', sieger);
+    }, 100);
+
+  } else if (typ === 'social') {
+    window._socialErfolg = sieger;
+    window._smErfolg = sieger;
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const modal = document.createElement('div');
+    modal.className = 'modal modal-xl';
+    modal.innerHTML = `
+      <div class="modal-header">
+        <h3>📱 Social Media – ${esc(sieger.beteiligte[0]?.anzeigename||'Sieger')}</h3>
+        <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
+      </div>
+      <div class="modal-body" style="background:#111;padding:16px">
+        <canvas id="sieger-sm-canvas" width="1080" height="1080"
+          style="max-width:100%;max-height:60vh;display:block;margin:0 auto;border-radius:8px"></canvas>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Schließen</button>
+        <button class="btn btn-primary" onclick="exportPosterPNG(window._votingSieger,'sieger-sm-canvas')">📥 PNG herunterladen</button>
+      </div>`;
+    overlay.appendChild(modal);
+    overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+    setTimeout(async () => {
+      await ladeMontserrat(); await ladeLogo();
+      await zeichneSocialFormat('sieger-sm-canvas', sieger, 'beitrag');
+    }, 100);
   }
 }
