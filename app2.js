@@ -6270,7 +6270,7 @@ function switchVotingAushangTab(format, btn) {
   if (canvas) {
     if (format === 'a3') { canvas.width=1587; canvas.height=1123; canvas.style.maxHeight='55vh'; }
     else if (format === 'social') { canvas.width=1080; canvas.height=1080; canvas.style.maxHeight='60vh'; }
-    else { canvas.width=1920; canvas.height=1080; canvas.style.maxHeight='45vh'; }
+    else { canvas.width=960; canvas.height=1080; canvas.style.maxHeight='55vh'; }
   }
   zeichneVotingAushang(format);
 }
@@ -6346,14 +6346,21 @@ async function zeichneVotingAushang(format) {
     const imgH = Math.round(cardH*0.55);
     if (k2.bild_url) {
       try {
-        const img = await ladeBild(k2.bild_url);
+        // Direkt als Image-Element laden (kein fetch/CORS-Problem)
+        const img = await new Promise((resolve) => {
+          const i = new Image();
+          i.crossOrigin = 'anonymous';
+          i.onload = () => resolve(i);
+          i.onerror = () => resolve(null);
+          i.src = k2.bild_url;
+        });
         if (img) {
           ctx.save();
           slzbRoundRect(ctx, cx, cardStartY, cardW, imgH, [16,16,0,0]); ctx.clip();
           drawCover(ctx, img, cx, cardStartY, cardW, imgH);
           ctx.restore();
         }
-      } catch(e) {}
+      } catch(e) { console.warn('Bild:', e.message); }
     } else {
       ctx.fillStyle='rgba(255,255,255,0.05)'; ctx.fillRect(cx, cardStartY, cardW, imgH);
       ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.font=`${Math.round(cardW*0.3)}px Arial`;
