@@ -740,8 +740,10 @@ async function zeichneA3Landscape(canvas, e, bild, meta) {
   // Großer A3-Header (gut lesbar im Vorbeigehen)
   const HEADER_H_L = zeichneA3Header(ctx, W, e);
 
-  // Bild oben (55%) oder Wasserzeichen-Silhouette
-  const fotoH = Math.round((H-HEADER_H_L-60)*0.55);
+  // Bild oben (50%) oder Wasserzeichen-Silhouette
+  const FOOTER_H_L = 70; // Platz für Footer
+  const verfuegbarH = H - HEADER_H_L - FOOTER_H_L;
+  const fotoH = Math.round(verfuegbarH * 0.50); // 50% für Foto
   if (bild) {
     ctx.save(); ctx.beginPath(); ctx.rect(0,HEADER_H_L,W,fotoH); ctx.clip();
     drawCover(ctx, bild, 0, HEADER_H_L, W, fotoH); ctx.restore();
@@ -749,8 +751,8 @@ async function zeichneA3Landscape(canvas, e, bild, meta) {
     zeichneA3Wasserzeichen(ctx, W, H, sportart, 0, HEADER_H_L);
   }
 
-  // Textbereich
-  let y = HEADER_H_L+fotoH+20;
+  // Textbereich mit Abstand nach Foto
+  let y = HEADER_H_L + fotoH + 16;
   ctx.fillStyle=SLZB_COLORS.red; ctx.font='bold 14px Montserrat, Arial, sans-serif';
   ctx.textAlign='center'; ctx.textBaseline='top';
   ctx.fillText(sportart.toUpperCase(), W/2, y); y+=22;
@@ -763,11 +765,11 @@ async function zeichneA3Landscape(canvas, e, bild, meta) {
 
   const woerter = titel.toUpperCase().split(' ');
   const mid = Math.ceil(woerter.length/2);
-  ctx.font='bold italic 64px Montserrat, Arial, sans-serif';
+  ctx.font='bold italic 52px Montserrat, Arial, sans-serif';
   ctx.fillStyle=SLZB_COLORS.blue;
-  ctx.fillText(woerter.slice(0,mid).join(' '), W/2, y, W-100); y+=72;
+  ctx.fillText(woerter.slice(0,mid).join(' '), W/2, y, W-100); y+=60;
   ctx.fillStyle=SLZB_COLORS.red;
-  if (woerter.slice(mid).length) { ctx.fillText(woerter.slice(mid).join(' '), W/2, y, W-100); y+=72; }
+  if (woerter.slice(mid).length) { ctx.fillText(woerter.slice(mid).join(' '), W/2, y, W-100); y+=60; }
 
   if (platz) {
     const ovalW=100, ovalH=50, ovalX=W/2-ovalW/2-70, ovalY=y;
