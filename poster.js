@@ -1278,7 +1278,7 @@ async function zeichneA3Vollbild(canvasId, e) {
   const CARD_PAD = 50;
   const CARD_X = 50;
   const CARD_W = W - 100;
-  const FOOTER_H_V = 55;
+  const FOOTER_H_V = 80; // Groß genug damit Text über Druckerrand (40px) liegt
 
   // Athletenname + Datum vorbereiten
   const _athV = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet'&&n.trim()!=='').join(', ');
@@ -1372,7 +1372,7 @@ async function zeichneA3Vollbild(canvasId, e) {
   ctx.fillStyle='#E2001A'; ctx.fillRect(0, H-FOOTER_H_V, W, 2);
   ctx.fillStyle='#fff'; ctx.font='bold 14px Montserrat, Arial, sans-serif';
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  ctx.fillText('Schul- und Leistungssportzentrum Berlin  ·  #SLZBerlin', W/2, H-FOOTER_H_V/2);
+  ctx.fillText('Schul- und Leistungssportzentrum Berlin  ·  #SLZBerlin', W/2, H - FOOTER_H_V + (FOOTER_H_V - 40) / 2);
   zeichneA3DruckerrandFinal(ctx, W, H);
 }
 
