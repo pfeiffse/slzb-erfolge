@@ -5397,6 +5397,19 @@ async function zeigeVotingAbstimmung(kampagneId) {
     const istBeendet = k.status === 'beendet' || (k.end_at && new Date(k.end_at) < new Date());
     const zeigeErgebnis = istBeendet || k.ergebnis_sichtbar || meineStimme;
 
+    // Entwurf: nur für Redaktion/Admin sichtbar
+    if (k.status === 'entwurf' && !Auth.canDo('bearbeiten')) {
+      modal.innerHTML = `<div class="modal-header" style="background:var(--slzb-primary);color:#fff">
+        <h3 style="color:#fff;margin:0">🔒 Noch nicht aktiv</h3>
+        <button class="btn btn-ghost btn-sm" style="color:#fff" onclick="this.closest('.modal-overlay').remove()">✕</button>
+      </div>
+      <div class="modal-body"><div class="alert alert-warning">
+        <span class="alert-icon">⚠️</span>
+        <span>Diese Abstimmung ist noch ein Entwurf und noch nicht für alle sichtbar.</span>
+      </div></div>`;
+      return;
+    }
+
     // Stimmen pro Kandidat laden wenn Ergebnis sichtbar
     let stimmenMap = {};
     if (zeigeErgebnis) {

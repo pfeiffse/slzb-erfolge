@@ -320,7 +320,7 @@ async function ladeAbstimmung() {
       kampagne = data;
     }
 
-    if (!kampagne) {
+    if (!kampagne || kampagne.status === 'entwurf') {
       app.innerHTML = `<div class="status-box warning">
         <div style="font-size:2rem;margin-bottom:8px">🏆</div>
         <strong>Keine aktive Abstimmung</strong><br>
