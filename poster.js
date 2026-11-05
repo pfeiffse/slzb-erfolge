@@ -690,7 +690,7 @@ function zeichneA3Header(ctx, W, e, transparent=false) {
   ctx.fillRect(0, 0, W, HEADER_H);
 
   // Logo (korrekte Ratio) – mit Sicherheitsabstand und vertikalem Abstand
-  const TOP = 28; // Abstand von oben (Druckerrand + Luft)
+  const TOP = 46; // Abstand von oben (Druckerrand 40px + 6px Luft)
   let logoEndX = MARGIN;
   if (_slzbLogo) {
     const _lRatio = _slzbLogo.width / _slzbLogo.height;
@@ -973,16 +973,18 @@ async function zeichneA3KeinBild(canvas, e) {
 }
 
 function zeichneA3Footer(ctx, W, H, meta) {
-  const FOOTER_H = 60;
-  const MARGIN = 60; // Sicherheitsabstand für Einspannrahmen
+  const FOOTER_H = 70; // Höher damit Text über Druckerrand liegt
+  const RAND_OB = 40;  // Druckerrand unten
+  const MARGIN = 60;
   ctx.fillStyle='#F0F0F0'; ctx.fillRect(0, H-FOOTER_H, W, FOOTER_H);
   ctx.fillStyle=SLZB_COLORS.blue; ctx.fillRect(0, H-FOOTER_H, W, 3);
   ctx.fillStyle='#333'; ctx.font='bold 14px Montserrat, Arial, sans-serif';
   ctx.textAlign='center'; ctx.textBaseline='middle';
   let footer = 'Schul- und Leistungssportzentrum Berlin  ·  #SLZBerlin';
   if (meta?.creator) footer += `  ·  Foto: ${meta.creator}`;
-  // Text zentriert mit Sicherheitsabstand beachtet
-  ctx.fillText(footer, W/2, H-FOOTER_H/2);
+  // Text in der Mitte des Footer-Bereichs ÜBER dem Druckerrand
+  const textY = H - FOOTER_H + (FOOTER_H - RAND_OB) / 2;
+  ctx.fillText(footer, W/2, textY);
 }
 
 // ── SOCIAL MEDIA MULTI-FORMAT ─────────────────────────────────
