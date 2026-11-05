@@ -787,19 +787,22 @@ async function zeichneA3Landscape(canvas, e, bild, meta) {
   ctx.fillStyle=SLZB_COLORS.red;
   if (woerter.slice(mid).length) { ctx.fillText(woerter.slice(mid).join(' '), W/2, y, W-80); y+=zeilenH; }
 
-  y += 8;
-  // Platzierung + Athlet + Datum kompakt
+  y += 10;
+  // Platzierung: elegantes Badge mit Medaillen-Emoji
   if (platz) {
-    const ovalW=80, ovalH=40, ovalX=W/2-ovalW/2-60, ovalY=y;
-    ctx.fillStyle=mColor; slzbRoundRect(ctx,ovalX,ovalY,ovalW,ovalH,20); ctx.fill();
-    ctx.fillStyle='#fff'; ctx.font='bold italic 24px Montserrat, Arial, sans-serif';
+    const medal = platz===1?'🥇':platz===2?'🥈':platz===3?'🥉':null;
+    const badgeH = 44;
+    const badgeText = medal ? `${medal}  ${platz}. Platz` : `${platz}. Platz`;
+    // Badge-Breite messen
+    ctx.font='bold 22px Montserrat, Arial, sans-serif';
+    const badgeW = Math.min(ctx.measureText(badgeText).width + 40, W*0.5);
+    const badgeX = W/2 - badgeW/2;
+    // Badge zeichnen
+    ctx.fillStyle=mColor; slzbRoundRect(ctx,badgeX,y,badgeW,badgeH,22); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.font='bold 22px Montserrat, Arial, sans-serif';
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(String(platz), ovalX+ovalW/2, ovalY+ovalH/2);
-    const pt = platz===1?'1. PLATZ':platz===2?'2. PLATZ':platz===3?'3. PLATZ':`${platz}. PLATZ`;
-    ctx.fillStyle=SLZB_COLORS.blue; ctx.font='bold italic 20px Montserrat, Arial, sans-serif';
-    ctx.textAlign='left'; ctx.textBaseline='middle';
-    ctx.fillText(pt, ovalX+ovalW+12, ovalY+ovalH/2);
-    y += ovalH + 8;
+    ctx.fillText(badgeText, W/2, y+badgeH/2);
+    y += badgeH + 10;
   }
 
   // Athletenname – dynamische Größe
@@ -979,17 +982,18 @@ async function zeichneA3KeinBild(canvas, e) {
 }
 
 function zeichneA3Footer(ctx, W, H, meta) {
-  const FOOTER_H = 70; // Höher damit Text über Druckerrand liegt
-  const RAND_OB = 40;  // Druckerrand unten
-  const MARGIN = 60;
+  const FOOTER_H = 80; // Footer-Bereich
+  const RAND_UNTEN = 40; // Druckerrand unten
+  // Footer-Hintergrund
   ctx.fillStyle='#F0F0F0'; ctx.fillRect(0, H-FOOTER_H, W, FOOTER_H);
   ctx.fillStyle=SLZB_COLORS.blue; ctx.fillRect(0, H-FOOTER_H, W, 3);
   ctx.fillStyle='#333'; ctx.font='bold 14px Montserrat, Arial, sans-serif';
   ctx.textAlign='center'; ctx.textBaseline='middle';
   let footer = 'Schul- und Leistungssportzentrum Berlin  ·  #SLZBerlin';
   if (meta?.creator) footer += `  ·  Foto: ${meta.creator}`;
-  // Text in der Mitte des Footer-Bereichs ÜBER dem Druckerrand
-  const textY = H - FOOTER_H + (FOOTER_H - RAND_OB) / 2;
+  // Text mittig im sichtbaren Bereich (zwischen Footer-Start und Druckerrand)
+  const sichtbarerBereich = FOOTER_H - RAND_UNTEN;
+  const textY = H - FOOTER_H + sichtbarerBereich / 2;
   ctx.fillText(footer, W/2, textY);
 }
 
