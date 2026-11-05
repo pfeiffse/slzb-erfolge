@@ -751,52 +751,64 @@ async function zeichneA3Landscape(canvas, e, bild, meta) {
     zeichneA3Wasserzeichen(ctx, W, H, sportart, 0, HEADER_H_L);
   }
 
-  // Textbereich mit Abstand nach Foto
-  let y = HEADER_H_L + fotoH + 16;
-  ctx.fillStyle=SLZB_COLORS.red; ctx.font='bold 14px Montserrat, Arial, sans-serif';
-  ctx.textAlign='center'; ctx.textBaseline='top';
-  ctx.fillText(sportart.toUpperCase(), W/2, y); y+=22;
-  // Wettbewerb
-  if (e.wettbewerbText) {
-    ctx.fillStyle='#555'; ctx.font='13px Montserrat, Arial, sans-serif';
-    ctx.fillText(e.wettbewerbText.toUpperCase(), W/2, y); y+=18;
-  }
-  ctx.fillStyle=SLZB_COLORS.blue; ctx.fillRect((W-80)/2, y, 80, 3); y+=12;
+  // Textbereich: dynamische Schriftgröße je nach verfügbarem Platz
+  const textStartY = HEADER_H_L + fotoH + 12;
+  const textEndY = H - FOOTER_H_L - 10;
+  const textH = textEndY - textStartY;
+  let y = textStartY;
 
+  // Sportart (klein)
+  ctx.fillStyle=SLZB_COLORS.red; ctx.font='bold 13px Montserrat, Arial, sans-serif';
+  ctx.textAlign='center'; ctx.textBaseline='top';
+  ctx.fillText(sportart.toUpperCase(), W/2, y); y+=18;
+
+  // Trennlinie
+  ctx.fillStyle=SLZB_COLORS.blue; ctx.fillRect((W-60)/2, y, 60, 2); y+=8;
+
+  // Titel: dynamische Schriftgröße
   const woerter = titel.toUpperCase().split(' ');
   const mid = Math.ceil(woerter.length/2);
-  ctx.font='bold italic 52px Montserrat, Arial, sans-serif';
-  ctx.fillStyle=SLZB_COLORS.blue;
-  ctx.fillText(woerter.slice(0,mid).join(' '), W/2, y, W-100); y+=60;
-  ctx.fillStyle=SLZB_COLORS.red;
-  if (woerter.slice(mid).length) { ctx.fillText(woerter.slice(mid).join(' '), W/2, y, W-100); y+=60; }
+  const zeilen = woerter.slice(mid).length > 0 ? 2 : 1;
+  // Berechne verfügbaren Platz für Titel
+  const restH = textEndY - y - 80; // 80px für Platz/Athlet/Datum
+  const maxTitelSz = Math.min(56, Math.floor(restH / (zeilen * 1.3)));
+  const titelSz = Math.max(24, maxTitelSz);
+  const zeilenH = Math.round(titelSz * 1.2);
 
+  ctx.font=`bold italic ${titelSz}px Montserrat, Arial, sans-serif`;
+  ctx.fillStyle=SLZB_COLORS.blue;
+  ctx.fillText(woerter.slice(0,mid).join(' '), W/2, y, W-80); y+=zeilenH;
+  ctx.fillStyle=SLZB_COLORS.red;
+  if (woerter.slice(mid).length) { ctx.fillText(woerter.slice(mid).join(' '), W/2, y, W-80); y+=zeilenH; }
+
+  y += 8;
+  // Platzierung + Athlet + Datum kompakt
   if (platz) {
-    const ovalW=100, ovalH=50, ovalX=W/2-ovalW/2-70, ovalY=y;
-    ctx.fillStyle=mColor; slzbRoundRect(ctx,ovalX,ovalY,ovalW,ovalH,25); ctx.fill();
-    ctx.fillStyle='#fff'; ctx.font='bold italic 30px Montserrat, Arial, sans-serif';
+    const ovalW=80, ovalH=40, ovalX=W/2-ovalW/2-60, ovalY=y;
+    ctx.fillStyle=mColor; slzbRoundRect(ctx,ovalX,ovalY,ovalW,ovalH,20); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.font='bold italic 24px Montserrat, Arial, sans-serif';
     ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText(String(platz), ovalX+ovalW/2, ovalY+ovalH/2);
     const pt = platz===1?'1. PLATZ':platz===2?'2. PLATZ':platz===3?'3. PLATZ':`${platz}. PLATZ`;
-    ctx.fillStyle=SLZB_COLORS.blue; ctx.font='bold italic 26px Montserrat, Arial, sans-serif';
-    ctx.textAlign='left'; ctx.textBaseline='top';
-    ctx.fillText(pt, ovalX+ovalW+16, ovalY+8);
+    ctx.fillStyle=SLZB_COLORS.blue; ctx.font='bold italic 20px Montserrat, Arial, sans-serif';
+    ctx.textAlign='left'; ctx.textBaseline='middle';
+    ctx.fillText(pt, ovalX+ovalW+12, ovalY+ovalH/2);
+    y += ovalH + 8;
   }
 
-  // Athletenname
+  // Athletenname – dynamische Größe
   const _athL = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet'&&n.trim()!=='').join(', ');
-  if (_athL) {
-    y += 12;
-    ctx.fillStyle=SLZB_COLORS.blue; ctx.font='bold italic 28px Montserrat, Arial, sans-serif';
+  if (_athL && y < textEndY - 20) {
+    const athSz = Math.min(24, Math.max(14, Math.floor((textEndY - y - 24) * 0.7)));
+    ctx.fillStyle=SLZB_COLORS.blue; ctx.font=`bold italic ${athSz}px Montserrat, Arial, sans-serif`;
     ctx.textAlign='center'; ctx.textBaseline='top';
-    ctx.fillText(_athL.toUpperCase(), W/2, y, W-100);
+    ctx.fillText(_athL.toUpperCase(), W/2, y, W-80); y += athSz + 6;
   }
   // Datum
   const _datumL2 = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'}) : '';
-  if (_datumL2 && !_datumA3L) {
-    y += _athL ? 36 : 12;
-    ctx.fillStyle='#666'; ctx.font='14px Montserrat, Arial, sans-serif';
-    ctx.textAlign='center'; ctx.fillText(_datumL2, W/2, y);
+  if (_datumL2 && !_datumA3L && y < textEndY - 16) {
+    ctx.fillStyle='#666'; ctx.font='13px Montserrat, Arial, sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='top'; ctx.fillText(_datumL2, W/2, y);
   }
   zeichneA3Footer(ctx, W, H, meta);
   zeichneA3DruckerrandFinal(ctx, W, H);
