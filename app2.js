@@ -5729,6 +5729,14 @@ function uebernehmeVotingKandidaten() {
   const auswahl = window._votingAuswahl || [];
   if (!auswahl.length) { toast('Bitte mindestens einen Kandidaten auswählen', 'warning'); return; }
 
+  // Debug: Prüfe ob Felder vorhanden sind
+  const testEl = document.getElementById('v-name-1');
+  console.log('[Voting] v-name-1 vorhanden:', !!testEl, 'Auswahl:', auswahl.length);
+  if (!testEl) {
+    toast('❌ Erstellen-Modal nicht gefunden – bitte neu öffnen', 'danger');
+    return;
+  }
+
   auswahl.forEach((k, i) => {
     const nr = i + 1;
     const nameEl   = document.getElementById(`v-name-${nr}`);
