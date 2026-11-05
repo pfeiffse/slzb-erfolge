@@ -5331,7 +5331,7 @@ async function speichereVoting(status) {
       // storage_path für spätere Signed URL Generierung
       const storagePath = bildInput?.dataset?.storagePath || null;
       const storageBucket = bildInput?.dataset?.storageBucket || 'achievement-media';
-      await Backend.client.from('voting_candidates').insert([{
+      const { error: insErr } = await Backend.client.from('voting_candidates').insert([{
         campaign_id: kampagne.id,
         name,
         sportart: document.getElementById(`v-sport-${i}`)?.value?.trim() || null,
@@ -5342,6 +5342,7 @@ async function speichereVoting(status) {
         storage_bucket: storageBucket,
         reihenfolge: i,
       }]);
+      if (insErr) throw new Error(`Kandidat ${i}: ${insErr.message}`);
     }
 
     document.querySelector('.modal-overlay')?.remove();
