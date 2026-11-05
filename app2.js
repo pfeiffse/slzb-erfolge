@@ -5163,6 +5163,7 @@ async function renderVotingVerwaltung() {
         <div class=\"flex gap-2\" style=\"flex-wrap:wrap\">
           <button class=\"btn btn-outline btn-sm\" onclick=\"zeigeVotingAbstimmung('${k.id}')\">🗳️ Öffnen</button>
           <button class=\"btn btn-ghost btn-sm\" onclick=\"zeigeVotingLink('${k.id}')\">🔗 Link</button>
+          <button class=\"btn btn-ghost btn-sm\" onclick=\"zeigeVotingAushang('${k.id}')\">📢 Poster</button>
           ${Auth.canDo('bearbeiten')?`
             <button class=\"btn btn-ghost btn-sm\" onclick=\"zeigeVotingErgebnis('${k.id}')\">📊 Ergebnis</button>
             <button class=\"btn btn-ghost btn-sm\" onclick=\"toggleVotingStatus('${k.id}','${k.status}')\">
@@ -6214,4 +6215,203 @@ async function zeigeVotingSiegerPoster(typ) {
       await zeichneSocialFormat('sieger-sm-canvas', sieger, 'beitrag');
     }, 100);
   }
+}
+
+// ── Abstimmungs-Poster (Aushang + Social) ────────────────────
+async function zeigeVotingAushang(kampagneId) {
+  const { data: k } = await Backend.client.from('voting_campaigns').select('*').eq('id', kampagneId).single();
+  const { data: kandidaten } = await Backend.client.from('voting_candidates')
+    .select('*').eq('campaign_id', kampagneId).order('reihenfolge');
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal modal-xl';
+
+  const tabs = ['A3 Aushang', 'Social Media', 'Bildschirm'];
+
+  modal.innerHTML = `
+    <div class="modal-header" style="background:var(--slzb-primary);color:#fff">
+      <h3 style="color:#fff;margin:0">📢 Abstimmungs-Ausgaben</h3>
+      <button class="btn btn-ghost btn-sm" style="color:#fff" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="tabs mb-3" style="display:flex;gap:8px">
+        <button class="tab-btn active" onclick="switchVotingAushangTab('a3',this)">📄 A3 Aushang</button>
+        <button class="tab-btn" onclick="switchVotingAushangTab('social',this)">📱 Social Media</button>
+        <button class="tab-btn" onclick="switchVotingAushangTab('bildschirm',this)">🖥️ Bildschirm</button>
+      </div>
+      <div style="text-align:center;background:#111;padding:16px;border-radius:8px">
+        <canvas id="voting-aushang-canvas" width="1587" height="1123"
+          style="max-width:100%;max-height:60vh;display:block;margin:0 auto;border-radius:8px"></canvas>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Schließen</button>
+      <button class="btn btn-primary" onclick="downloadVotingAushang()">📥 PNG herunterladen</button>
+    </div>`;
+
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+
+  window._votingAushangKampagne = k;
+  window._votingAushangKandidaten = kandidaten;
+  window._votingAushangFormat = 'a3';
+
+  setTimeout(() => zeichneVotingAushang('a3'), 100);
+}
+
+function switchVotingAushangTab(format, btn) {
+  document.querySelectorAll('.modal .tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  window._votingAushangFormat = format;
+  const canvas = document.getElementById('voting-aushang-canvas');
+  if (canvas) {
+    if (format === 'a3') { canvas.width=1587; canvas.height=1123; canvas.style.maxHeight='55vh'; }
+    else if (format === 'social') { canvas.width=1080; canvas.height=1080; canvas.style.maxHeight='60vh'; }
+    else { canvas.width=1920; canvas.height=1080; canvas.style.maxHeight='45vh'; }
+  }
+  zeichneVotingAushang(format);
+}
+
+async function zeichneVotingAushang(format) {
+  const k = window._votingAushangKampagne;
+  const kandidaten = window._votingAushangKandidaten || [];
+  const canvas = document.getElementById('voting-aushang-canvas');
+  if (!canvas || !k) return;
+
+  await ladeMontserrat(); await ladeLogo();
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  // Hintergrund
+  ctx.fillStyle = '#003366'; ctx.fillRect(0,0,W,H);
+  const grad = ctx.createLinearGradient(0,0,W,H);
+  grad.addColorStop(0,'#003366'); grad.addColorStop(1,'#001a33');
+  ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
+
+  // Dekorative Kreise
+  ctx.save(); ctx.globalAlpha=0.06;
+  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(W*0.85,H*0.15,H*0.4,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(W*0.1,H*0.85,H*0.3,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // Header
+  const HEADER_H = format==='bildschirm' ? 80 : 100;
+  ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.fillRect(0,0,W,HEADER_H);
+  if (_slzbLogo) {
+    const r = _slzbLogo.width/_slzbLogo.height;
+    const lh = HEADER_H*0.75;
+    ctx.drawImage(_slzbLogo, 40, (HEADER_H-lh)/2, lh*r, lh);
+  }
+  ctx.fillStyle='#fff'; ctx.font=`bold ${Math.round(HEADER_H*0.28)}px Montserrat, Arial`;
+  ctx.textAlign='left'; ctx.textBaseline='middle';
+  ctx.fillText('Schul- und Leistungssportzentrum Berlin', HEADER_H*1.8, HEADER_H*0.4);
+  ctx.fillStyle='#E2001A'; ctx.font=`bold ${Math.round(HEADER_H*0.2)}px Montserrat, Arial`;
+  ctx.fillText('#SLZBerlin', HEADER_H*1.8, HEADER_H*0.72);
+
+  // Titel
+  const titleY = HEADER_H + (format==='bildschirm'?30:50);
+  ctx.fillStyle='#fff'; ctx.font=`800 ${Math.round(W*0.045)}px Montserrat, Arial`;
+  ctx.textAlign='center'; ctx.textBaseline='top';
+  ctx.fillText('🏆 WÄHLE DEINEN FAVORITEN!', W/2, titleY);
+
+  ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.font=`bold ${Math.round(W*0.022)}px Montserrat, Arial`;
+  ctx.fillText(k.titel.toUpperCase(), W/2, titleY + Math.round(W*0.055));
+
+  if (k.end_at) {
+    const endDatum = new Date(k.end_at).toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'});
+    ctx.fillStyle='#E2001A'; ctx.font=`bold ${Math.round(W*0.018)}px Montserrat, Arial`;
+    ctx.fillText(`⏰ Abstimmung endet: ${endDatum}`, W/2, titleY + Math.round(W*0.085));
+  }
+
+  // Kandidaten-Karten
+  const cardStartY = titleY + Math.round(W*0.115);
+  const cardCount = kandidaten.length || 1;
+  const cardW = Math.round((W - 80 - (cardCount-1)*20) / cardCount);
+  const cardH = H - cardStartY - (format==='bildschirm'?60:80);
+
+  for (let i = 0; i < kandidaten.length; i++) {
+    const k2 = kandidaten[i];
+    const cx = 40 + i*(cardW+20);
+
+    // Karten-Hintergrund
+    ctx.fillStyle='rgba(255,255,255,0.1)';
+    slzbRoundRect(ctx, cx, cardStartY, cardW, cardH, 16); ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.lineWidth=1;
+    slzbRoundRect(ctx, cx, cardStartY, cardW, cardH, 16); ctx.stroke();
+
+    // Bild
+    const imgH = Math.round(cardH*0.55);
+    if (k2.bild_url) {
+      try {
+        const img = await ladeBild(k2.bild_url);
+        if (img) {
+          ctx.save();
+          slzbRoundRect(ctx, cx, cardStartY, cardW, imgH, [16,16,0,0]); ctx.clip();
+          drawCover(ctx, img, cx, cardStartY, cardW, imgH);
+          ctx.restore();
+        }
+      } catch(e) {}
+    } else {
+      ctx.fillStyle='rgba(255,255,255,0.05)'; ctx.fillRect(cx, cardStartY, cardW, imgH);
+      ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.font=`${Math.round(cardW*0.3)}px Arial`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('🏃', cx+cardW/2, cardStartY+imgH/2);
+    }
+
+    // Gradient über Bild
+    const fadeG = ctx.createLinearGradient(0, cardStartY+imgH*0.5, 0, cardStartY+imgH);
+    fadeG.addColorStop(0,'rgba(0,26,51,0)'); fadeG.addColorStop(1,'rgba(0,26,51,0.8)');
+    ctx.fillStyle=fadeG; ctx.fillRect(cx, cardStartY, cardW, imgH);
+
+    // Name
+    const textY = cardStartY + imgH + 16;
+    ctx.fillStyle='#fff'; ctx.font=`bold ${Math.round(cardW*0.09)}px Montserrat, Arial`;
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillText(k2.name, cx+cardW/2, textY, cardW-20);
+
+    // Sportart
+    if (k2.sportart) {
+      ctx.fillStyle='#E2001A'; ctx.font=`bold ${Math.round(cardW*0.065)}px Montserrat, Arial`;
+      ctx.fillText(k2.sportart.toUpperCase(), cx+cardW/2, textY+Math.round(cardW*0.1), cardW-20);
+    }
+
+    // Erfolg
+    if (k2.erfolg) {
+      ctx.fillStyle='rgba(255,255,255,0.75)'; ctx.font=`${Math.round(cardW*0.055)}px Montserrat, Arial`;
+      const erfolgY = textY + Math.round(cardW*0.18);
+      // Zeilenumbruch
+      const words = k2.erfolg.split(' ');
+      let line = ''; let ly = erfolgY;
+      for (const word of words) {
+        const test = line + word + ' ';
+        if (ctx.measureText(test).width > cardW-24 && line) {
+          ctx.fillText(line.trim(), cx+cardW/2, ly, cardW-20);
+          line = word + ' '; ly += Math.round(cardW*0.07);
+        } else { line = test; }
+      }
+      if (line) ctx.fillText(line.trim(), cx+cardW/2, ly, cardW-20);
+    }
+  }
+
+  // QR-Code Hinweis
+  const footerY = H - (format==='bildschirm'?55:70);
+  ctx.fillStyle='rgba(0,0,0,0.4)'; ctx.fillRect(0, footerY, W, H-footerY);
+  ctx.fillStyle='#fff'; ctx.font=`bold ${Math.round(W*0.018)}px Montserrat, Arial`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('📱 Jetzt abstimmen: tinyurl.com/slzb-erfolge → Sportler/in des Monats', W/2, footerY+(H-footerY)/2);
+}
+
+function downloadVotingAushang() {
+  const canvas = document.getElementById('voting-aushang-canvas');
+  if (!canvas) return;
+  const k = window._votingAushangKampagne;
+  const format = window._votingAushangFormat || 'a3';
+  const a = document.createElement('a');
+  a.download = `SLZB_Abstimmung_${k?.monat||'2026'}_${format}.png`;
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+  toast('📥 Poster heruntergeladen', 'success');
 }
