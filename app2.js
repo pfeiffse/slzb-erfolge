@@ -6346,14 +6346,8 @@ async function zeichneVotingAushang(format) {
     const imgH = Math.round(cardH*0.55);
     if (k2.bild_url) {
       try {
-        // Direkt als Image-Element laden (kein fetch/CORS-Problem)
-        const img = await new Promise((resolve) => {
-          const i = new Image();
-          i.crossOrigin = 'anonymous';
-          i.onload = () => resolve(i);
-          i.onerror = () => resolve(null);
-          i.src = k2.bild_url;
-        });
+        // Bild über ladeBild() laden (nutzt fetch mit Auth-Headers)
+        const img = await ladeBild(k2.bild_url);
         if (img) {
           ctx.save();
           slzbRoundRect(ctx, cx, cardStartY, cardW, imgH, [16,16,0,0]); ctx.clip();

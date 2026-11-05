@@ -669,15 +669,14 @@ function setzeA3DruckerrandClip(ctx, W, H) { /* nicht mehr verwendet */ }
 
 // Weißen Rand am Ende sauber zeichnen (nach restore)
 function zeichneA3DruckerrandFinal(ctx, W, H) {
-  // Druckerrand: dünne weiße Linie am äußersten Rand
-  // Inhalt hat bereits 60px Sicherheitsabstand (MARGIN in zeichneA3Header)
-  // Druckerrand liegt innerhalb dieses Abstands → kein Inhalt wird abgeschnitten
-  const RAND = 20;
+  // Druckerrand: oben/unten doppelt so groß wie links/rechts
+  const RAND_SEITE = 20;   // links/rechts ~5mm
+  const RAND_OB    = 40;   // oben/unten ~10mm (doppelt)
   ctx.fillStyle = '#fff';
-  ctx.fillRect(0, 0, W, RAND);        // oben
-  ctx.fillRect(0, H-RAND, W, RAND);   // unten  
-  ctx.fillRect(0, 0, RAND, H);        // links
-  ctx.fillRect(W-RAND, 0, RAND, H);   // rechts
+  ctx.fillRect(0, 0, W, RAND_OB);           // oben
+  ctx.fillRect(0, H-RAND_OB, W, RAND_OB);   // unten
+  ctx.fillRect(0, 0, RAND_SEITE, H);         // links
+  ctx.fillRect(W-RAND_SEITE, 0, RAND_SEITE, H); // rechts
 }
 
 function zeichneA3Header(ctx, W, e, transparent=false) {
