@@ -734,6 +734,12 @@ async function zeichneA3Landscape(canvas, e, bild, meta) {
   const medaille = e.medaille && e.medaille!=='keine' ? e.medaille : '';
   const mColor = medailleColorDruck(medaille);
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
+  // Platzierungsangaben aus Titel entfernen wenn Platzierung separat angezeigt wird
+  const titelBereinigt = platz ? titel
+    .replace(/\b\d+\.?\s*PLATZ\b/gi, '')
+    .replace(/\b(1\.|2\.|3\.)\s*(PLATZ)?\b/gi, '')
+    .replace(/\s+–\s*$/, '').replace(/–\s*$/, '').trim()
+    : titel;
 
   ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
 
@@ -766,7 +772,7 @@ async function zeichneA3Landscape(canvas, e, bild, meta) {
   ctx.fillStyle=SLZB_COLORS.blue; ctx.fillRect((W-60)/2, y, 60, 2); y+=8;
 
   // Titel: dynamische Schriftgröße
-  const woerter = titel.toUpperCase().split(' ');
+  const woerter = titelBereinigt.toUpperCase().split(' ');
   const mid = Math.ceil(woerter.length/2);
   const zeilen = woerter.slice(mid).length > 0 ? 2 : 1;
   // Berechne verfügbaren Platz für Titel
