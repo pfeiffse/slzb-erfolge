@@ -1119,7 +1119,7 @@ async function zeichneSocialStory(ctx, e, bild, meta, W, H) {
   const nachname = teile.length>0 ? teile[teile.length-1] : '';
   zeichneSlzbHintergrundMitFallback(ctx, W, H, bild, 'rot', sportart);
   zeichneSlzbDeko(ctx, W, H);
-  zeichneSlzbHeader(ctx, W, H, sportart, datum);
+  // Kein Header bei Story/Reel – Instagram zeigt Profilbild + Titel automatisch
   zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname: nachname||null, titel: nachname?null:titel, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
   // "Folge uns auf Instagram"-Hinweis
   { const _fSz = Math.round(Math.min(W,H)*0.013);

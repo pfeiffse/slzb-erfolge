@@ -517,11 +517,11 @@ function kerndatenFelder(extra='') {
     <div class="form-group"><label>Ebene</label>
       <select id="f-ebene"><option value="">–</option>${ebeneOptions()}</select></div>
     <div class="form-group"><label>Medaille</label>
-      <select id="f-medaille">${['keine','Bronze','Silber','Gold'].map(m=>`<option>${m}</option>`).join('')}</select></div>
+      <select id="f-medaille" onchange=\"syncMedaillePlatz(this.value)\">${['keine','Bronze','Silber','Gold'].map(m=>`<option>${m}</option>`).join('')}</select></div>
   </div>
   <div class="form-row cols-3">
     <div class="form-group"><label>Platzierung</label>
-      <input type="number" id="f-platzierung" min="1" placeholder="1"></div>
+      <input type="number" id="f-platzierung" min="1" placeholder="1" oninput=\"syncPlatzMedaille(this.value)\">"1"></div>
     <div class="form-group"><label>Ergebnis (Wert)</label>
       <input type="number" id="f-ergebnis-wert" step="0.001" placeholder="10.85"></div>
     <div class="form-group"><label>Einheit</label>

@@ -1287,15 +1287,13 @@ function zeigeBildUploadModal(erfolgId) {
       <div class="form-group"><label>Datei <span class="required">*</span></label>
         <input type="file" id="upload-datei" accept="image/jpeg,image/png,image/webp"></div>
       <div class="form-group">
-        <label>Fotograf / Urheber / Quelle <span class="required">*</span></label>
-        <input type="text" id="upload-urheber" placeholder="z.B. Max Mustermann / SLZB-Archiv">
-        <div class="form-hint">Name des Fotografen oder der Bildquelle</div>
+        <label>Fotograf / Urheber <span class="required">*</span></label>
+        <input type="text" id="upload-urheber" placeholder="z.B. Max Mustermann oder SLZB-Archiv">
+        <div class="form-hint">Name des Fotografen – wird auf dem Poster angezeigt</div>
       </div>
-      <div class="form-row cols-2">
-        <div class="form-group"><label>Bildunterschrift</label>
-          <input type="text" id="upload-caption" placeholder="z.B. Die Staffel beim Start"></div>
-        <div class="form-group"><label>Alternativtext</label>
-          <input type="text" id="upload-alt" placeholder="Beschreibung für Barrierefreiheit"></div>
+      <div class="form-group">
+        <label>Bildunterschrift <span class="text-muted text-xs">(optional)</span></label>
+        <input type="text" id="upload-caption" placeholder="z.B. Die Staffel beim Start">
       </div>
       <div id="upload-error"></div>
       <div id="upload-progress" style="display:none" class="alert alert-info mt-2">

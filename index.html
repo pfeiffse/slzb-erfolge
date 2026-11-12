@@ -262,6 +262,26 @@ async function startApp() {
 
 document.addEventListener('DOMContentLoaded', startApp);
 
+// Platzierung → Medaille automatisch ableiten
+function syncPlatzMedaille(platz) {
+  const p = parseInt(platz);
+  const medailleEl = document.getElementById('f-medaille');
+  if (!medailleEl) return;
+  if (p === 1) medailleEl.value = 'Gold';
+  else if (p === 2) medailleEl.value = 'Silber';
+  else if (p === 3) medailleEl.value = 'Bronze';
+  else if (p > 3) medailleEl.value = 'keine';
+}
+
+// Medaille → Platzierung automatisch ableiten
+function syncMedaillePlatz(medaille) {
+  const platzEl = document.getElementById('f-platzierung');
+  if (!platzEl || platzEl.value) return; // Nur wenn Platzierung leer
+  if (medaille === 'Gold') platzEl.value = '1';
+  else if (medaille === 'Silber') platzEl.value = '2';
+  else if (medaille === 'Bronze') platzEl.value = '3';
+}
+
 // Mobile: Hamburger-Button einblenden
 function initMobile() {
   const btn = document.getElementById('hamburger-btn');
