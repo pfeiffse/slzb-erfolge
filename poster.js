@@ -111,7 +111,7 @@ function zeichneSlzbKarte(ctx, W, H, opts, akzent='rot') {
   const cardPad = Math.round(W*0.030);
   const cardX = Math.round(W*0.026);
   const cardW = W - 2*cardX;
-  const cardTop = Math.round(H*0.42);
+  const cardTop = Math.round(H*0.52); // Weiter unten = mehr Bild sichtbar
   const FOOTER_H = Math.round(H*0.095); // Platz für Footer
 
   // ── Inhaltshöhe vorab berechnen (für dynamische Kartenhöhe) ──
@@ -189,7 +189,9 @@ function zeichneSlzbKarte(ctx, W, H, opts, akzent='rot') {
 
   // Info-Row: Goldenes Oval + Text
   if (opts.platz || opts.wettbewerb) {
-    const mColor = opts.medaille ? medailleColor(opts.medaille) : '#efc54d';
+    // Medaille automatisch aus Platzierung ableiten wenn nicht angegeben
+    const autoMedaille = opts.platz===1?'Gold':opts.platz===2?'Silber':opts.platz===3?'Bronze':null;
+    const mColor = (opts.medaille && opts.medaille!=='keine') ? medailleColor(opts.medaille) : autoMedaille ? medailleColor(autoMedaille) : '#efc54d';
     const ovalW=Math.round(W*0.067), ovalH=Math.round(H*0.047);
     const rowX = cx - Math.round(cardW*0.25);
     // Oval
@@ -198,13 +200,15 @@ function zeichneSlzbKarte(ctx, W, H, opts, akzent='rot') {
     ctx.fillStyle = '#000';
     ctx.font = `900 italic ${Math.round(H*0.024)}px Montserrat, Arial, sans-serif`;
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(opts.platz ? String(opts.platz) : '★', rowX+ovalW/2, y+ovalH/2);
-    // Text rechts vom Oval
+    // Medaillen-Emoji + Zahl im Oval
+    const medalEmoji = opts.platz===1?'🥇':opts.platz===2?'🥈':opts.platz===3?'🥉':null;
+    const ovalLabel = medalEmoji ? `${medalEmoji} ${opts.platz}` : String(opts.platz||'★');
+    ctx.fillText(ovalLabel, rowX+ovalW/2, y+ovalH/2);
+    // Wettbewerb rechts (kein 'X. PLATZ' mehr)
     const tx = rowX + ovalW + Math.round(W*0.017);
-    ctx.fillStyle='#fff'; ctx.font=`800 italic ${Math.round(H*0.023)}px Montserrat, Arial, sans-serif`;
+    ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.font=`700 ${Math.round(H*0.020)}px Montserrat, Arial, sans-serif`;
     ctx.textAlign='left'; ctx.textBaseline='top';
-    const pt = opts.platz===1?'1. PLATZ':opts.platz===2?'2. PLATZ':opts.platz===3?'3. PLATZ':opts.platz?`${opts.platz}. PLATZ`:'';
-    ctx.fillText(pt||opts.wettbewerb||'', tx, y+Math.round(H*0.004), cardW-cardPad*2-ovalW-Math.round(W*0.017));
+    if (opts.zusatz) ctx.fillText(opts.zusatz.toUpperCase(), tx, y+Math.round(H*0.004), cardW-cardPad*2-ovalW-Math.round(W*0.017));
     if (opts.zusatz) {
       ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.font=`700 ${Math.round(H*0.014)}px Montserrat, Arial, sans-serif`;
       ctx.letterSpacing='2px';

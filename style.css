@@ -10,18 +10,19 @@
   --slzb-warning:    #E67E00;
   --slzb-danger:     #C0001A;
   --slzb-info:       #0066CC;
-  --slzb-light:      #F4F6FA;
-  --slzb-border:     #D0D7E3;
+  --slzb-light:      #F0F4FA;  /* Heller Seitenhintergrund */
+  --slzb-bg:         #F5F7FB;  /* Haupthintergrund (hell) */
+  --slzb-border:     #D8DEE9;
   --slzb-text:       #1A2233;
   --slzb-muted:      #6B7A99;
   --slzb-white:      #FFFFFF;
   --slzb-card-bg:    #FFFFFF;
-  --slzb-sidebar-bg: #001F4D;
+  --slzb-sidebar-bg: #002855;  /* Etwas heller als vorher */
   --slzb-sidebar-w:  260px;
   --radius:          8px;
   --radius-lg:       14px;
-  --shadow:          0 2px 12px rgba(0,30,80,.10);
-  --shadow-lg:       0 6px 32px rgba(0,30,80,.16);
+  --shadow:          0 1px 8px rgba(0,30,80,.08);
+  --shadow-lg:       0 4px 24px rgba(0,30,80,.12);
   --transition:      .18s ease;
   --font:            'Segoe UI', system-ui, -apple-system, sans-serif;
 }
@@ -32,7 +33,7 @@ html { font-size: 15px; scroll-behavior: smooth; }
 
 body {
   font-family: var(--font);
-  background: var(--slzb-light);
+  background: var(--slzb-bg);
   color: var(--slzb-text);
   min-height: 100vh;
   display: flex;
@@ -174,8 +175,9 @@ body {
 
 /* ── Topbar ────────────────────────────────────────────── */
 .topbar {
-  background: var(--slzb-white);
+  background: #FFFFFF;
   border-bottom: 1px solid var(--slzb-border);
+  box-shadow: 0 1px 4px rgba(0,30,80,.06);
   padding: 0 28px;
   height: 58px;
   display: flex; align-items: center; gap: 16px;

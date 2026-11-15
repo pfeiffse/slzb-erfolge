@@ -271,6 +271,9 @@ function syncPlatzMedaille(platz) {
   else if (p === 2) medailleEl.value = 'Silber';
   else if (p === 3) medailleEl.value = 'Bronze';
   else if (p > 3) medailleEl.value = 'keine';
+  // Medaillen-Feld dimmen wenn automatisch gesetzt
+  const medParent = medailleEl.closest('.form-group');
+  if (medParent) medParent.style.opacity = (p >= 1 && p <= 3) ? '0.5' : '1';
 }
 
 // Medaille → Platzierung automatisch ableiten
