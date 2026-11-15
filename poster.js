@@ -127,6 +127,8 @@ function zeichneSlzbKarte(ctx, W, H, opts, akzent='rot') {
   _contentH += Math.round(H*0.012); // Abstand vor Oval
   if (opts.platz || opts.wettbewerb) _contentH += Math.round(H*0.047) + Math.round(H*0.020);
   if (opts.zusatz) _contentH += Math.round(H*0.020);
+  if (opts.ergebnis) _contentH += Math.round(H*0.022);
+  if (opts.ort) _contentH += Math.round(H*0.020);
   _contentH += Math.round(H*0.030); // unterer Innenabstand
 
   // Kartenhöhe: Inhalt + Mindesthöhe, aber nie über Footer
@@ -209,8 +211,27 @@ function zeichneSlzbKarte(ctx, W, H, opts, akzent='rot') {
     ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.font=`700 ${Math.round(H*0.020)}px Montserrat, Arial, sans-serif`;
     ctx.textAlign='left'; ctx.textBaseline='top';
     if (opts.zusatz) ctx.fillText(opts.zusatz.toUpperCase(), tx, y+Math.round(H*0.004), cardW-cardPad*2-ovalW-Math.round(W*0.017));
-    // zusatz (Disziplin · Ebene) wird im Oval-Bereich angezeigt
-    // Kein separater Block mehr → keine Dopplung
+  }
+
+  // Ergebnis anzeigen (Wert + Einheit oder Text)
+  if (opts.ergebnis) {
+    y += Math.round(H*0.075);
+    ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.font=`700 ${Math.round(H*0.018)}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillText('⏱ ' + opts.ergebnis, cx, y, cardW-cardPad*2);
+    y += Math.round(H*0.022);
+  }
+
+  // Ort anzeigen
+  if (opts.ort && !opts.ergebnis) {
+    y += Math.round(H*0.075);
+    ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.font=`${Math.round(H*0.015)}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillText('📍 ' + opts.ort, cx, y, cardW-cardPad*2);
+  } else if (opts.ort && opts.ergebnis) {
+    ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.font=`${Math.round(H*0.015)}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillText('📍 ' + opts.ort, cx, y, cardW-cardPad*2);
   }
 }
 
@@ -1041,7 +1062,9 @@ async function zeichneSocialBeitragLandscape(ctx, e, bild, meta, W, H) {
   zeichneSlzbHintergrundMitFallback(ctx, W, H, bild, 'rot', sportart);
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
-  zeichneSlzbKarte(ctx, W, H, { subtitle: sportart, vorname: vorname||null, nachname: nachname||null, titel: nachname?null:titel, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
+  zeichneSlzbKarte(ctx, W, H, { subtitle: sportart, vorname: vorname||null, nachname: nachname||null, titel: nachname?null:titel, platz, medaille, zusatz:e.disziplin||null, wettbewerb:e.wettbewerbText,
+    ergebnis: e.ergebnisWert ? `${e.ergebnisWert}${e.ergebnisEinheit?' '+e.ergebnisEinheit:''}` : (e.ergebnisText||null),
+    ort: e.ort||null });
   // "Folge uns auf Instagram"-Hinweis
   { const _fSz = Math.round(Math.min(W,H)*0.013);
     ctx.fillStyle='rgba(255,255,255,0.45)';
@@ -1068,7 +1091,9 @@ async function zeichneSocialBeitragPortrait(ctx, e, bild, meta, W, H) {
   zeichneSlzbHintergrundMitFallback(ctx, W, H, bild, 'rot', sportart);
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
-  zeichneSlzbKarte(ctx, W, H, { subtitle: sportart, vorname: vorname||null, nachname: nachname||null, titel: nachname?null:titel, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
+  zeichneSlzbKarte(ctx, W, H, { subtitle: sportart, vorname: vorname||null, nachname: nachname||null, titel: nachname?null:titel, platz, medaille, zusatz:e.disziplin||null, wettbewerb:e.wettbewerbText,
+    ergebnis: e.ergebnisWert ? `${e.ergebnisWert}${e.ergebnisEinheit?' '+e.ergebnisEinheit:''}` : (e.ergebnisText||null),
+    ort: e.ort||null });
   // "Folge uns auf Instagram"-Hinweis
   { const _fSz = Math.round(Math.min(W,H)*0.013);
     ctx.fillStyle='rgba(255,255,255,0.45)';
@@ -1094,7 +1119,9 @@ async function zeichneSocialBeitragKeinBild(ctx, e, W, H) {
   zeichneSlzbHintergrund(ctx, W, H, null);
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
-  zeichneSlzbKarte(ctx, W, H, { subtitle: sportart, vorname: vorname||null, nachname: nachname||null, titel: (vorname||nachname)?null:titel, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
+  zeichneSlzbKarte(ctx, W, H, { subtitle: sportart, vorname: vorname||null, nachname: nachname||null, titel: (vorname||nachname)?null:titel, platz, medaille, zusatz:e.disziplin||null, wettbewerb:e.wettbewerbText,
+    ergebnis: e.ergebnisWert ? `${e.ergebnisWert}${e.ergebnisEinheit?' '+e.ergebnisEinheit:''}` : (e.ergebnisText||null),
+    ort: e.ort||null });
   // "Folge uns auf Instagram"-Hinweis
   { const _fSz = Math.round(Math.min(W,H)*0.013);
     ctx.fillStyle='rgba(255,255,255,0.45)';
@@ -1120,7 +1147,9 @@ async function zeichneSocialStory(ctx, e, bild, meta, W, H) {
   zeichneSlzbHintergrundMitFallback(ctx, W, H, bild, 'rot', sportart);
   zeichneSlzbDeko(ctx, W, H);
   // Kein Header bei Story/Reel – Instagram zeigt Profilbild + Titel automatisch
-  zeichneSlzbKarte(ctx, W, H, { subtitle: sportart, vorname: vorname||null, nachname: nachname||null, titel: nachname?null:titel, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
+  zeichneSlzbKarte(ctx, W, H, { subtitle: sportart, vorname: vorname||null, nachname: nachname||null, titel: nachname?null:titel, platz, medaille, zusatz:e.disziplin||null, wettbewerb:e.wettbewerbText,
+    ergebnis: e.ergebnisWert ? `${e.ergebnisWert}${e.ergebnisEinheit?' '+e.ergebnisEinheit:''}` : (e.ergebnisText||null),
+    ort: e.ort||null });
   // "Folge uns auf Instagram"-Hinweis
   { const _fSz = Math.round(Math.min(W,H)*0.013);
     ctx.fillStyle='rgba(255,255,255,0.45)';
