@@ -2,6 +2,20 @@
 // SLZB-Erfolge v3 – App-Logik Teil 2
 // ============================================================
 
+// ── Bearbeitungsrechte und Beteiligten-Helfer ─────────────────
+const EDITIERBARE_TRAINER_STATUS = new Set(['Entwurf','Unvollständig','Eingereicht','Rückfrage an Melder']);
+
+function kannErfolgBearbeiten(erfolg) {
+  if (!erfolg) return false;
+  if (Auth.canDo('bearbeiten')) return true;
+  return erfolg.melderId === Auth.id() && EDITIERBARE_TRAINER_STATUS.has(erfolg.status);
+}
+
+function teilnehmerRollenOptionen(aktuell='Athlet') {
+  return ['Athlet','Kapitän','Ersatz','Trainer','Betreuer','Sonstiges']
+    .map(r=>`<option value="${esc(r)}" ${r===aktuell?'selected':''}>${esc(r)}</option>`).join('');
+}
+
 // ── Erfolg-Detail ────────────────────────────────────────────
 async function renderErfolgDetail() {
   const e=await DB.getErfolgById(APP.currentErfolgId);
@@ -37,7 +51,7 @@ async function renderErfolgDetail() {
       <button class="tab-btn" onclick="switchTab('datenschutz')">Datenschutz</button>
       <button class="tab-btn" onclick="switchTab('ausgaben')">Ausgaben</button>
       <button class="tab-btn" onclick="switchTab('protokoll')">Protokoll (${e.protokoll?.length||0})</button>
-      ${Auth.canDo('bearbeiten')?`<button class="tab-btn" onclick="switchTab('bearbeiten')" style="color:#E2001A;font-weight:700">✏️ Bearbeiten</button>`:''}
+      ${kannErfolgBearbeiten(e)?`<button class="tab-btn" onclick="switchTab('bearbeiten')" style="color:#E2001A;font-weight:700">✏️ Bearbeiten</button>`:''}
     </div>
 
     <div id="tab-kerndaten" class="tab-panel active">
@@ -87,7 +101,7 @@ async function renderErfolgDetail() {
     <div id="tab-beteiligte" class="tab-panel">
       <div class="card">
         <div class="card-header"><h2>👥 Beteiligte</h2></div>
-        <div class="card-body">${renderBeteiligteTabelle(e.beteiligte||[])}</div>
+        <div class="card-body">${renderBeteiligteTabelle(e,{bearbeitbar:kannErfolgBearbeiten(e)})}</div>
       </div>
     </div>
 
@@ -168,7 +182,7 @@ async function renderErfolgDetail() {
       </div>
     </div>
 
-    ${Auth.canDo('bearbeiten')?`<div id="tab-bearbeiten" class="tab-panel">
+    ${kannErfolgBearbeiten(e)?`<div id="tab-bearbeiten" class="tab-panel">
       <div class="card mb-3">
         <div class="card-header"><h2>✏️ Kerndaten bearbeiten</h2></div>
         <div class="card-body">
@@ -240,28 +254,106 @@ async function renderErfolgDetail() {
   </div>`;
 }
 
-function renderBeteiligteTabelle(beteiligte) {
-  if (!beteiligte?.length) return '<p class="text-muted">Keine Beteiligten erfasst.</p>';
-  return `<table class="einwilligung-matrix">
-    <thead><tr><th>Schüler/in</th><th>Rolle</th><th>Foto</th><th>Print</th><th>Homepage</th><th>Dig.Sign.</th><th>Social</th><th>Einzel</th><th>Status</th></tr></thead>
-    <tbody>${beteiligte.map(b=>{
-      const s=SLZB_DB.getSchueler(b.schuelerId);
-      const abgelaufen=s?.ewGueltigBis&&new Date(s.ewGueltigBis)<new Date();
-      const ok=(f)=>s&&s.ew?.[f]&&!s.ewWiderruf&&!abgelaufen;
-      return`<tr>
-        <td>${esc(s?.anzeigename||b.schuelerId)}<br><span class="text-xs text-muted">${esc(b.schuelerId)}</span></td>
-        <td class="text-sm">${esc(b.rolle)}</td>
-        <td>${s?einwilligungIcon(ok('foto')):'<span class="ew-warn">?</span>'}</td>
-        <td>${s?einwilligungIcon(ok('print')):'<span class="ew-warn">?</span>'}</td>
-        <td>${s?einwilligungIcon(ok('homepage')):'<span class="ew-warn">?</span>'}</td>
-        <td>${s?einwilligungIcon(ok('digitalSignage')):'<span class="ew-warn">?</span>'}</td>
-        <td>${s?einwilligungIcon(ok('socialMedia')):'<span class="ew-warn">?</span>'}</td>
-        <td>${s?einwilligungIcon(ok('einzeldarstellung')):'<span class="ew-warn">?</span>'}</td>
-        <td>${statusBadge(b.einwilligungsstatus)}${abgelaufen?'<br><span class="badge badge-danger text-xs">Abgelaufen</span>':''}${s?.ewWiderruf?'<br><span class="badge badge-danger text-xs">Widerrufen</span>':''}</td>
-      </tr>`;}).join('')}
-    </tbody>
-  </table>`;
+function renderBeteiligteTabelle(input, optionen={}) {
+  const e=Array.isArray(input)?{beteiligte:input}:input;
+  const beteiligte=e?.beteiligte||[];
+  const bearbeitbar=optionen.bearbeitbar===true;
+
+  const zeilen=beteiligte.map(b=>{
+    const s=b.schuelerId?SLZB_DB.getSchueler(b.schuelerId):null;
+    const name=b.anzeigename||s?.anzeigename||b.schuelerId||'–';
+    const abgelaufen=s?.ewGueltigBis&&new Date(s.ewGueltigBis)<new Date();
+    const ok=(f)=>s&&s.ew?.[f]&&!s.ewWiderruf&&!abgelaufen;
+
+    if(bearbeitbar){
+      return `<tr data-beteiligter-id="${esc(b.id||'')}">
+        <td><input class="bet-name" type="text" value="${esc(name==='–'?'':name)}" style="min-width:180px"></td>
+        <td><select class="bet-rolle">${teilnehmerRollenOptionen(b.rolle||'Athlet')}</select></td>
+        <td colspan="6" class="text-sm text-muted">${s?'Stammdatensatz verknüpft':'Freitext-Beteiligter'}</td>
+        <td>
+          <select class="bet-status">
+            ${['Nicht geprüft','Geprüft','Freigegeben','Gesperrt'].map(x=>`<option ${x===(b.einwilligungsstatus||'Nicht geprüft')?'selected':''}>${x}</option>`).join('')}
+          </select>
+        </td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-outline btn-sm" onclick="speichereBeteiligtenAenderung('${b.id||''}')">💾</button>
+          <button class="btn btn-danger btn-sm" onclick="entferneBeteiligten('${b.id||''}','${esc(name).replace(/'/g,"\\'")}')">✕</button>
+        </td>
+      </tr>`;
+    }
+
+    return `<tr>
+      <td>${esc(name)}${b.schuelerId?`<br><span class="text-xs text-muted">${esc(b.schuelerId)}</span>`:''}</td>
+      <td class="text-sm">${esc(b.rolle||'Athlet')}</td>
+      <td>${s?einwilligungIcon(ok('foto')):'<span class="ew-warn">?</span>'}</td>
+      <td>${s?einwilligungIcon(ok('print')):'<span class="ew-warn">?</span>'}</td>
+      <td>${s?einwilligungIcon(ok('homepage')):'<span class="ew-warn">?</span>'}</td>
+      <td>${s?einwilligungIcon(ok('digitalSignage')):'<span class="ew-warn">?</span>'}</td>
+      <td>${s?einwilligungIcon(ok('socialMedia')):'<span class="ew-warn">?</span>'}</td>
+      <td>${s?einwilligungIcon(ok('einzeldarstellung')):'<span class="ew-warn">?</span>'}</td>
+      <td>${statusBadge(b.einwilligungsstatus||'Nicht geprüft')}${abgelaufen?'<br><span class="badge badge-danger text-xs">Abgelaufen</span>':''}${s?.ewWiderruf?'<br><span class="badge badge-danger text-xs">Widerrufen</span>':''}</td>
+    </tr>`;
+  }).join('');
+
+  const tabelle=beteiligte.length?`<div style="overflow-x:auto"><table class="einwilligung-matrix">
+    <thead><tr><th>Schüler/in</th><th>Rolle</th><th>Foto</th><th>Print</th><th>Homepage</th><th>Dig.Sign.</th><th>Social</th><th>Einzel</th><th>Status</th>${bearbeitbar?'<th>Aktionen</th>':''}</tr></thead>
+    <tbody>${zeilen}</tbody></table></div>`:'<p class="text-muted">Keine Beteiligten erfasst.</p>';
+
+  if(!bearbeitbar) return tabelle;
+  return `${tabelle}
+    <div class="card mt-3" style="border:1px solid var(--slzb-border)">
+      <div class="card-header"><h3>➕ Beteiligten hinzufügen</h3></div>
+      <div class="card-body">
+        <div class="form-row cols-3">
+          <div class="form-group"><label>Name</label><input id="bet-neu-name" type="text" placeholder="z. B. Max Mustermann"></div>
+          <div class="form-group"><label>Rolle</label><select id="bet-neu-rolle">${teilnehmerRollenOptionen()}</select></div>
+          <div class="form-group"><label>Einwilligung</label><select id="bet-neu-status"><option>Nicht geprüft</option><option>Geprüft</option><option>Freigegeben</option><option>Gesperrt</option></select></div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="fuegeBeteiligtenHinzu('${e?.id||APP.currentErfolgId}')">Hinzufügen</button>
+      </div>
+    </div>`;
 }
+
+async function fuegeBeteiligtenHinzu(erfolgId) {
+  const name=document.getElementById('bet-neu-name')?.value?.trim()||'';
+  const rolle=document.getElementById('bet-neu-rolle')?.value||'Athlet';
+  const status=document.getElementById('bet-neu-status')?.value||'Nicht geprüft';
+  if(!name){toast('Bitte einen Namen eingeben.','warning');return;}
+  const result=await DB.fuegeBeteiligtenHinzu(erfolgId,{anzeigename:name,rolle,einwilligungsstatus:status,schuelerId:null});
+  if(!result.ok){toast('Fehler: '+result.fehler,'danger');return;}
+  APP._erfolgeCache=null;
+  toast('Beteiligter hinzugefügt','success');
+  navigateTo('erfolg-detail',{currentErfolgId:erfolgId});
+  setTimeout(()=>switchTab('beteiligte'),150);
+}
+
+async function speichereBeteiligtenAenderung(id) {
+  if(!id){toast('Teilnehmer-ID fehlt.','danger');return;}
+  const row=document.querySelector(`[data-beteiligter-id="${CSS.escape(id)}"]`);
+  if(!row){toast('Beteiligter wurde nicht gefunden.','danger');return;}
+  const result=await DB.aktualisiereBeteiligten(id,{
+    anzeigename:row.querySelector('.bet-name')?.value?.trim()||'',
+    rolle:row.querySelector('.bet-rolle')?.value||'Athlet',
+    einwilligungsstatus:row.querySelector('.bet-status')?.value||'Nicht geprüft',
+  });
+  if(!result.ok){toast('Fehler: '+result.fehler,'danger');return;}
+  APP._erfolgeCache=null;
+  toast('Beteiligter aktualisiert','success');
+  navigateTo('erfolg-detail',{currentErfolgId:APP.currentErfolgId});
+  setTimeout(()=>switchTab('beteiligte'),150);
+}
+
+async function entferneBeteiligten(id,name) {
+  if(!id){toast('Teilnehmer-ID fehlt.','danger');return;}
+  if(!confirm(`${name||'Diese Person'} wirklich entfernen?`)) return;
+  const result=await DB.entferneBeteiligten(id);
+  if(!result.ok){toast('Fehler: '+result.fehler,'danger');return;}
+  APP._erfolgeCache=null;
+  toast('Beteiligter entfernt','success');
+  navigateTo('erfolg-detail',{currentErfolgId:APP.currentErfolgId});
+  setTimeout(()=>switchTab('beteiligte'),150);
+}
+
 
 function renderDatenschutzTab(e) {
   const pruefung=(e.beteiligte||[]).map(b=>{
@@ -279,7 +371,7 @@ function renderDatenschutzTab(e) {
         <ul>${pruefung.filter(p=>!p.ok).map(p=>`<li>${esc(p.name)}: ${esc(p.grund)}</li>`).join('')}</ul></div>`:
         `<div class="alert alert-success"><span class="alert-icon">✅</span><span>Alle Einwilligungen gültig.</span></div>`}
       <div class="section-title mt-3">Einwilligungsstatus je Person</div>
-      ${renderBeteiligteTabelle(e.beteiligte||[])}
+      ${renderBeteiligteTabelle(e,{bearbeitbar:false})}
       <hr class="divider">
       <div class="alert alert-info"><span class="alert-icon">📷</span>
         <span><strong>Teamfoto-Regel:</strong> Fehlt für eine identifizierbare Person die Einwilligung, darf das Teamfoto nicht verwendet werden.</span></div>
@@ -3534,123 +3626,74 @@ function zeigeLightbox(src, caption, creator) {
 // KERNDATEN BEARBEITEN (Redaktion / ÖA / Admin)
 // ══════════════════════════════════════════════════════════════
 async function speichereKerndaten(erfolgId) {
-  const titel = document.getElementById('edit-titel')?.value?.trim();
-  if (!titel) { toast('Titel ist Pflichtfeld', 'warning'); return; }
+  const aktuell=await DB.getErfolgById(erfolgId);
+  if(!aktuell){toast('Meldung nicht gefunden.','danger');return;}
+  if(!kannErfolgBearbeiten(aktuell)){toast('Diese Meldung darf nicht bearbeitet werden.','danger');return;}
 
-  const sportartText = document.getElementById('edit-sportart')?.value?.trim() || '';
-  const wettbewerbText = document.getElementById('edit-wettbewerb')?.value?.trim() || '';
-  const disziplin = document.getElementById('edit-disziplin')?.value?.trim() || '';
-  const datum = document.getElementById('edit-datum')?.value || null;
-  const ort = document.getElementById('edit-ort')?.value?.trim() || '';
-  const ebene = document.getElementById('edit-ebene')?.value || '';
-  const platzierung = document.getElementById('edit-platzierung')?.value ? Number(document.getElementById('edit-platzierung').value) : null;
-  const medaille = document.getElementById('edit-medaille')?.value || 'keine';
-  const ergebnisWert = document.getElementById('edit-ergebnis-wert')?.value ? Number(document.getElementById('edit-ergebnis-wert').value) : null;
-  const ergebnisEinheit = document.getElementById('edit-ergebnis-einheit')?.value?.trim() || '';
-  const quelleUrl = document.getElementById('edit-quelle')?.value?.trim() || '';
-  const athlet = document.getElementById('edit-athlet')?.value?.trim() || '';
-  const kurzinfo = document.getElementById('edit-kurzinfo')?.value?.trim() || '';
-  const textArtikel = document.getElementById('edit-artikel-text')?.value?.trim() || '';
+  const titel=document.getElementById('edit-titel')?.value?.trim()||'';
+  if(!titel){toast('Titel ist Pflichtfeld','warning');return;}
 
-  // Sportart-ID auflösen
-  const sp = SLZB_DB.sportarten.find(s => s.name.toLowerCase() === sportartText.toLowerCase());
+  const sportartText=document.getElementById('edit-sportart')?.value?.trim()||'';
+  const wettbewerbText=document.getElementById('edit-wettbewerb')?.value?.trim()||'';
+  const athlet=document.getElementById('edit-athlet')?.value?.trim()||'';
+  const sp=SLZB_DB.sportarten.find(s=>s.name.toLowerCase()===sportartText.toLowerCase());
 
-  // Wettbewerb auflösen oder neu anlegen
-  let wettbewerbId = null;
-  if (wettbewerbText) {
-    try {
-      const wb = await DB.getOderErstelleWettbewerb(wettbewerbText, datum);
-      wettbewerbId = wb;
-    } catch(e) {
-      // Fallback: nur suchen
-      try {
-        const { data: wbData } = await Backend.client
-          .from('competitions').select('id').eq('name', wettbewerbText).maybeSingle();
-        wettbewerbId = wbData?.id || null;
-      } catch(e2) { /* ignorieren */ }
-    }
+  let wettbewerbId=aktuell.wettbewerbId||null;
+  if(wettbewerbText && wettbewerbText!==aktuell.wettbewerbText){
+    try{
+      wettbewerbId=await DB.getOderErstelleWettbewerb(wettbewerbText,document.getElementById('edit-datum')?.value||null);
+    }catch(err){console.warn('Wettbewerb konnte nicht aufgelöst werden:',err.message);}
   }
 
-  const btn = document.querySelector('#tab-bearbeiten .btn-primary');
-  if (btn) { btn.disabled = true; btn.textContent = 'Wird gespeichert...'; }
+  const daten={
+    meldungsart:aktuell.meldungsart,
+    titel,
+    sportartId:sp?.id||aktuell.sportartId||null,
+    sportartText,
+    disziplin:document.getElementById('edit-disziplin')?.value?.trim()||'',
+    wettbewerbId,
+    wettbewerbText,
+    datum:document.getElementById('edit-datum')?.value||null,
+    ort:document.getElementById('edit-ort')?.value?.trim()||'',
+    ebene:document.getElementById('edit-ebene')?.value||'',
+    platzierung:document.getElementById('edit-platzierung')?.value?Number(document.getElementById('edit-platzierung').value):null,
+    medaille:document.getElementById('edit-medaille')?.value||'keine',
+    ergebnisWert:document.getElementById('edit-ergebnis-wert')?.value?Number(document.getElementById('edit-ergebnis-wert').value):null,
+    ergebnisEinheit:document.getElementById('edit-ergebnis-einheit')?.value?.trim()||'',
+    ergebnisText:aktuell.ergebnisText||'',
+    kurzinfo:document.getElementById('edit-kurzinfo')?.value?.trim()||'',
+    quelleUrl:document.getElementById('edit-quelle')?.value?.trim()||'',
+    textArtikel:document.getElementById('edit-artikel-text')?.value?.trim()||'',
+    textKIEntwurf:aktuell.textKIEntwurf||'',
+    videoUrl:aktuell.videoUrl||'',
+    status:aktuell.status,
+  };
 
-  try {
-    // Echte Supabase-Spaltennamen (englisch, wie in der DB angelegt)
-    const updateData = {
-      title: titel,
-      sport_id: sp?.id || null,
-      discipline: disziplin,
-      competition_id: wettbewerbId,
-      event_date: datum,
-      location: ort,
-      level: ebene,
-      placement: platzierung,
-      medal: medaille,
-      result_value: ergebnisWert,
-      result_unit: ergebnisEinheit,
-      result_text: '',
-      short_info: kurzinfo,
-      source_url: quelleUrl,
-      article_text: textArtikel,
-      updated_at: new Date().toISOString(),
-    };
+  const btn=document.querySelector('#tab-bearbeiten .btn-primary');
+  if(btn){btn.disabled=true;btn.textContent='Wird gespeichert...';}
+  try{
+    const update=await DB.aktualisiereErfolg(erfolgId,daten);
+    if(!update.ok) throw new Error(update.fehler||'Kerndaten konnten nicht gespeichert werden.');
 
-
-    // Entferne null-Werte nicht – Supabase setzt sie auf NULL
-    const { error } = await Backend.client
-      .from('achievements')
-      .update(updateData)
-      .eq('id', erfolgId);
-
-    if (error) throw new Error(error.message);
-
-    // Athleten-Beteiligten aktualisieren: erst alle löschen, dann neu anlegen
-    if (athlet !== undefined) {
-      const { error: delErr } = await Backend.client
-        .from('achievement_participants')
-        .delete()
-        .eq('achievement_id', erfolgId);
-      if (delErr) console.warn('Beteiligte löschen:', delErr.message);
-
-      if (athlet.trim()) {
-        const namen = athlet.split(',').map(n => n.trim()).filter(Boolean);
-        for (const name of namen) {
-          const { error: insErr } = await Backend.client
-            .from('achievement_participants')
-            .insert({
-              achievement_id: erfolgId,
-              student_id: null,
-              participant_role: name,   // Freitext-Name in participant_role
-              consent_status: 'Nicht geprüft',
-            });
-          if (insErr) console.warn('Beteiligter einfügen:', insErr.message);
-        }
-      }
+    // Das Sammelfeld im Bearbeiten-Tab bleibt kompatibel: kommaseparierte Namen
+    // werden als Beteiligtenliste gespeichert. Die Detailtabelle erlaubt danach
+    // einzelne Änderungen ohne die gesamte Liste zu löschen.
+    const namen=athlet.split(',').map(n=>n.trim()).filter(Boolean);
+    const bisher=(aktuell.beteiligte||[]).map(b=>b.anzeigename||'').filter(Boolean);
+    if(JSON.stringify(namen)!==JSON.stringify(bisher)){
+      const ersatz=await DB.ersetzeBeteiligte(erfolgId,namen.map(name=>({
+        anzeigename:name,rolle:'Athlet',einwilligungsstatus:'Nicht geprüft',schuelerId:null,
+      })));
+      if(!ersatz.ok) throw new Error(ersatz.fehler||'Beteiligte konnten nicht gespeichert werden.');
     }
 
-    // Protokoll: Nur Kommentar ohne Statuswechsel – aktuellen Status aus DB lesen
-    try {
-      const { data: aktErfolg } = await Backend.client
-        .from('achievements').select('status').eq('id', erfolgId).single();
-      const aktStatus = aktErfolg?.status || 'Entwurf';
-      await Backend.client.from('achievement_status_history').insert({
-        achievement_id: erfolgId,
-        old_status: aktStatus,
-        new_status: aktStatus,
-        changed_at: new Date().toISOString(),
-        changed_by: Auth.id(),
-        changed_by_name: Auth.name(),
-        comment: `Kerndaten bearbeitet: Titel="${titel}", Sportart="${sportartText}", Athlet="${athlet}"`,
-      });
-    } catch(e) { /* Protokoll optional */ }
-
-    APP._erfolgeCache = null;
-    toast('✅ Kerndaten erfolgreich gespeichert!', 'success');
-    navigateTo('erfolg-detail', { currentErfolgId: erfolgId });
-
-  } catch(err) {
-    toast('Fehler: ' + err.message, 'danger');
-    if (btn) { btn.disabled = false; btn.textContent = '💾 Änderungen speichern'; }
+    await DB.protokolliere(erfolgId,aktuell.status,aktuell.status,`Kerndaten bearbeitet: Titel="${titel}"`);
+    APP._erfolgeCache=null;
+    toast('Änderungen gespeichert','success');
+    navigateTo('erfolg-detail',{currentErfolgId:erfolgId});
+  }catch(err){
+    toast('Fehler beim Speichern: '+err.message,'danger');
+    if(btn){btn.disabled=false;btn.textContent='💾 Änderungen speichern';}
   }
 }
 
