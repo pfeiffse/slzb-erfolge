@@ -419,15 +419,25 @@ function bildFormat(img) {
   return 'square';
 }
 
-// Bild cover-fit zeichnen (mit optionalem Offset für Bildausschnitt)
+// Bild cover-fit zeichnen (mit optionalem Offset und Zoom für Bildausschnitt)
+// offsetX/Y: 0=links/oben, 0.5=mitte, 1=rechts/unten
+// zoom: 1.0=normal, >1=hineingezoomt (z.B. 1.5 = 150%)
 function drawCover(ctx, img, x, y, w, h, offsetX, offsetY) {
-  const scale = Math.max(w/img.width, h/img.height);
-  const sw = img.width*scale, sh = img.height*scale;
-  // Offset: 0=links/oben, 0.5=mitte, 1=rechts/unten
   const ox = typeof offsetX === 'number' ? offsetX : (window._bildOffset?.x ?? 0.5);
   const oy = typeof offsetY === 'number' ? offsetY : (window._bildOffset?.y ?? 0.5);
-  const dx = x + (w-sw) * ox;
-  const dy = y + (h-sh) * oy;
+  const zoom = window._bildZoom ?? 1.0;
+
+  // Basis-Scale: Bild füllt den Bereich vollständig (cover-fit)
+  const baseScale = Math.max(w / img.width, h / img.height);
+  // Zoom multipliziert den Scale – Bild wird größer, sichtbarer Ausschnitt kleiner
+  const scale = baseScale * zoom;
+
+  const sw = img.width * scale;
+  const sh = img.height * scale;
+
+  // Offset bestimmt, welcher Teil des (vergrößerten) Bildes sichtbar ist
+  const dx = x + (w - sw) * ox;
+  const dy = y + (h - sh) * oy;
   ctx.drawImage(img, dx, dy, sw, sh);
 }
 

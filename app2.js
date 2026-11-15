@@ -6729,8 +6729,9 @@ function datenschutzBadgeHTML(warnungen) {
 // BILD-POSITION ANPASSEN (Crop/Pan)
 // ══════════════════════════════════════════════════════════════
 
-// Bild-Offset für aktuelles Poster
+// Bild-Offset und Zoom für aktuelles Poster
 window._bildOffset = { x: 0.5, y: 0.5 }; // 0-1, Mittelpunkt des sichtbaren Bereichs
+window._bildZoom = 1.0; // 1.0 = normal, >1 = hineingezoomt
 
 function zeigeBildPositionEditor() {
   const overlay = document.createElement('div');
@@ -6738,60 +6739,192 @@ function zeigeBildPositionEditor() {
   overlay.style.zIndex = '10001';
   const modal = document.createElement('div');
   modal.className = 'modal';
-  modal.style.maxWidth = '420px';
+  modal.style.cssText = 'max-width:520px;width:95vw';
+
+  const zoomPct = Math.round((window._bildZoom ?? 1.0) * 100);
+  const oxPct   = Math.round((window._bildOffset?.x ?? 0.5) * 100);
+  const oyPct   = Math.round((window._bildOffset?.y ?? 0.5) * 100);
 
   modal.innerHTML = `
     <div class="modal-header">
       <h3>🖼️ Bildausschnitt anpassen</h3>
       <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
     </div>
-    <div class="modal-body">
-      <p class="text-muted text-sm mb-3">Verschiebe den Bildausschnitt damit der Sportler besser sichtbar ist.</p>
+    <div class="modal-body" style="padding-bottom:8px">
 
-      <div style="margin-bottom:16px">
-        <label style="font-weight:600;display:block;margin-bottom:6px">Horizontal (Links ↔ Rechts)</label>
-        <input type="range" id="bild-offset-x" min="0" max="100" value="${Math.round(window._bildOffset.x*100)}"
-          style="width:100%" oninput="aktualisiereBildOffset()">
-        <div style="display:flex;justify-content:space-between;font-size:.75rem;color:#888">
+      <!-- Live-Vorschau -->
+      <div style="margin-bottom:16px;text-align:center">
+        <div style="font-weight:600;font-size:.8rem;color:#888;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Live-Vorschau</div>
+        <div style="position:relative;display:inline-block;border:2px solid #E2001A;border-radius:8px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.25)">
+          <canvas id="bild-vorschau-canvas"
+            style="display:block;max-width:100%;height:auto;background:#1B1C1F"
+            width="360" height="270"></canvas>
+          <div id="bild-vorschau-spinner"
+            style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5);font-size:1.5rem">
+            ⏳
+          </div>
+        </div>
+        <div style="font-size:.7rem;color:#888;margin-top:4px">Aktualisiert sich beim Verschieben der Regler</div>
+      </div>
+
+      <!-- Zoom -->
+      <div style="margin-bottom:14px">
+        <label style="font-weight:600;display:flex;justify-content:space-between;margin-bottom:6px">
+          <span>🔍 Zoom</span>
+          <span id="bild-zoom-label" style="color:#E2001A;font-size:.85rem">${zoomPct}%</span>
+        </label>
+        <input type="range" id="bild-zoom" min="100" max="300" step="5" value="${zoomPct}"
+          style="width:100%;accent-color:#E2001A" oninput="aktualisiereBildOffset()">
+        <div style="display:flex;justify-content:space-between;font-size:.72rem;color:#888">
+          <span>Normal (100%)</span><span>Mittel (200%)</span><span>Max (300%)</span>
+        </div>
+      </div>
+
+      <!-- Horizontal -->
+      <div style="margin-bottom:14px">
+        <label style="font-weight:600;display:flex;justify-content:space-between;margin-bottom:6px">
+          <span>↔ Horizontal</span>
+          <span id="bild-ox-label" style="color:#888;font-size:.85rem">${oxPct}%</span>
+        </label>
+        <input type="range" id="bild-offset-x" min="0" max="100" value="${oxPct}"
+          style="width:100%;accent-color:#003366" oninput="aktualisiereBildOffset()">
+        <div style="display:flex;justify-content:space-between;font-size:.72rem;color:#888">
           <span>Links</span><span>Mitte</span><span>Rechts</span>
         </div>
       </div>
 
-      <div style="margin-bottom:16px">
-        <label style="font-weight:600;display:block;margin-bottom:6px">Vertikal (Oben ↕ Unten)</label>
-        <input type="range" id="bild-offset-y" min="0" max="100" value="${Math.round(window._bildOffset.y*100)}"
-          style="width:100%" oninput="aktualisiereBildOffset()">
-        <div style="display:flex;justify-content:space-between;font-size:.75rem;color:#888">
+      <!-- Vertikal -->
+      <div style="margin-bottom:14px">
+        <label style="font-weight:600;display:flex;justify-content:space-between;margin-bottom:6px">
+          <span>↕ Vertikal</span>
+          <span id="bild-oy-label" style="color:#888;font-size:.85rem">${oyPct}%</span>
+        </label>
+        <input type="range" id="bild-offset-y" min="0" max="100" value="${oyPct}"
+          style="width:100%;accent-color:#003366" oninput="aktualisiereBildOffset()">
+        <div style="display:flex;justify-content:space-between;font-size:.72rem;color:#888">
           <span>Oben</span><span>Mitte</span><span>Unten</span>
         </div>
       </div>
 
-      <div class="flex gap-2" style="flex-wrap:wrap">
-        <button class="btn btn-ghost btn-sm" onclick="window._bildOffset={x:0.5,y:0.5};document.getElementById('bild-offset-x').value=50;document.getElementById('bild-offset-y').value=50;aktualisiereBildOffset()">
-          ⊙ Zentrieren
-        </button>
-        <button class="btn btn-ghost btn-sm" onclick="window._bildOffset.y=0.2;document.getElementById('bild-offset-y').value=20;aktualisiereBildOffset()">
-          ↑ Oben (Gesicht)
-        </button>
-        <button class="btn btn-ghost btn-sm" onclick="window._bildOffset.y=0.35;document.getElementById('bild-offset-y').value=35;aktualisiereBildOffset()">
-          ↑ Oberes Drittel
-        </button>
+      <!-- Schnellauswahl -->
+      <div style="margin-bottom:8px">
+        <div style="font-size:.75rem;color:#888;margin-bottom:6px;font-weight:600">Schnellauswahl:</div>
+        <div class="flex gap-2" style="flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="_bildEditorReset()">⊙ Zurücksetzen</button>
+          <button class="btn btn-ghost btn-sm" onclick="_bildEditorPreset(50,20,100)">↑ Gesicht oben</button>
+          <button class="btn btn-ghost btn-sm" onclick="_bildEditorPreset(50,35,100)">↑ Oberes Drittel</button>
+          <button class="btn btn-ghost btn-sm" onclick="_bildEditorPreset(50,50,150)">🔍 Zoom Mitte</button>
+          <button class="btn btn-ghost btn-sm" onclick="_bildEditorPreset(50,25,175)">🔍 Gesicht nah</button>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Schließen</button>
-      <button class="btn btn-primary" onclick="this.closest('.modal-overlay').remove();posterEditorAktualisieren()">✅ Anwenden</button>
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="this.closest('.modal-overlay').remove();posterEditorAktualisieren()">✅ Auf Poster anwenden</button>
     </div>`;
 
   overlay.appendChild(modal);
   overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
   document.body.appendChild(overlay);
+
+  // Vorschau sofort laden
+  setTimeout(() => _bildVorschauAktualisieren(), 100);
+}
+
+// Schnellauswahl-Preset setzen
+function _bildEditorPreset(ox, oy, zoom) {
+  const xEl = document.getElementById('bild-offset-x');
+  const yEl = document.getElementById('bild-offset-y');
+  const zEl = document.getElementById('bild-zoom');
+  if (xEl) xEl.value = ox;
+  if (yEl) yEl.value = oy;
+  if (zEl) zEl.value = zoom;
+  aktualisiereBildOffset();
+}
+
+// Alles zurücksetzen
+function _bildEditorReset() {
+  _bildEditorPreset(50, 50, 100);
+}
+
+// Live-Vorschau im Editor-Canvas zeichnen
+async function _bildVorschauAktualisieren() {
+  const canvas = document.getElementById('bild-vorschau-canvas');
+  const spinner = document.getElementById('bild-vorschau-spinner');
+  if (!canvas) return;
+
+  // Bild aus aktuellem Erfolg holen
+  const e = window._a3Erfolg || window._bsErfolg || window._smErfolg;
+  if (!e) { if (spinner) spinner.style.display = 'none'; return; }
+
+  const bildUrl = (e.bilder && e.bilder.length > 0) ? e.bilder[0].signedUrl : null;
+  if (!bildUrl) {
+    if (spinner) spinner.style.display = 'none';
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#1B1C1F';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#555';
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Kein Bild vorhanden', canvas.width/2, canvas.height/2);
+    return;
+  }
+
+  try {
+    const img = await new Promise((res, rej) => {
+      const i = new Image(); i.crossOrigin = 'anonymous';
+      i.onload = () => res(i); i.onerror = rej;
+      i.src = bildUrl;
+    });
+
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Bild mit aktuellen Offset/Zoom-Werten zeichnen
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, canvas.width, canvas.height);
+    ctx.clip();
+    drawCover(ctx, img, 0, 0, canvas.width, canvas.height);
+    ctx.restore();
+
+    // Rahmen-Overlay: zeigt den "sicheren" Textbereich unten
+    const safeH = Math.round(canvas.height * 0.38);
+    const grad = ctx.createLinearGradient(0, canvas.height - safeH, 0, canvas.height);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.75)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, canvas.height - safeH, canvas.width, safeH);
+
+    // Hinweis-Text
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.font = '11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('▼ Textbereich', canvas.width/2, canvas.height - 8);
+
+    if (spinner) spinner.style.display = 'none';
+  } catch(err) {
+    if (spinner) spinner.style.display = 'none';
+    console.warn('Vorschau-Fehler:', err);
+  }
 }
 
 function aktualisiereBildOffset() {
-  const x = parseInt(document.getElementById('bild-offset-x')?.value || 50) / 100;
-  const y = parseInt(document.getElementById('bild-offset-y')?.value || 50) / 100;
+  const x    = parseInt(document.getElementById('bild-offset-x')?.value ?? 50) / 100;
+  const y    = parseInt(document.getElementById('bild-offset-y')?.value ?? 50) / 100;
+  const zoom = parseInt(document.getElementById('bild-zoom')?.value ?? 100) / 100;
+
   window._bildOffset = { x, y };
-  // Sofort Vorschau aktualisieren
-  posterEditorAktualisieren();
+  window._bildZoom   = zoom;
+
+  // Labels aktualisieren
+  const zoomLbl = document.getElementById('bild-zoom-label');
+  const oxLbl   = document.getElementById('bild-ox-label');
+  const oyLbl   = document.getElementById('bild-oy-label');
+  if (zoomLbl) zoomLbl.textContent = Math.round(zoom * 100) + '%';
+  if (oxLbl)   oxLbl.textContent   = Math.round(x * 100) + '%';
+  if (oyLbl)   oyLbl.textContent   = Math.round(y * 100) + '%';
+
+  // Live-Vorschau im Editor aktualisieren (leichtgewichtig, kein volles Poster)
+  _bildVorschauAktualisieren();
 }
