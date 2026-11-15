@@ -111,7 +111,7 @@ function zeichneSlzbKarte(ctx, W, H, opts, akzent='rot') {
   const cardPad = Math.round(W*0.030);
   const cardX = Math.round(W*0.026);
   const cardW = W - 2*cardX;
-  const cardTop = Math.round(H*0.52); // Weiter unten = mehr Bild sichtbar
+  const cardTop = Math.round(H*0.58); // Tiefer = mehr Bild sichtbar
   const FOOTER_H = Math.round(H*0.095); // Platz für Footer
 
   // ── Inhaltshöhe vorab berechnen (für dynamische Kartenhöhe) ──
@@ -136,10 +136,17 @@ function zeichneSlzbKarte(ctx, W, H, opts, akzent='rot') {
   const maxCardH = H - cardTop - FOOTER_H;
   const cardH = Math.min(maxCardH, Math.max(minCardH, _contentH));
 
-  // Glasmorphismus-Hintergrund (dynamische Höhe)
-  ctx.fillStyle = 'rgba(0,0,0,0.42)';
+  // Glasmorphismus-Hintergrund
+  // Helles Schema: weißer Hintergrund mit Schatten
+  ctx.fillStyle = 'rgba(255,255,255,0.92)';
   slzbRoundRect(ctx, cardX, cardTop, cardW, cardH, Math.round(W*0.017)); ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
+  // Schatten-Effekt
+  ctx.shadowColor = 'rgba(0,0,30,0.3)';
+  ctx.shadowBlur = 20;
+  ctx.shadowOffsetY = -4;
+  slzbRoundRect(ctx, cardX, cardTop, cardW, cardH, Math.round(W*0.017)); ctx.fill();
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  ctx.strokeStyle = 'rgba(0,51,102,0.15)'; ctx.lineWidth = 1;
   slzbRoundRect(ctx, cardX, cardTop, cardW, cardH, Math.round(W*0.017)); ctx.stroke();
 
   let y = cardTop + Math.round(H*0.045);
@@ -157,9 +164,9 @@ function zeichneSlzbKarte(ctx, W, H, opts, akzent='rot') {
     y += Math.round(H*0.030);
   }
 
-  // Vorname (weiß, groß, italic)
+  // Vorname (dunkelblau, groß, italic)
   if (opts.vorname) {
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = '#003366';
     ctx.font = `800 italic ${Math.round(H*0.069)}px Montserrat, Arial, sans-serif`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     ctx.fillText(opts.vorname.toUpperCase(), cx, y, cardW-cardPad*2);
@@ -181,9 +188,9 @@ function zeichneSlzbKarte(ctx, W, H, opts, akzent='rot') {
     const mid = woerter.length>3 ? Math.ceil(woerter.length/2) : woerter.length;
     const tSz = Math.round(H*0.072);
     ctx.font = `800 italic ${tSz}px Montserrat, Arial, sans-serif`;
-    ctx.fillStyle = '#fff'; ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillStyle = '#003366'; ctx.textAlign='center'; ctx.textBaseline='top';
     ctx.fillText(woerter.slice(0,mid).join(' '), cx, y, cardW-cardPad*2); y+=tSz+8;
-    ctx.fillStyle = akzent==='blau' ? '#1a7fff' : akzent==='gruen' ? '#00cc55' : akzent==='gold' ? '#e8b830' : akzent==='grau' ? '#a0b4cc' : '#ff0027';
+    ctx.fillStyle = akzent==='blau' ? '#0044aa' : akzent==='gruen' ? '#007733' : akzent==='gold' ? '#b8860b' : akzent==='grau' ? '#556677' : '#cc0011';
     if (woerter.slice(mid).length) { ctx.fillText(woerter.slice(mid).join(' '), cx, y, cardW-cardPad*2); y+=tSz+8; }
   }
 
@@ -412,11 +419,16 @@ function bildFormat(img) {
   return 'square';
 }
 
-// Bild cover-fit zeichnen
-function drawCover(ctx, img, x, y, w, h) {
+// Bild cover-fit zeichnen (mit optionalem Offset für Bildausschnitt)
+function drawCover(ctx, img, x, y, w, h, offsetX, offsetY) {
   const scale = Math.max(w/img.width, h/img.height);
   const sw = img.width*scale, sh = img.height*scale;
-  ctx.drawImage(img, x+(w-sw)/2, y+(h-sh)/2, sw, sh);
+  // Offset: 0=links/oben, 0.5=mitte, 1=rechts/unten
+  const ox = typeof offsetX === 'number' ? offsetX : (window._bildOffset?.x ?? 0.5);
+  const oy = typeof offsetY === 'number' ? offsetY : (window._bildOffset?.y ?? 0.5);
+  const dx = x + (w-sw) * ox;
+  const dy = y + (h-sh) * oy;
+  ctx.drawImage(img, dx, dy, sw, sh);
 }
 
 // ── POSTER-GENERATOR (Social/Bildschirm) ─────────────────────

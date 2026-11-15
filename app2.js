@@ -4864,7 +4864,10 @@ function posterEditorHTML(e) {
         placeholder="z.B. Judo">
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.1)">
-      <p style="color:#666;font-size:.7rem;margin:0">💡 Änderungen gelten nur für diese Ausgabe.</p>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" onclick="zeigeBildPositionEditor()" style="font-size:.75rem">🖼️ Bildausschnitt</button>
+        <p style="color:#666;font-size:.7rem;margin:0;align-self:center">💡 Nur für diese Ausgabe</p>
+      </div>
       <button id="pe-save-btn" class="btn btn-outline btn-sm" onclick="posterEntwurfSpeichern(window._a3Erfolg?'a3':window._bsErfolg?'bildschirm':'social')" style="color:#C9A227;border-color:#C9A227;font-size:.75rem">💾 Entwurf speichern</button>
     </div>
   </div>`;
@@ -6720,4 +6723,75 @@ function datenschutzBadgeHTML(warnungen) {
     ${hatPrint ? '<span style="background:#E2001A;color:#fff;padding:1px 8px;border-radius:10px;margin:0 4px">✗ Print</span>' : ''}
     </span>
   </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// BILD-POSITION ANPASSEN (Crop/Pan)
+// ══════════════════════════════════════════════════════════════
+
+// Bild-Offset für aktuelles Poster
+window._bildOffset = { x: 0.5, y: 0.5 }; // 0-1, Mittelpunkt des sichtbaren Bereichs
+
+function zeigeBildPositionEditor() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.style.zIndex = '10001';
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.maxWidth = '420px';
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>🖼️ Bildausschnitt anpassen</h3>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="text-muted text-sm mb-3">Verschiebe den Bildausschnitt damit der Sportler besser sichtbar ist.</p>
+
+      <div style="margin-bottom:16px">
+        <label style="font-weight:600;display:block;margin-bottom:6px">Horizontal (Links ↔ Rechts)</label>
+        <input type="range" id="bild-offset-x" min="0" max="100" value="${Math.round(window._bildOffset.x*100)}"
+          style="width:100%" oninput="aktualisiereBildOffset()">
+        <div style="display:flex;justify-content:space-between;font-size:.75rem;color:#888">
+          <span>Links</span><span>Mitte</span><span>Rechts</span>
+        </div>
+      </div>
+
+      <div style="margin-bottom:16px">
+        <label style="font-weight:600;display:block;margin-bottom:6px">Vertikal (Oben ↕ Unten)</label>
+        <input type="range" id="bild-offset-y" min="0" max="100" value="${Math.round(window._bildOffset.y*100)}"
+          style="width:100%" oninput="aktualisiereBildOffset()">
+        <div style="display:flex;justify-content:space-between;font-size:.75rem;color:#888">
+          <span>Oben</span><span>Mitte</span><span>Unten</span>
+        </div>
+      </div>
+
+      <div class="flex gap-2" style="flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" onclick="window._bildOffset={x:0.5,y:0.5};document.getElementById('bild-offset-x').value=50;document.getElementById('bild-offset-y').value=50;aktualisiereBildOffset()">
+          ⊙ Zentrieren
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="window._bildOffset.y=0.2;document.getElementById('bild-offset-y').value=20;aktualisiereBildOffset()">
+          ↑ Oben (Gesicht)
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="window._bildOffset.y=0.35;document.getElementById('bild-offset-y').value=35;aktualisiereBildOffset()">
+          ↑ Oberes Drittel
+        </button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Schließen</button>
+      <button class="btn btn-primary" onclick="this.closest('.modal-overlay').remove();posterEditorAktualisieren()">✅ Anwenden</button>
+    </div>`;
+
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+function aktualisiereBildOffset() {
+  const x = parseInt(document.getElementById('bild-offset-x')?.value || 50) / 100;
+  const y = parseInt(document.getElementById('bild-offset-y')?.value || 50) / 100;
+  window._bildOffset = { x, y };
+  // Sofort Vorschau aktualisieren
+  posterEditorAktualisieren();
 }
