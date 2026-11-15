@@ -209,12 +209,8 @@ function zeichneSlzbKarte(ctx, W, H, opts, akzent='rot') {
     ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.font=`700 ${Math.round(H*0.020)}px Montserrat, Arial, sans-serif`;
     ctx.textAlign='left'; ctx.textBaseline='top';
     if (opts.zusatz) ctx.fillText(opts.zusatz.toUpperCase(), tx, y+Math.round(H*0.004), cardW-cardPad*2-ovalW-Math.round(W*0.017));
-    if (opts.zusatz) {
-      ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.font=`700 ${Math.round(H*0.014)}px Montserrat, Arial, sans-serif`;
-      ctx.letterSpacing='2px';
-      ctx.fillText(opts.zusatz.toUpperCase(), tx, y+Math.round(H*0.004)+Math.round(H*0.028), cardW-cardPad*2-ovalW-Math.round(W*0.017));
-      ctx.letterSpacing='0px';
-    }
+    // zusatz (Disziplin · Ebene) wird im Oval-Bereich angezeigt
+    // Kein separater Block mehr → keine Dopplung
   }
 }
 
@@ -1045,7 +1041,7 @@ async function zeichneSocialBeitragLandscape(ctx, e, bild, meta, W, H) {
   zeichneSlzbHintergrundMitFallback(ctx, W, H, bild, 'rot', sportart);
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
-  zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname: nachname||null, titel: nachname?null:titel, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
+  zeichneSlzbKarte(ctx, W, H, { subtitle: sportart, vorname: vorname||null, nachname: nachname||null, titel: nachname?null:titel, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
   // "Folge uns auf Instagram"-Hinweis
   { const _fSz = Math.round(Math.min(W,H)*0.013);
     ctx.fillStyle='rgba(255,255,255,0.45)';
@@ -1072,7 +1068,7 @@ async function zeichneSocialBeitragPortrait(ctx, e, bild, meta, W, H) {
   zeichneSlzbHintergrundMitFallback(ctx, W, H, bild, 'rot', sportart);
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
-  zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname: nachname||null, titel: nachname?null:titel, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
+  zeichneSlzbKarte(ctx, W, H, { subtitle: sportart, vorname: vorname||null, nachname: nachname||null, titel: nachname?null:titel, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
   // "Folge uns auf Instagram"-Hinweis
   { const _fSz = Math.round(Math.min(W,H)*0.013);
     ctx.fillStyle='rgba(255,255,255,0.45)';
@@ -1098,7 +1094,7 @@ async function zeichneSocialBeitragKeinBild(ctx, e, W, H) {
   zeichneSlzbHintergrund(ctx, W, H, null);
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
-  zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname: nachname||null, titel: (vorname||nachname)?null:titel, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
+  zeichneSlzbKarte(ctx, W, H, { subtitle: sportart, vorname: vorname||null, nachname: nachname||null, titel: (vorname||nachname)?null:titel, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
   // "Folge uns auf Instagram"-Hinweis
   { const _fSz = Math.round(Math.min(W,H)*0.013);
     ctx.fillStyle='rgba(255,255,255,0.45)';
@@ -1124,7 +1120,7 @@ async function zeichneSocialStory(ctx, e, bild, meta, W, H) {
   zeichneSlzbHintergrundMitFallback(ctx, W, H, bild, 'rot', sportart);
   zeichneSlzbDeko(ctx, W, H);
   // Kein Header bei Story/Reel – Instagram zeigt Profilbild + Titel automatisch
-  zeichneSlzbKarte(ctx, W, H, { subtitle: e.wettbewerbText||sportart, vorname: vorname||null, nachname: nachname||null, titel: nachname?null:titel, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
+  zeichneSlzbKarte(ctx, W, H, { subtitle: sportart, vorname: vorname||null, nachname: nachname||null, titel: nachname?null:titel, platz, medaille, zusatz:[e.disziplin,e.ebene].filter(Boolean).join(' · '), wettbewerb:e.wettbewerbText });
   // "Folge uns auf Instagram"-Hinweis
   { const _fSz = Math.round(Math.min(W,H)*0.013);
     ctx.fillStyle='rgba(255,255,255,0.45)';
