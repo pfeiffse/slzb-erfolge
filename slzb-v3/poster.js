@@ -798,11 +798,21 @@ async function zeichneA3Landscape(canvas, e, bild, meta) {
   ctx.textAlign='center'; ctx.textBaseline='top';
   ctx.fillText(sportart.toUpperCase(), W/2, y); y+=18;
 
-  // Wettbewerb (wenn vorhanden)
+  // Wettbewerb (wenn vorhanden) - mit Zeilenumbruch bei langen Namen
   if (e.wettbewerbText) {
-    ctx.fillStyle='#555'; ctx.font='bold 14px Montserrat, Arial, sans-serif';
+    ctx.fillStyle='#555'; ctx.font='bold 13px Montserrat, Arial, sans-serif';
     ctx.textAlign='center'; ctx.textBaseline='top';
-    ctx.fillText(e.wettbewerbText.toUpperCase(), W/2, y, W-100); y+=20;
+    const wbText = e.wettbewerbText.toUpperCase();
+    const maxWbW = W - 120;
+    if (ctx.measureText(wbText).width > maxWbW) {
+      // Zeilenumbruch bei langen Wettbewerbsnamen
+      const wbWoerter = wbText.split(' ');
+      const wbMid = Math.ceil(wbWoerter.length/2);
+      ctx.fillText(wbWoerter.slice(0,wbMid).join(' '), W/2, y, maxWbW); y+=16;
+      ctx.fillText(wbWoerter.slice(wbMid).join(' '), W/2, y, maxWbW); y+=16;
+    } else {
+      ctx.fillText(wbText, W/2, y, maxWbW); y+=18;
+    }
   }
 
   // Trennlinie
@@ -824,22 +834,21 @@ async function zeichneA3Landscape(canvas, e, bild, meta) {
   ctx.fillStyle=SLZB_COLORS.red;
   if (woerter.slice(mid).length) { ctx.fillText(woerter.slice(mid).join(' '), W/2, y, W-80); y+=zeilenH; }
 
-  y += 10;
-  // Platzierung: elegantes Badge mit Medaillen-Emoji
+  y += 8;
+  // Platzierung: kompaktes Badge
   if (platz) {
     const medal = platz===1?'🥇':platz===2?'🥈':platz===3?'🥉':null;
-    const badgeH = 44;
-    const badgeText = medal ? `${medal}  ${platz}. Platz` : `${platz}. Platz`;
-    // Badge-Breite messen
-    ctx.font='bold 22px Montserrat, Arial, sans-serif';
-    const badgeW = Math.min(ctx.measureText(badgeText).width + 40, W*0.5);
+    const badgeH = 36;
+    const badgeFontSz = 18;
+    ctx.font=`bold ${badgeFontSz}px Montserrat, Arial, sans-serif`;
+    const badgeText = medal ? `${medal} ${platz}. Platz` : `${platz}. Platz`;
+    const badgeW = Math.min(ctx.measureText(badgeText).width + 32, W*0.45);
     const badgeX = W/2 - badgeW/2;
-    // Badge zeichnen
-    ctx.fillStyle=mColor; slzbRoundRect(ctx,badgeX,y,badgeW,badgeH,22); ctx.fill();
-    ctx.fillStyle='#fff'; ctx.font='bold 22px Montserrat, Arial, sans-serif';
+    ctx.fillStyle=mColor; slzbRoundRect(ctx,badgeX,y,badgeW,badgeH,18); ctx.fill();
+    ctx.fillStyle='#1a1a1a'; ctx.font=`bold ${badgeFontSz}px Montserrat, Arial, sans-serif`;
     ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText(badgeText, W/2, y+badgeH/2);
-    y += badgeH + 10;
+    y += badgeH + 8;
   }
 
   // Athletenname – dynamische Größe
