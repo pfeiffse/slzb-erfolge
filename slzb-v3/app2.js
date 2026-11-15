@@ -6533,7 +6533,11 @@ async function importiereDatenschutzExcel() {
     const daten = [];
     for (let i = 1; i < zeilen.length; i++) {
       const cols = zeilen[i].split(/[,;|\t]/).map(c => c.trim().replace(/^"|"$/g, ''));
-      if (cols.length < 3 || !cols[0]) continue;
+      // Leere Zeilen überspringen
+      if (!cols[0] || !cols[0].trim()) continue;
+      if (cols.length < 2 || !cols[1] || !cols[1].trim()) continue;
+      // Zeilen überspringen die nur Trennzeichen enthalten
+      if (cols.every(c => !c.trim() || c.trim() === '-')) continue;
 
       const istX = (v) => {
         if (!v || v.trim() === '' || v.trim() === '-') return false;
