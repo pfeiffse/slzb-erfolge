@@ -497,28 +497,16 @@ function getStatusAktionen(status,rolle) {
 async function statusWechselUI(erfolgId,statusNeu) {
   const kommentar=document.getElementById('status-kommentar')?.value||'';
   const result=await DB.statusWechsel(erfolgId,statusNeu,kommentar);
-  if(!result.ok){toast('Fehler beim Statuswechsel','danger');return;}
+  if(!result.ok){
+    toast('Fehler beim Statuswechsel: '+(result.fehler||'Unbekannter Fehler'),'danger');
+    return;
+  }
   APP._erfolgeCache=null;
   toast(`Status → ${statusNeu}`,'success');
 
-  // Push-Benachrichtigung senden
-  try {
-    const erfolg = await DB.getErfolgById(erfolgId);
-    if (erfolg) {
-      // An Melder: bei Statusänderungen die ihn betreffen
-      const PUSH_AN_MELDER = ['Freigegeben','Veröffentlicht','Rückfrage an Melder',
-        'Wegen Einwilligung gesperrt','Archiviert','Teilweise freigegeben'];
-      if (PUSH_AN_MELDER.includes(statusNeu) && erfolg.melderId && erfolg.melderId !== Auth.id()) {
-        await Backend.invoke('notify-status-change', {
-          userId: erfolg.melderId, titel: erfolg.titel,
-          status: statusNeu, erfolgId, kommentar: kommentar||null,
-        }).catch(e => console.warn('[Push→Melder]', e.message));
-      }
-    }
-  } catch(pushErr) {
-    console.warn('[Push] Fehler:', pushErr.message);
-  }
-
+  // notify-status-change ist in diesem Supabase-Projekt nicht vorhanden.
+  // Statuswechsel bleiben vollständig funktionsfähig, ohne eine nicht
+  // bereitgestellte Edge Function aufzurufen.
   navigateTo('erfolg-detail',{currentErfolgId:erfolgId});
 }
 
@@ -5141,30 +5129,11 @@ async function renderPosterEntwuerfeInTab(erfolgId) {
 // PUSH AN REDAKTION: Neue Meldung eingereicht
 // ══════════════════════════════════════════════════════════════
 async function sendeRedaktionsPush(erfolgId, titel) {
-  try {
-    // Alle Redakteure/ÖA/Admin aus profiles laden
-    const { data: redakteure } = await Backend.client
-      .from('profiles')
-      .select('user_id')
-      .in('role', ['redaktion', 'oea', 'admin'])
-      .eq('active', true);
-
-    if (!redakteure?.length) return;
-
-    // Push an jeden Redakteur (außer dem Melder selbst)
-    for (const r of redakteure) {
-      if (r.user_id === Auth.id()) continue; // Kein Push an sich selbst
-      await Backend.invoke('notify-status-change', {
-        userId:   r.user_id,
-        titel:    titel,
-        status:   '📥 Neue Meldung eingereicht',
-        erfolgId: erfolgId,
-        kommentar: `Von: ${Auth.name()}`,
-      }).catch(e => console.warn('[Push→Redaktion]', e.message));
-    }
-  } catch(e) {
-    console.warn('[Push→Redaktion] Fehler:', e.message);
-  }
+  // Bewusst deaktiviert: Die Edge Function notify-status-change ist nicht
+  // bereitgestellt. Diese No-op-Funktion erhält bestehende Aufrufe, löst aber
+  // keine fehlgeschlagenen Netzwerkrequests aus.
+  console.info('[Push] Übersprungen:', { erfolgId, titel });
+  return { ok: true, skipped: true };
 }
 
 // ══════════════════════════════════════════════════════════════

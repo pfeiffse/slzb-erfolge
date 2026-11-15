@@ -453,23 +453,77 @@ const DB = {
 
   async getBilder(erfolgId) {
     const { data, error } = await Backend.client
-      .from('achievement_media').select('*').eq('achievement_id', erfolgId).order('created_at');
-    if (error || !data?.length) return [];
+      .from('achievement_media')
+      .select('*')
+      .eq('achievement_id', erfolgId)
+      .order('created_at');
+
+    if (error) {
+      console.error('[Bilder] Metadaten laden fehlgeschlagen:', error);
+      return [];
+    }
+    if (!data?.length) return [];
+
     return Promise.all(data.map(async row => {
-      let signedUrl = null;
-      try {
-        const signed = await Backend.client.storage
-          .from('achievement-media').createSignedUrl(row.storage_path, 3600);
-        signedUrl = signed.data?.signedUrl || null;
-      } catch (error) {
-        console.warn('Signed URL:', error.message);
+      // storage_path speichert nur den Pfad innerhalb des Buckets.
+      const storagePath = String(row.storage_path || '')
+        .trim()
+        .replace(/^achievement-media\//, '')
+        .replace(/^\/+/, '');
+
+      let imageUrl = null;
+      let urlSource = 'none';
+      let loadError = null;
+
+      if (!storagePath) {
+        loadError = 'storage_path ist leer';
+      } else {
+        // Zuverlässigste Variante für private Buckets: authentifizierter Download.
+        // Dadurch wird kein ablaufender Signatur-Link im Cache oder Poster verwendet.
+        const downloaded = await Backend.client.storage
+          .from('achievement-media')
+          .download(storagePath);
+
+        if (!downloaded.error && downloaded.data) {
+          imageUrl = URL.createObjectURL(downloaded.data);
+          urlSource = 'blob';
+        } else {
+          loadError = downloaded.error?.message || 'Storage-Download fehlgeschlagen';
+
+          // Fallback, falls die Storage-Policy nur signierte URLs zulässt.
+          const signed = await Backend.client.storage
+            .from('achievement-media')
+            .createSignedUrl(storagePath, 60 * 60);
+
+          if (!signed.error && signed.data?.signedUrl) {
+            imageUrl = signed.data.signedUrl;
+            urlSource = 'signed';
+            loadError = null;
+          } else {
+            loadError = signed.error?.message || loadError;
+          }
+        }
       }
+
+      if (!imageUrl) {
+        console.error('[Bilder] Datei nicht ladbar:', {
+          mediaId: row.id,
+          bucket: 'achievement-media',
+          storagePath,
+          fehler: loadError,
+        });
+      }
+
       return {
         id: row.id,
-        storagePath: row.storage_path,
+        storagePath,
         originalName: row.original_name,
         mimeType: row.mime_type,
-        signedUrl,
+        // Bestehende App und poster.js erwarten weiterhin signedUrl.
+        signedUrl: imageUrl,
+        imageUrl,
+        urlSource,
+        loadError,
         caption: row.caption || '',
         altText: row.alt_text || '',
         creator: row.creator || row.copyright_holder || '',
