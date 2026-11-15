@@ -637,6 +637,28 @@ function exportPosterPNG(e, canvasId='social-canvas') {
 }
 
 // ── A3 DRUCKFREUNDLICH (3 Layouts) ───────────────────────────
+
+// ── Hilfsfunktion: Text auf Breite begrenzen (Font-Scaling) ──
+function fitText(ctx, text, maxW, maxFontSz, minFontSz=10, fontStyle='bold') {
+  let sz = maxFontSz;
+  while (sz >= minFontSz) {
+    ctx.font = `${fontStyle} ${sz}px Montserrat, Arial, sans-serif`;
+    if (ctx.measureText(text).width <= maxW) return sz;
+    sz -= 1;
+  }
+  return minFontSz;
+}
+
+// ── Hilfsfunktion: Text mit Ellipsis abschneiden ──
+function truncateText(ctx, text, maxW) {
+  if (ctx.measureText(text).width <= maxW) return text;
+  let t = text;
+  while (t.length > 3 && ctx.measureText(t + '…').width > maxW) {
+    t = t.slice(0, -1);
+  }
+  return t + '…';
+}
+
 async function zeichneA3Druckfreundlich(canvasId, e) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
@@ -798,21 +820,14 @@ async function zeichneA3Landscape(canvas, e, bild, meta) {
   ctx.textAlign='center'; ctx.textBaseline='top';
   ctx.fillText(sportart.toUpperCase(), W/2, y); y+=18;
 
-  // Wettbewerb (wenn vorhanden) - mit Zeilenumbruch bei langen Namen
+  // Wettbewerb (wenn vorhanden) - Font-Scaling für lange Namen
   if (e.wettbewerbText) {
-    ctx.fillStyle='#555'; ctx.font='bold 13px Montserrat, Arial, sans-serif';
-    ctx.textAlign='center'; ctx.textBaseline='top';
     const wbText = e.wettbewerbText.toUpperCase();
-    const maxWbW = W - 120;
-    if (ctx.measureText(wbText).width > maxWbW) {
-      // Zeilenumbruch bei langen Wettbewerbsnamen
-      const wbWoerter = wbText.split(' ');
-      const wbMid = Math.ceil(wbWoerter.length/2);
-      ctx.fillText(wbWoerter.slice(0,wbMid).join(' '), W/2, y, maxWbW); y+=16;
-      ctx.fillText(wbWoerter.slice(wbMid).join(' '), W/2, y, maxWbW); y+=16;
-    } else {
-      ctx.fillText(wbText, W/2, y, maxWbW); y+=18;
-    }
+    const maxWbW = W - 100;
+    const wbSz = fitText(ctx, wbText, maxWbW, 14, 9, 'bold');
+    ctx.fillStyle='#444'; ctx.font=`bold ${wbSz}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillText(truncateText(ctx, wbText, maxWbW), W/2, y); y+=wbSz+6;
   }
 
   // Trennlinie
@@ -834,21 +849,50 @@ async function zeichneA3Landscape(canvas, e, bild, meta) {
   ctx.fillStyle=SLZB_COLORS.red;
   if (woerter.slice(mid).length) { ctx.fillText(woerter.slice(mid).join(' '), W/2, y, W-80); y+=zeilenH; }
 
-  y += 8;
-  // Platzierung: kompaktes Badge
+  y += 10;
+  // Platzierung: professionelles Badge mit Verlauf
   if (platz) {
     const medal = platz===1?'🥇':platz===2?'🥈':platz===3?'🥉':null;
-    const badgeH = 36;
-    const badgeFontSz = 18;
-    ctx.font=`bold ${badgeFontSz}px Montserrat, Arial, sans-serif`;
-    const badgeText = medal ? `${medal} ${platz}. Platz` : `${platz}. Platz`;
-    const badgeW = Math.min(ctx.measureText(badgeText).width + 32, W*0.45);
+    const platzText = `${platz}. Platz`;
+    const badgeH = 40;
+    const badgePad = 20;
+    ctx.font='bold 18px Montserrat, Arial, sans-serif';
+    const textW = ctx.measureText(platzText).width;
+    const badgeW = Math.min(textW + badgePad*2 + (medal?36:0), W*0.5);
     const badgeX = W/2 - badgeW/2;
-    ctx.fillStyle=mColor; slzbRoundRect(ctx,badgeX,y,badgeW,badgeH,18); ctx.fill();
-    ctx.fillStyle='#1a1a1a'; ctx.font=`bold ${badgeFontSz}px Montserrat, Arial, sans-serif`;
+    const badgeR = badgeH/2; // Vollständig abgerundet
+
+    // Verlauf: Gold/Silber/Bronze je nach Platz
+    const grad = ctx.createLinearGradient(badgeX, y, badgeX, y+badgeH);
+    if (platz===1) { grad.addColorStop(0,'#FFD700'); grad.addColorStop(0.5,'#FFA500'); grad.addColorStop(1,'#B8860B'); }
+    else if (platz===2) { grad.addColorStop(0,'#E8E8E8'); grad.addColorStop(0.5,'#C0C0C0'); grad.addColorStop(1,'#909090'); }
+    else if (platz===3) { grad.addColorStop(0,'#CD7F32'); grad.addColorStop(0.5,'#A0522D'); grad.addColorStop(1,'#8B4513'); }
+    else { grad.addColorStop(0,mColor); grad.addColorStop(1,mColor); }
+
+    // Badge zeichnen
+    ctx.fillStyle=grad; slzbRoundRect(ctx,badgeX,y,badgeW,badgeH,badgeR); ctx.fill();
+
+    // Glanz-Effekt oben
+    const glanz = ctx.createLinearGradient(badgeX, y, badgeX, y+badgeH*0.5);
+    glanz.addColorStop(0,'rgba(255,255,255,0.35)'); glanz.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=glanz; slzbRoundRect(ctx,badgeX,y,badgeW,badgeH*0.5,badgeR); ctx.fill();
+
+    // Dünner Rahmen
+    ctx.strokeStyle='rgba(0,0,0,0.15)'; ctx.lineWidth=1;
+    slzbRoundRect(ctx,badgeX,y,badgeW,badgeH,badgeR); ctx.stroke();
+
+    // Text: Emoji + Platz
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(badgeText, W/2, y+badgeH/2);
-    y += badgeH + 8;
+    const textY = y + badgeH/2;
+    if (medal) {
+      ctx.font='20px Arial'; // Emoji-Font
+      ctx.fillStyle='rgba(0,0,0,0.7)';
+      ctx.fillText(medal, W/2 - textW/2 - 2, textY);
+    }
+    ctx.font='bold 17px Montserrat, Arial, sans-serif';
+    ctx.fillStyle='rgba(0,0,0,0.75)';
+    ctx.fillText(platzText, medal ? W/2 + 16 : W/2, textY);
+    y += badgeH + 10;
   }
 
   // Athletenname – dynamische Größe
