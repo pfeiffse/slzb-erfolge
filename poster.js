@@ -373,30 +373,36 @@ function drawLogo(ctx, x, y, maxH) {
 async function ladeBild(url) {
   if (!url) return null;
 
-  // Öffentliche Supabase-Storage-URLs brauchen KEINE Auth-Header.
-  // Auth-Header bei public-Buckets verursachen HTTP 400.
-  const istOeffentlich = url.includes('/storage/v1/object/public/');
+  const anonKey = window.SLZB_CONFIG?.supabaseAnonKey || '';
+  const istSupabaseStorage = url.includes('.supabase.co/storage/');
 
   try {
-    const fetchOpts = istOeffentlich ? {} : {
-      headers: Backend.client ? {
-        'Authorization': `Bearer ${(await Backend.session())?.access_token || ''}`,
-        'apikey': window.SLZB_CONFIG?.supabaseAnonKey || '',
-      } : {}
-    };
-    const response = await fetch(url, fetchOpts);
+    // Supabase Storage braucht immer den apikey-Header (auch bei "public" Buckets).
+    // Kein Bearer-Token für öffentliche Objekte – nur apikey reicht.
+    let session = null;
+    try { session = await Backend.session(); } catch(_) {}
+    const accessToken = session?.access_token || '';
+
+    const headers = {};
+    if (istSupabaseStorage && anonKey) {
+      headers['apikey'] = anonKey;
+      // Nur wenn eingeloggt: auch Authorization mitschicken (für private Buckets)
+      if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+
+    const response = await fetch(url, { headers });
     if (!response.ok) throw new Error('HTTP ' + response.status);
     const blob = await response.blob();
     const objectUrl = URL.createObjectURL(blob);
     return new Promise(resolve => {
       const img = new Image();
-      img.onload = () => { resolve(img); }
+      img.onload = () => resolve(img);
       img.onerror = () => resolve(null);
       img.src = objectUrl;
     });
   } catch(e) {
-    console.warn('Bild laden fehlgeschlagen:', e.message);
-    // Fallback: direkt ohne Auth
+    console.warn('Bild laden fehlgeschlagen:', e.message, '| URL:', url.substring(0, 80));
+    // Fallback: direkt ohne Header
     return new Promise(resolve => {
       const img = new Image();
       img.crossOrigin = 'anonymous';

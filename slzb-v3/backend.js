@@ -248,11 +248,12 @@ const DB = {
     const bilder = await Promise.all(data.map(async (b) => {
       let signedUrl = null;
       try {
-        const { data: urlData } = Backend.client.storage
+        // Signed URL (3600s = 1h) – funktioniert auch bei privaten Buckets
+        const { data: urlData, error: urlErr } = await Backend.client.storage
           .from('achievement-media')
-          .getPublicUrl(b.storage_path);
-        signedUrl = urlData?.publicUrl || null;
-        console.log('[getBilder] storage_path:', b.storage_path, '| publicUrl:', signedUrl?.substring(0,100));
+          .createSignedUrl(b.storage_path, 3600);
+        signedUrl = urlData?.signedUrl || null;
+        if (urlErr) console.warn('[getBilder] Signed URL Fehler:', urlErr.message);
       } catch(e) { console.warn('Signed URL:', e.message); }
       return {
         id:           b.id,
