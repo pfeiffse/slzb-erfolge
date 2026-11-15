@@ -6535,7 +6535,11 @@ async function importiereDatenschutzExcel() {
       const cols = zeilen[i].split(/[,;|\t]/).map(c => c.trim().replace(/^"|"$/g, ''));
       if (cols.length < 3 || !cols[0]) continue;
 
-      const istX = (v) => v && (v.toLowerCase() === 'x' || v === '1' || v.toLowerCase() === 'ja');
+      const istX = (v) => {
+        if (!v || v.trim() === '' || v.trim() === '-') return false;
+        const s = v.trim().toLowerCase();
+        return s === 'x' || s === '1' || s === 'ja' || s === 'yes' || s === 'true';
+      };
 
       daten.push({
         nachname:       cols[0] || '',
