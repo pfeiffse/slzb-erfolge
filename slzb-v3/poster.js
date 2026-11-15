@@ -798,6 +798,13 @@ async function zeichneA3Landscape(canvas, e, bild, meta) {
   ctx.textAlign='center'; ctx.textBaseline='top';
   ctx.fillText(sportart.toUpperCase(), W/2, y); y+=18;
 
+  // Wettbewerb (wenn vorhanden)
+  if (e.wettbewerbText) {
+    ctx.fillStyle='#555'; ctx.font='bold 14px Montserrat, Arial, sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillText(e.wettbewerbText.toUpperCase(), W/2, y, W-100); y+=20;
+  }
+
   // Trennlinie
   ctx.fillStyle=SLZB_COLORS.blue; ctx.fillRect((W-60)/2, y, 60, 2); y+=8;
 
