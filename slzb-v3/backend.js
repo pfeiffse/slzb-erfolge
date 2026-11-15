@@ -252,6 +252,7 @@ const DB = {
           .from('achievement-media')
           .getPublicUrl(b.storage_path);
         signedUrl = urlData?.publicUrl || null;
+        console.log('[getBilder] storage_path:', b.storage_path, '| publicUrl:', signedUrl?.substring(0,100));
       } catch(e) { console.warn('Signed URL:', e.message); }
       return {
         id:           b.id,
