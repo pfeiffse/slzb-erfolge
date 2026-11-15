@@ -500,7 +500,67 @@ const DB = {
   },
 
   // Mapping: App → Supabase (deutsche App-Namen → englische Spaltennamen)
-  async unmapErfolg(e) {
+  // Erfolg aktualisieren (Kerndaten bearbeiten)
+  async aktualisiereErfolg(erfolgId, daten) {
+    try {
+      // Wettbewerb auflösen
+      const wbName = daten.wettbewerbText || '';
+      let competitionId = daten.wettbewerbId || null;
+      if (wbName) {
+        competitionId = await this.getOderErstelleWettbewerb(wbName, daten.datum);
+      }
+
+      const updateData = {
+        title:          daten.titel,
+        sport_id:       daten.sportartId || null,
+        discipline:     daten.disziplin || '',
+        competition_id: competitionId,
+        event_date:     daten.datum || null,
+        location:       daten.ort || '',
+        level:          daten.ebene || '',
+        placement:      daten.platzierung || null,
+        medal:          daten.medaille || 'keine',
+        result_value:   daten.ergebnisWert || null,
+        result_unit:    daten.ergebnisEinheit || '',
+        result_text:    daten.ergebnisText || '',
+        short_info:     daten.kurzinfo || '',
+        source_url:     daten.quelleUrl || '',
+        article_text:   daten.textArtikel || '',
+        updated_at:     new Date().toISOString(),
+      };
+
+      const { error } = await Backend.client
+        .from('achievements')
+        .update(updateData)
+        .eq('id', erfolgId);
+
+      if (error) return { ok: false, fehler: error.message };
+      return { ok: true };
+    } catch(e) {
+      return { ok: false, fehler: e.message };
+    }
+  },
+
+  // Beteiligte ersetzen
+  async ersetzeBeteiligte(erfolgId, beteiligte) {
+    try {
+      await Backend.client.from('achievement_participants').delete().eq('achievement_id', erfolgId);
+      for (const b of beteiligte) {
+        if (!b.anzeigename) continue;
+        await Backend.client.from('achievement_participants').insert({
+          achievement_id:   erfolgId,
+          student_id:       b.schuelerId || null,
+          participant_role: b.anzeigename,
+          consent_status:   b.einwilligungsstatus || 'Nicht geprüft',
+        });
+      }
+      return { ok: true };
+    } catch(e) {
+      return { ok: false, fehler: e.message };
+    }
+  },
+
+    async unmapErfolg(e) {
     // sport_id: direkt aus lokaler DB (IDs sind identisch: SP01, SP14 etc.)
     const sportId = e.sportartId || null;
 
