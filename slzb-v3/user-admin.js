@@ -26,7 +26,7 @@ function renderNutzerverwaltung() {
             <input type="text" id="nu-anzeige" placeholder="Vorname Nachname"></div>
           <div class="form-group"><label>Rolle <span class="required">*</span></label>
             <select id="nu-rolle">
-              <option value="trainer">Trainer/Melder</option>
+              <option value="schueler">Schüler/in</option><option value="trainer">Trainer/Melder</option>
               <option value="redaktion">Redaktion</option>
               <option value="oea">Öffentlichkeitsarbeit</option>
               <option value="datenschutz">Datenschutz</option>
@@ -116,7 +116,7 @@ async function ladeNutzerverwaltung() {
           <td class="text-sm">${esc(u.email)}</td>
           <td>
             <select id="role-${u.id}" ${u.id===Auth.id()?'disabled title="Eigene Rolle kann nicht geändert werden"':''}>
-              ${['trainer','redaktion','oea','datenschutz','admin'].map(r=>
+              ${['schueler','trainer','mitarbeiter','redaktion','oea','datenschutz','admin'].map(r=>
                 `<option value="${r}"${u.role===r?' selected':''}>${UserAdmin.roleLabel(r)}</option>`
               ).join('')}
             </select>
@@ -202,25 +202,62 @@ async function erstelleNutzerV3() {
 
 async function speichereNutzerRolle(userId) {
   const roleEl = document.getElementById(`role-${userId}`);
-  if (!roleEl) return;
+  if (!roleEl) { toast('Rollen-Dropdown nicht gefunden','warning'); return; }
+  const neueRolle = roleEl.value;
+  debug(`Rolle speichern: ${userId} → ${neueRolle}`);
+
+  // Strategie 1: Edge Function (Service Role Key – umgeht RLS)
   try {
-    await UserAdmin.call('update', { userId, role: roleEl.value });
-    toast('Rolle gespeichert', 'success');
+    await UserAdmin.call('update', { userId, role: neueRolle });
+    toast('Rolle gespeichert ✅', 'success');
     await ladeNutzerverwaltung();
+    return;
   } catch(e) {
-    toast(e.message, 'danger');
+    debug('Edge Function fehlgeschlagen: '+e.message);
   }
+
+  // Strategie 2: Direkte DB mit authenticated session
+  const { error } = await Backend.client
+    .from('profiles')
+    .update({ role: neueRolle })
+    .eq('user_id', userId);
+
+  if (error) {
+    debug('DB-Update Fehler: '+error.message);
+    toast(`Fehler: ${error.message}`, 'danger');
+    return;
+  }
+  toast('Rolle gespeichert ✅', 'success');
+  await ladeNutzerverwaltung();
 }
 
 async function setzeNutzerAktiv(userId, active) {
   if (!confirm(`Konto wirklich ${active?'aktivieren':'deaktivieren'}?`)) return;
+  debug(`Aktivierung: ${userId} → ${active}`);
+
+  // Strategie 1: Edge Function
   try {
     await UserAdmin.call('update', { userId, active });
-    toast(`Konto ${active?'aktiviert':'deaktiviert'}`, 'success');
+    toast(`Konto ${active?'aktiviert ✅':'deaktiviert'}`, 'success');
     await ladeNutzerverwaltung();
+    return;
   } catch(e) {
-    toast(e.message, 'danger');
+    debug('Edge Function fehlgeschlagen: '+e.message);
   }
+
+  // Strategie 2: Direkte DB
+  const { error } = await Backend.client
+    .from('profiles')
+    .update({ active })
+    .eq('user_id', userId);
+
+  if (error) {
+    debug('DB-Update Fehler: '+error.message);
+    toast(`Fehler: ${error.message}`, 'danger');
+    return;
+  }
+  toast(`Konto ${active?'aktiviert ✅':'deaktiviert'}`, 'success');
+  await ladeNutzerverwaltung();
 }
 
 function zeigePasswortAendernV3(userId, name) {
