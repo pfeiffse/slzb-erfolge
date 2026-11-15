@@ -6440,3 +6440,270 @@ function downloadVotingAushang() {
   a.click();
   toast('📥 Poster heruntergeladen', 'success');
 }
+
+// ══════════════════════════════════════════════════════════════
+// DATENSCHUTZ-NEGATIVLISTE
+// ══════════════════════════════════════════════════════════════
+
+// ── Excel-Import ──────────────────────────────────────────────
+async function renderDatenschutzImport() {
+  const { data: eintraege } = await Backend.client
+    .from('datenschutz_widerspruch')
+    .select('*')
+    .order('nachname');
+
+  const anzahl = eintraege?.length || 0;
+
+  return `<div class="page">
+    <div class="page-header">
+      <h1>🔒 Datenschutz-Negativliste</h1>
+      <p class="text-muted">Schüler/innen mit Widerspruch zur Veröffentlichung – Import aus Excel</p>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header"><h2>📥 Excel-Datei importieren</h2></div>
+      <div class="card-body">
+        <div class="alert alert-warning mb-3">
+          <span class="alert-icon">⚠️</span>
+          <span><strong>Datenschutz:</strong> Diese Daten sind vertraulich. Nur Datenschutzbeauftragte und Admins haben Zugriff.</span>
+        </div>
+        <div class="form-group mb-3">
+          <label>Excel-Datei (.xlsx) <span class="required">*</span></label>
+          <input type="file" id="ds-excel-datei" accept=".xlsx,.xls,.csv">
+          <div class="form-hint">Format: Name | Vorname | Klasse | Name-Print | Name-Presse | Name-Homepage | Name-Events | Name-Social | Foto-Print | Foto-Presse | Foto-Homepage | Foto-Events | Foto-Social</div>
+        </div>
+        <div class="form-group mb-3">
+          <label>Schuljahr</label>
+          <input type="text" id="ds-schuljahr" value="2026/27" style="max-width:120px">
+        </div>
+        <div class="alert alert-info mb-3">
+          <span class="alert-icon">ℹ️</span>
+          <span>X oder x in einer Zelle = Widerspruch. Leere Zelle = keine Einschränkung.</span>
+        </div>
+        <button class="btn btn-primary" onclick="importiereDatenschutzExcel()">📥 Importieren</button>
+        <button class="btn btn-danger btn-sm ml-2" onclick="loescheDatenschutzListe()" style="margin-left:8px">🗑️ Liste leeren</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2>📋 Aktuelle Liste (${anzahl} Einträge)</h2>
+        <button class="btn btn-ghost btn-sm" onclick="navigateTo('einwilligungen')">↻ Aktualisieren</button>
+      </div>
+      <div class="card-body">
+        ${!anzahl ? '<p class="text-muted">Noch keine Einträge. Bitte Excel-Datei importieren.</p>' :
+        `<div class="table-wrap"><table style="font-size:.82rem">
+          <thead><tr>
+            <th>Name</th><th>Klasse</th>
+            <th title="Name-Print">N-P</th><th title="Name-Presse">N-Pr</th>
+            <th title="Name-Homepage">N-H</th><th title="Name-Events">N-E</th>
+            <th title="Name-Social">N-S</th>
+            <th title="Foto-Print">F-P</th><th title="Foto-Presse">F-Pr</th>
+            <th title="Foto-Homepage">F-H</th><th title="Foto-Events">F-E</th>
+            <th title="Foto-Social">F-S</th>
+          </tr></thead>
+          <tbody>
+            ${eintraege.map(e => `<tr>
+              <td><strong>${esc(e.nachname)}</strong>, ${esc(e.vorname)}</td>
+              <td>${esc(e.klasse||'–')}</td>
+              ${['name_print','name_presse','name_homepage','name_events','name_social',
+                 'foto_print','foto_presse','foto_homepage','foto_events','foto_social']
+                .map(f => `<td style="text-align:center">${e[f]?'<span style="color:#E2001A;font-weight:700">✗</span>':'<span style="color:#888">–</span>'}</td>`).join('')}
+            </tr>`).join('')}
+          </tbody>
+        </table></div>`}
+      </div>
+    </div>
+  </div>`;
+}
+
+async function importiereDatenschutzExcel() {
+  const datei = document.getElementById('ds-excel-datei')?.files?.[0];
+  const schuljahr = document.getElementById('ds-schuljahr')?.value || '2026/27';
+  if (!datei) { toast('Bitte Excel-Datei auswählen', 'warning'); return; }
+
+  toast('⏳ Wird verarbeitet...', 'info');
+
+  try {
+    // Datei als Text lesen (CSV) oder ArrayBuffer (XLSX)
+    const text = await datei.text();
+    const zeilen = text.split('\n').filter(z => z.trim());
+
+    // Header-Zeile überspringen (erste Zeile)
+    const daten = [];
+    for (let i = 1; i < zeilen.length; i++) {
+      const cols = zeilen[i].split(/[,;|\t]/).map(c => c.trim().replace(/^"|"$/g, ''));
+      if (cols.length < 3 || !cols[0]) continue;
+
+      const istX = (v) => v && (v.toLowerCase() === 'x' || v === '1' || v.toLowerCase() === 'ja');
+
+      daten.push({
+        nachname:       cols[0] || '',
+        vorname:        cols[1] || '',
+        klasse:         cols[2] || null,
+        name_print:     istX(cols[3]),
+        name_presse:    istX(cols[4]),
+        name_homepage:  istX(cols[5]),
+        name_events:    istX(cols[6]),
+        name_social:    istX(cols[7]),
+        foto_print:     istX(cols[8]),
+        foto_presse:    istX(cols[9]),
+        foto_homepage:  istX(cols[10]),
+        foto_events:    istX(cols[11]),
+        foto_social:    istX(cols[12]),
+        schuljahr,
+        importiert_von: Auth.id(),
+      });
+    }
+
+    if (!daten.length) { toast('Keine gültigen Daten gefunden', 'warning'); return; }
+
+    // Alte Einträge für dieses Schuljahr löschen
+    await Backend.client.from('datenschutz_widerspruch').delete().eq('schuljahr', schuljahr);
+
+    // Neue Einträge einfügen (in Batches)
+    const BATCH = 50;
+    for (let i = 0; i < daten.length; i += BATCH) {
+      const { error } = await Backend.client.from('datenschutz_widerspruch').insert(daten.slice(i, i+BATCH));
+      if (error) throw new Error(error.message);
+    }
+
+    toast(`✅ ${daten.length} Einträge importiert`, 'success');
+    APP._dsCache = null; // Cache leeren
+    navigateTo('einwilligungen');
+  } catch(e) {
+    toast('Fehler: ' + e.message, 'danger');
+  }
+}
+
+async function loescheDatenschutzListe() {
+  const schuljahr = document.getElementById('ds-schuljahr')?.value || '2026/27';
+  if (!confirm(`Alle Datenschutz-Einträge für ${schuljahr} löschen?`)) return;
+  await Backend.client.from('datenschutz_widerspruch').delete().eq('schuljahr', schuljahr);
+  toast('🗑️ Liste geleert', 'success');
+  APP._dsCache = null;
+  navigateTo('einwilligungen');
+}
+
+// ── Datenschutz-Prüfung beim Anlegen ─────────────────────────
+let _dsCache = null;
+let _dsCacheTime = 0;
+
+async function ladeDatenschutzListe() {
+  const jetzt = Date.now();
+  if (_dsCache && (jetzt - _dsCacheTime) < 5 * 60 * 1000) return _dsCache;
+  try {
+    const { data } = await Backend.client.from('datenschutz_widerspruch').select('*');
+    _dsCache = data || [];
+    _dsCacheTime = jetzt;
+    return _dsCache;
+  } catch(e) {
+    return _dsCache || [];
+  }
+}
+
+async function pruefeDatenschutz(athletenNamen) {
+  // athletenNamen: Array von Strings ["Max Mustermann", "Lisa Müller"]
+  if (!athletenNamen?.length) return [];
+  const liste = await ladeDatenschutzListe();
+  const warnungen = [];
+
+  for (const name of athletenNamen) {
+    const teile = name.trim().split(' ');
+    if (teile.length < 2) continue;
+    const vorname = teile.slice(0, -1).join(' ').toLowerCase();
+    const nachname = teile[teile.length - 1].toLowerCase();
+
+    // Suche in Negativliste (Fuzzy-Match)
+    const treffer = liste.find(e =>
+      e.nachname.toLowerCase() === nachname &&
+      e.vorname.toLowerCase().startsWith(vorname.slice(0, 3))
+    );
+
+    if (!treffer) continue;
+
+    const einschraenkungen = [];
+    if (treffer.name_print)    einschraenkungen.push('Name in Print');
+    if (treffer.name_presse)   einschraenkungen.push('Name in Presse');
+    if (treffer.name_homepage) einschraenkungen.push('Name auf Homepage');
+    if (treffer.name_events)   einschraenkungen.push('Name bei Events');
+    if (treffer.name_social)   einschraenkungen.push('Name auf Social Media');
+    if (treffer.foto_print)    einschraenkungen.push('Foto in Print');
+    if (treffer.foto_presse)   einschraenkungen.push('Foto in Presse');
+    if (treffer.foto_homepage) einschraenkungen.push('Foto auf Homepage');
+    if (treffer.foto_events)   einschraenkungen.push('Foto bei Events');
+    if (treffer.foto_social)   einschraenkungen.push('Foto auf Social Media');
+
+    if (einschraenkungen.length) {
+      warnungen.push({
+        name: `${treffer.vorname} ${treffer.nachname}`,
+        klasse: treffer.klasse,
+        einschraenkungen,
+        // Welche Ausgaben sind betroffen?
+        keinSocial: treffer.name_social || treffer.foto_social,
+        keinPrint:  treffer.name_print  || treffer.foto_print,
+        keinHomepage: treffer.name_homepage || treffer.foto_homepage,
+      });
+    }
+  }
+  return warnungen;
+}
+
+// Warnung anzeigen wenn Datenschutz-Einschränkungen gefunden
+async function zeigeDatenschutzWarnung(athletenNamen, onWeiter) {
+  const warnungen = await pruefeDatenschutz(athletenNamen);
+  if (!warnungen.length) { onWeiter(); return; }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.maxWidth = '500px';
+
+  modal.innerHTML = `
+    <div class="modal-header" style="background:#E2001A;color:#fff">
+      <h3 style="color:#fff;margin:0">🔒 Datenschutz-Hinweis</h3>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-danger mb-3">
+        <span class="alert-icon">⚠️</span>
+        <span>Für folgende Person(en) liegen Datenschutz-Widersprüche vor:</span>
+      </div>
+      ${warnungen.map(w => `
+        <div style="background:#fff3f3;border:1px solid #fcc;border-radius:8px;padding:12px;margin-bottom:10px">
+          <div style="font-weight:700;margin-bottom:6px">👤 ${esc(w.name)}${w.klasse?' ('+esc(w.klasse)+')':''}</div>
+          <div style="font-size:.85rem">
+            ${w.einschraenkungen.map(e => `<span style="background:#E2001A;color:#fff;padding:2px 8px;border-radius:10px;margin:2px;display:inline-block;font-size:.78rem">✗ ${esc(e)}</span>`).join('')}
+          </div>
+        </div>`).join('')}
+      <div class="alert alert-warning mt-3">
+        <span class="alert-icon">ℹ️</span>
+        <span>Die Meldung kann trotzdem gespeichert werden. Beachte die Einschränkungen bei der Veröffentlichung.</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
+      <button class="btn btn-warning" onclick="this.closest('.modal-overlay').remove();(${onWeiter.toString()})()">
+        ⚠️ Trotzdem speichern
+      </button>
+    </div>`;
+
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(modal);
+  document.body.appendChild(overlay);
+}
+
+// Datenschutz-Badge für Ausgaben
+function datenschutzBadgeHTML(warnungen) {
+  if (!warnungen?.length) return '';
+  const hatSocial = warnungen.some(w => w.keinSocial);
+  const hatPrint = warnungen.some(w => w.keinPrint);
+  return `<div class="alert alert-danger" style="margin-bottom:8px">
+    <span class="alert-icon">🔒</span>
+    <span><strong>Datenschutz:</strong>
+    ${hatSocial ? '<span style="background:#E2001A;color:#fff;padding:1px 8px;border-radius:10px;margin:0 4px">✗ Social Media</span>' : ''}
+    ${hatPrint ? '<span style="background:#E2001A;color:#fff;padding:1px 8px;border-radius:10px;margin:0 4px">✗ Print</span>' : ''}
+    </span>
+  </div>`;
+}

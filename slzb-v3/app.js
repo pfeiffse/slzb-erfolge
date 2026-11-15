@@ -105,6 +105,7 @@ function navigateTo(page, params={}) {
     redaktion:         renderRedaktion,
     'erfolg-detail':   renderErfolgDetail,
     einwilligungen:    renderEinwilligungen,
+    datenschutz_import: renderDatenschutzImport,
     ausgaben:          renderAusgaben,
     'highlights':      renderHighlightsSeite,
     'nachwuchswahl':   renderNachwuchswahlSeite,
@@ -184,6 +185,7 @@ function renderSidebar() {
     {page:'jahreschronik',icon:'📅',label:'Jahreschronik',roles:['redaktion','oea','admin']},
     {section:'Datenschutz',roles:['datenschutz','admin']},
     {page:'einwilligungen',icon:'🔒',label:'Einwilligungen',roles:['datenschutz','admin']},
+    {page:'datenschutz_import',icon:'📋',label:'Negativliste importieren',roles:['datenschutz','admin']},
     {section:'Administration',roles:['admin']},
     {page:'stammdaten',icon:'⚙️',label:'Stammdaten',roles:['admin']},
     {page:'nutzerverwaltung',icon:'👥',label:'Nutzerverwaltung',roles:['admin']},
@@ -760,6 +762,18 @@ async function speichereErfolg(status, meldungsart) {
     const ok = confirm('⚠️ Kein Athletenname eingetragen!\n\nOhne Namen erscheint auf dem Poster nur der Titel.\nTrotzdem einreichen?');
     if (!ok) {
       document.getElementById('f-schueler-text')?.focus();
+      return;
+    }
+  }
+
+  // Datenschutz-Prüfung
+  if (athletText && status === 'Eingereicht' && typeof pruefeDatenschutz === 'function') {
+    const dsWarnungen = await pruefeDatenschutz([athletText]);
+    if (dsWarnungen.length) {
+      // Warnung anzeigen, dann weiter
+      zeigeDatenschutzWarnung([athletText], async () => {
+        await _speichereErfolgDurchfuehren(daten, athletText, status, meldungsart);
+      });
       return;
     }
   }
