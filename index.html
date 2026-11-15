@@ -312,6 +312,47 @@ function initMobile() {
   }, { passive: true });
 }
 document.addEventListener('DOMContentLoaded', initMobile);
+
+// Formular-Optimierungen: Redundante Felder ausblenden
+function optimiereFormular() {
+  // Medaille ausblenden (auto aus Platzierung)
+  const medGrp = document.getElementById('f-medaille')?.closest('.form-group');
+  if (medGrp) medGrp.style.display = 'none';
+
+  // Ebene ausblenden wenn Wettbewerb ausgefüllt
+  const wbEl = document.getElementById('f-wettbewerb');
+  const ebeneGrp = document.getElementById('f-ebene')?.closest('.form-group');
+  if (wbEl && ebeneGrp) {
+    const updateEbene = () => {
+      ebeneGrp.style.opacity = wbEl.value.trim() ? '0.4' : '1';
+      ebeneGrp.title = wbEl.value.trim() ? 'Ebene ist durch den Wettbewerb impliziert' : '';
+    };
+    wbEl.addEventListener('input', updateEbene);
+    updateEbene();
+  }
+
+  // Ergebnis-Wert + Einheit: Label vereinfachen
+  const wertLabel = document.querySelector('label[for="f-ergebnis-wert"]');
+  const einheitGrp = document.getElementById('f-ergebnis-einheit')?.closest('.form-group');
+  if (einheitGrp) einheitGrp.style.display = 'none'; // Einheit in Wert-Feld eingeben
+  const wertGrp = document.getElementById('f-ergebnis-wert')?.closest('.form-group');
+  if (wertGrp) {
+    const lbl = wertGrp.querySelector('label');
+    if (lbl) lbl.innerHTML = 'Ergebnis <span class="text-muted text-xs">(Zeit, Weite, Punkte...)</span>';
+    const inp = document.getElementById('f-ergebnis-wert');
+    if (inp) { inp.type = 'text'; inp.placeholder = 'z.B. 58.3 Sek oder Neuer Schulrekord'; inp.step = ''; }
+  }
+}
+
+// Formular-Optimierung nach jedem Render aufrufen
+const _origNavigateTo2 = typeof navigateTo !== 'undefined' ? navigateTo : null;
+document.addEventListener('click', (e) => {
+  if (e.target.closest('[onclick*="neue-meldung"]') || e.target.closest('[onclick*="speichereErfolg"]')) {
+    setTimeout(optimiereFormular, 200);
+  }
+});
+// Auch beim Laden
+document.addEventListener('DOMContentLoaded', () => setTimeout(optimiereFormular, 500));
 </script>
 </body>
 </html>

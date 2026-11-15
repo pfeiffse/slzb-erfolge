@@ -414,11 +414,11 @@ async function zeichnePosterLandscape(ctx, e, bild, meta) {
   const vorname = teile.length>1 ? teile.slice(0,-1).join(' ') : '';
   const nachname = teile.length>0 ? teile[teile.length-1] : '';
   zeichneSlzbKarte(ctx, W, H, {
-    subtitle: e.wettbewerbText || sportart,
+    subtitle: sportart,
     vorname: vorname || null, nachname: nachname || null,
     titel: null,
     platz, medaille,
-    zusatz: [e.disziplin, e.ebene].filter(Boolean).join(' · '),
+    zusatz: e.disziplin||null,
     wettbewerb: e.wettbewerbText,
   });
   // "Folge uns auf Instagram"-Hinweis
@@ -447,11 +447,11 @@ async function zeichnePosterPortrait(ctx, e, bild, meta) {
   const vorname = teile.length>1 ? teile.slice(0,-1).join(' ') : '';
   const nachname = teile.length>0 ? teile[teile.length-1] : '';
   zeichneSlzbKarte(ctx, W, H, {
-    subtitle: e.wettbewerbText || sportart,
+    subtitle: sportart,
     vorname: vorname || null, nachname: nachname || null,
     titel: null,
     platz, medaille,
-    zusatz: [e.disziplin, e.ebene].filter(Boolean).join(' · '),
+    zusatz: e.disziplin||null,
     wettbewerb: e.wettbewerbText,
   });
   // "Folge uns auf Instagram"-Hinweis
@@ -483,12 +483,12 @@ async function zeichnePosterKeinBild(ctx, e) {
   const nachname = teile.length>0 ? teile[teile.length-1] : '';
 
   zeichneSlzbKarte(ctx, W, H, {
-    subtitle: e.wettbewerbText || sportart,
+    subtitle: sportart,
     vorname: vorname || null,
-    nachname: nachname,
+    nachname: nachname || null,
     titel: null,
     platz, medaille,
-    zusatz: [e.disziplin, e.ebene].filter(Boolean).join(' · '),
+    zusatz: e.disziplin||null,
     wettbewerb: e.wettbewerbText,
   });
   // "Folge uns auf Instagram"-Hinweis
