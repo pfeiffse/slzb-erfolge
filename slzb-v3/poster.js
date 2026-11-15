@@ -189,35 +189,70 @@ function zeichneSlzbKarte(ctx, W, H, opts, akzent='rot') {
 
   y += Math.round(H*0.012);
 
-  // Info-Row: Goldenes Oval + Text
+  // Info-Row: Professionelles Medaillen-Badge + Wettbewerb
   if (opts.platz || opts.wettbewerb) {
-    // Medaille automatisch aus Platzierung ableiten wenn nicht angegeben
     const autoMedaille = opts.platz===1?'Gold':opts.platz===2?'Silber':opts.platz===3?'Bronze':null;
     const mColor = (opts.medaille && opts.medaille!=='keine') ? medailleColor(opts.medaille) : autoMedaille ? medailleColor(autoMedaille) : '#efc54d';
-    const ovalW=Math.round(W*0.067), ovalH=Math.round(H*0.047);
-    const rowX = cx - Math.round(cardW*0.25);
-    // Oval
-    ctx.fillStyle = mColor;
-    slzbRoundRect(ctx, rowX, y, ovalW, ovalH, ovalH/2); ctx.fill();
-    ctx.fillStyle = '#000';
-    ctx.font = `900 italic ${Math.round(H*0.024)}px Montserrat, Arial, sans-serif`;
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    // Medaillen-Emoji + Zahl im Oval
     const medalEmoji = opts.platz===1?'🥇':opts.platz===2?'🥈':opts.platz===3?'🥉':null;
-    const ovalLabel = medalEmoji ? `${medalEmoji} ${opts.platz}` : String(opts.platz||'★');
-    ctx.fillText(ovalLabel, rowX+ovalW/2, y+ovalH/2);
-    // Wettbewerb rechts vom Oval (oder Disziplin wenn kein Wettbewerb)
-    const tx = rowX + ovalW + Math.round(W*0.017);
+
+    if (opts.platz) {
+      // Kompaktes Badge: nur Emoji + Zahl, zentriert
+      const badgeSz = Math.round(H*0.032);
+      const badgeH = Math.round(H*0.055);
+      const platzStr = `${opts.platz}. Platz`;
+      ctx.font=`bold ${badgeSz}px Montserrat, Arial, sans-serif`;
+      const platzW = ctx.measureText(platzStr).width;
+      const emojiW = medalEmoji ? badgeSz * 1.3 : 0;
+      const badgeW = Math.min(platzW + emojiW + Math.round(W*0.04), cardW*0.7);
+      const badgeX = cx - badgeW/2;
+
+      // Verlauf je nach Medaille
+      const grad = ctx.createLinearGradient(badgeX, y, badgeX, y+badgeH);
+      if (opts.platz===1||autoMedaille==='Gold') { grad.addColorStop(0,'#FFD700'); grad.addColorStop(0.5,'#FFC200'); grad.addColorStop(1,'#B8860B'); }
+      else if (opts.platz===2||autoMedaille==='Silber') { grad.addColorStop(0,'#E8E8E8'); grad.addColorStop(0.5,'#C8C8C8'); grad.addColorStop(1,'#909090'); }
+      else if (opts.platz===3||autoMedaille==='Bronze') { grad.addColorStop(0,'#CD7F32'); grad.addColorStop(0.5,'#B87333'); grad.addColorStop(1,'#8B4513'); }
+      else { grad.addColorStop(0,mColor); grad.addColorStop(1,mColor); }
+
+      ctx.fillStyle=grad; slzbRoundRect(ctx,badgeX,y,badgeW,badgeH,badgeH/2); ctx.fill();
+      // Glanz
+      const gl=ctx.createLinearGradient(badgeX,y,badgeX,y+badgeH*0.5);
+      gl.addColorStop(0,'rgba(255,255,255,0.4)'); gl.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle=gl; slzbRoundRect(ctx,badgeX,y,badgeW,badgeH*0.5,badgeH/2); ctx.fill();
+      ctx.strokeStyle='rgba(0,0,0,0.12)'; ctx.lineWidth=1;
+      slzbRoundRect(ctx,badgeX,y,badgeW,badgeH,badgeH/2); ctx.stroke();
+
+      // Emoji + Text
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      const midY = y + badgeH/2;
+      if (medalEmoji) {
+        ctx.font=`${Math.round(badgeSz*1.1)}px Arial`;
+        ctx.fillStyle='rgba(0,0,0,0.6)';
+        ctx.fillText(medalEmoji, cx - platzW/2 - 4, midY);
+      }
+      ctx.font=`bold ${badgeSz}px Montserrat, Arial, sans-serif`;
+      ctx.fillStyle='rgba(0,0,0,0.75)';
+      ctx.fillText(platzStr, medalEmoji ? cx + emojiW/2 : cx, midY);
+      y += badgeH + Math.round(H*0.012);
+    }
+
+    // Wettbewerb + Disziplin unter dem Badge (zentriert, mit Font-Scaling)
     const rechtsText = opts.wettbewerb || opts.zusatz || '';
     if (rechtsText) {
-      ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.font=`700 ${Math.round(H*0.018)}px Montserrat, Arial, sans-serif`;
-      ctx.textAlign='left'; ctx.textBaseline='top';
-      // Wettbewerb in erster Zeile
-      ctx.fillText(rechtsText.toUpperCase(), tx, y+Math.round(H*0.004), cardW-cardPad*2-ovalW-Math.round(W*0.017));
-      // Disziplin in zweiter Zeile (nur wenn Wettbewerb UND Disziplin vorhanden)
+      const maxTW = cardW - cardPad*2;
+      const wbSz = Math.round(H*0.016);
+      ctx.font=`700 ${wbSz}px Montserrat, Arial, sans-serif`;
+      ctx.fillStyle='rgba(255,255,255,0.8)';
+      ctx.textAlign='center'; ctx.textBaseline='top';
+      // Font-Scaling
+      let sz = wbSz;
+      while (sz > 9 && ctx.measureText(rechtsText.toUpperCase()).width > maxTW) {
+        sz--; ctx.font=`700 ${sz}px Montserrat, Arial, sans-serif`;
+      }
+      ctx.fillText(rechtsText.toUpperCase(), cx, y, maxTW);
+      y += sz + 4;
       if (opts.wettbewerb && opts.zusatz) {
-        ctx.fillStyle='rgba(255,255,255,0.65)'; ctx.font=`600 ${Math.round(H*0.014)}px Montserrat, Arial, sans-serif`;
-        ctx.fillText(opts.zusatz.toUpperCase(), tx, y+Math.round(H*0.004)+Math.round(H*0.022), cardW-cardPad*2-ovalW-Math.round(W*0.017));
+        ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.font=`600 ${Math.round(sz*0.85)}px Montserrat, Arial, sans-serif`;
+        ctx.fillText(opts.zusatz.toUpperCase(), cx, y, maxTW);
       }
     }
   }
