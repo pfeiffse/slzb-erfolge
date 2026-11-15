@@ -6527,17 +6527,23 @@ async function importiereDatenschutzExcel() {
   try {
     // Datei als Text lesen (CSV) oder ArrayBuffer (XLSX)
     const text = await datei.text();
-    const zeilen = text.split('\n').filter(z => z.trim());
+    // Normalisiere Zeilenumbrüche (Windows \r\n, Mac \r, Unix \n)
+    const normalizedText = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const zeilen = normalizedText.split('\n');
 
     // Header-Zeile überspringen (erste Zeile)
     const daten = [];
     for (let i = 1; i < zeilen.length; i++) {
-      const cols = zeilen[i].split(/[,;|\t]/).map(c => c.trim().replace(/^"|"$/g, ''));
+      const zeile = zeilen[i].trim();
+      if (!zeile) continue; // Komplett leere Zeile
+      const cols = zeile.split(/[,;|\t]/).map(c => c.trim().replace(/^"|"$/g, '').trim());
       // Leere Zeilen überspringen
       if (!cols[0] || !cols[0].trim()) continue;
       if (cols.length < 2 || !cols[1] || !cols[1].trim()) continue;
-      // Zeilen überspringen die nur Trennzeichen enthalten
-      if (cols.every(c => !c.trim() || c.trim() === '-')) continue;
+      // Zeilen überspringen die nur Trennzeichen/Leerzeichen enthalten
+      if (cols.every(c => !c || c === '-' || c === '–')) continue;
+      // Zeilen überspringen die wie Header aussehen
+      if (cols[0].toLowerCase().includes('name') || cols[0].toLowerCase().includes('nachname')) continue;
 
       const istX = (v) => {
         if (!v || v.trim() === '' || v.trim() === '-') return false;

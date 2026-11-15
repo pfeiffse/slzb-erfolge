@@ -206,11 +206,20 @@ function zeichneSlzbKarte(ctx, W, H, opts, akzent='rot') {
     const medalEmoji = opts.platz===1?'🥇':opts.platz===2?'🥈':opts.platz===3?'🥉':null;
     const ovalLabel = medalEmoji ? `${medalEmoji} ${opts.platz}` : String(opts.platz||'★');
     ctx.fillText(ovalLabel, rowX+ovalW/2, y+ovalH/2);
-    // Wettbewerb rechts (kein 'X. PLATZ' mehr)
+    // Wettbewerb rechts vom Oval (oder Disziplin wenn kein Wettbewerb)
     const tx = rowX + ovalW + Math.round(W*0.017);
-    ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.font=`700 ${Math.round(H*0.020)}px Montserrat, Arial, sans-serif`;
-    ctx.textAlign='left'; ctx.textBaseline='top';
-    if (opts.zusatz) ctx.fillText(opts.zusatz.toUpperCase(), tx, y+Math.round(H*0.004), cardW-cardPad*2-ovalW-Math.round(W*0.017));
+    const rechtsText = opts.wettbewerb || opts.zusatz || '';
+    if (rechtsText) {
+      ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.font=`700 ${Math.round(H*0.018)}px Montserrat, Arial, sans-serif`;
+      ctx.textAlign='left'; ctx.textBaseline='top';
+      // Wettbewerb in erster Zeile
+      ctx.fillText(rechtsText.toUpperCase(), tx, y+Math.round(H*0.004), cardW-cardPad*2-ovalW-Math.round(W*0.017));
+      // Disziplin in zweiter Zeile (nur wenn Wettbewerb UND Disziplin vorhanden)
+      if (opts.wettbewerb && opts.zusatz) {
+        ctx.fillStyle='rgba(255,255,255,0.65)'; ctx.font=`600 ${Math.round(H*0.014)}px Montserrat, Arial, sans-serif`;
+        ctx.fillText(opts.zusatz.toUpperCase(), tx, y+Math.round(H*0.004)+Math.round(H*0.022), cardW-cardPad*2-ovalW-Math.round(W*0.017));
+      }
+    }
   }
 
   // Ergebnis anzeigen (Wert + Einheit oder Text)
