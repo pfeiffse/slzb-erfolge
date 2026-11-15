@@ -369,22 +369,7 @@ function drawLogo(ctx, x, y, maxH) {
   return w;
 }
 
-async function ladeBild(url) {
-  if (!url) return null;
 
-  // Öffentliche Supabase-Storage-URLs brauchen KEINE Auth-Header.
-  // Auth-Header bei public-Buckets verursachen HTTP 400.
-  const istOeffentlich = url.includes('/storage/v1/object/public/');
-
-  try {
-    const fetchOpts = istOeffentlich ? {} : {
-      headers: Backend.client ? {
-        'Authorization': `Bearer ${(await Backend.session())?.access_token || ''}`,
-        'apikey': window.SLZB_CONFIG?.supabaseAnonKey || '',
-      } : {}
-    };
-    const response = await fetch(url, fetchOpts);
-    if (!response.ok) throw new Error('HTTP ' + response.status);
     const blob = await response.blob();
     const objectUrl = URL.createObjectURL(blob);
     return new Promise(resolve => {
