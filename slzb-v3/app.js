@@ -430,11 +430,13 @@ async function testNutzerListe() {
 function renderNeueMeldung() {
   if (!APP.selectedMeldungsart) return renderMeldungsartAuswahl();
   const forms = {
-    'Einzelerfolg':    renderEinzelerfolgForm,
-    'Teamerfolg':      renderTeamerfolgForm,
-    'Sammelmeldung':   renderSammelmeldungForm,
-    'Fertiger Artikel':renderArtikelForm,
-    'Minimalmeldung':  renderMinimalmeldungForm,
+    'Einzelerfolg':         renderEinzelerfolgForm,
+    'Teamerfolg':           renderTeamerfolgForm,
+    'Sammelmeldung':        renderSammelmeldungForm,
+    'Mehrtitel-Athlet':     renderMehrtitelAthlетForm,
+    'Veranstaltungs-Bilanz':renderVeranstaltungsBilanzForm,
+    'Fertiger Artikel':     renderArtikelForm,
+    'Minimalmeldung':       renderMinimalmeldungForm,
   };
   return (forms[APP.selectedMeldungsart]||renderMeldungsartAuswahl)();
 }
@@ -444,6 +446,8 @@ function renderMeldungsartAuswahl() {
     {art:'Einzelerfolg',icon:'🏅',desc:'Ein Schüler, ein Wettbewerb, ein Ergebnis.'},
     {art:'Teamerfolg',icon:'🏆',desc:'Mehrere Schüler, Team/Mannschaft.'},
     {art:'Sammelmeldung',icon:'📊',desc:'CSV-Import oder Schnelleingabe.'},
+    {art:'Mehrtitel-Athlet',icon:'🏅',desc:'Ein Athlet, mehrere Titel/Disziplinen auf einmal.'},
+    {art:'Veranstaltungs-Bilanz',icon:'🏟️',desc:'Mehrere Athleten, eine Veranstaltung – ein Poster.'},
     {art:'Fertiger Artikel',icon:'📰',desc:'Artikeltext einreichen.'},
     {art:'Minimalmeldung',icon:'⚡',desc:'Schnellmeldung. Status: Unvollständig.'},
   ];
@@ -638,6 +642,299 @@ function renderTeamBeteiligteFreitext() {
       <span class="chip-remove" onclick="removeFreitextVonTeam('${esc(b.anzeigename)}')">✕</span>
     </div>`).join('')}
   </div>`;
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// OPTION A: MEHRTITEL-ATHLET
+// Ein Athlet, mehrere Disziplinen/Titel auf einmal
+// ══════════════════════════════════════════════════════════════
+function renderMehrtitelAthlетForm() {
+  return `<div class="page">
+    ${formularKopf('Mehrtitel-Athlet','🏅')}
+    <div class="card mb-3">
+      <div class="card-header"><h2>🏅 Athlet & Veranstaltung</h2></div>
+      <div class="card-body">
+        <div class="form-row cols-2">
+          <div class="form-group">
+            <label>Athletenname <span class="required">*</span></label>
+            <input type="text" id="mt-athlet" placeholder="Vorname Nachname" style="width:100%">
+          </div>
+          <div class="form-group">
+            <label>Sportart <span class="required">*</span></label>
+            <input type="text" id="mt-sportart" list="mt-sportarten-list" placeholder="z.B. Schwimmen" style="width:100%">
+            <datalist id="mt-sportarten-list">${SLZB_DB.sportarten.map(s=>`<option value="${esc(s.name)}">`).join('')}</datalist>
+          </div>
+          <div class="form-group">
+            <label>Veranstaltung <span class="required">*</span></label>
+            <input type="text" id="mt-wettbewerb" placeholder="z.B. Deutsche Meisterschaften" style="width:100%">
+          </div>
+          <div class="form-group">
+            <label>Datum <span class="required">*</span></label>
+            <input type="date" id="mt-datum" style="width:100%">
+          </div>
+          <div class="form-group">
+            <label>Ort</label>
+            <input type="text" id="mt-ort" placeholder="z.B. Berlin" style="width:100%">
+          </div>
+          <div class="form-group">
+            <label>Ebene</label>
+            <select id="mt-ebene" style="width:100%"><option value="">– wählen –</option>${ebeneOptions()}</select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+        <h2>🏆 Titel & Disziplinen</h2>
+        <button class="btn btn-ghost btn-sm" onclick="mtTitelHinzu()">+ Titel hinzufügen</button>
+      </div>
+      <div class="card-body" style="padding:0;overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:.85rem">
+          <thead>
+            <tr style="background:rgba(226,0,26,0.12)">
+              <th style="padding:8px 6px;text-align:left;min-width:160px">Disziplin <span class="required">*</span></th>
+              <th style="padding:8px 6px;text-align:left;min-width:80px">Platz</th>
+              <th style="padding:8px 6px;text-align:left;min-width:100px">Wettbewerb-Typ</th>
+              <th style="padding:8px 6px;text-align:left;min-width:120px">Ergebnis/Zeit</th>
+              <th style="padding:8px 4px;width:36px"></th>
+            </tr>
+          </thead>
+          <tbody id="mt-tbody"></tbody>
+        </table>
+      </div>
+      <div class="card-footer" style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-ghost btn-sm" onclick="mtTitelHinzu()">+ Zeile</button>
+        <span id="mt-zaehler" class="text-xs text-muted">0 Titel</span>
+        <div style="flex:1"></div>
+        <button class="btn btn-primary" onclick="mtEinreichen()">📤 Alle einreichen</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function mtTitelHinzu() {
+  const tbody = document.getElementById('mt-tbody');
+  if (!tbody) return;
+  const idx = tbody.rows.length;
+  const tr = document.createElement('tr');
+  tr.style.borderBottom = '1px solid rgba(255,255,255,.08)';
+  tr.innerHTML = `
+    <td style="padding:4px 6px"><input type="text" placeholder="z.B. 100m Rücken" style="width:100%;background:#222;color:#fff;border:1px solid #444;border-radius:4px;padding:4px 6px;font-size:.82rem" data-field="disziplin"></td>
+    <td style="padding:4px 6px"><input type="number" min="1" max="100" placeholder="1" style="width:60px;background:#222;color:#fff;border:1px solid #444;border-radius:4px;padding:4px 6px;font-size:.82rem" data-field="platz"></td>
+    <td style="padding:4px 6px"><select style="background:#222;color:#fff;border:1px solid #444;border-radius:4px;padding:4px 6px;font-size:.82rem;width:100%" data-field="typ">
+      <option value="Meisterschaft">Meisterschaft</option>
+      <option value="Jugendmeisterschaft">Jugendmeisterschaft</option>
+      <option value="Staffel">Staffel</option>
+      <option value="Pokal">Pokal</option>
+      <option value="Sonstiges">Sonstiges</option>
+    </select></td>
+    <td style="padding:4px 6px"><input type="text" placeholder="z.B. 1:02,34" style="width:100%;background:#222;color:#fff;border:1px solid #444;border-radius:4px;padding:4px 6px;font-size:.82rem" data-field="ergebnis"></td>
+    <td style="padding:4px 6px;text-align:center"><button onclick="this.closest('tr').remove();mtZaehlerAktualisieren()" style="background:none;border:none;color:#E2001A;cursor:pointer;font-size:1rem">✕</button></td>`;
+  tbody.appendChild(tr);
+  mtZaehlerAktualisieren();
+}
+
+function mtZaehlerAktualisieren() {
+  const n = document.getElementById('mt-tbody')?.rows.length || 0;
+  const el = document.getElementById('mt-zaehler');
+  if (el) el.textContent = n + ' Titel';
+}
+
+async function mtEinreichen() {
+  const athlet  = document.getElementById('mt-athlet')?.value.trim();
+  const sportart = document.getElementById('mt-sportart')?.value.trim();
+  const wettbewerb = document.getElementById('mt-wettbewerb')?.value.trim();
+  const datum   = document.getElementById('mt-datum')?.value;
+  const ort     = document.getElementById('mt-ort')?.value.trim();
+  const ebene   = document.getElementById('mt-ebene')?.value;
+  const tbody   = document.getElementById('mt-tbody');
+
+  if (!athlet || !sportart || !wettbewerb || !datum) {
+    toast('Bitte Athlet, Sportart, Veranstaltung und Datum ausfüllen.', 'warning'); return;
+  }
+  const zeilen = Array.from(tbody?.rows || []);
+  if (!zeilen.length) { toast('Bitte mindestens einen Titel eintragen.', 'warning'); return; }
+
+  const sportartObj = SLZB_DB.sportarten.find(s=>s.name.toLowerCase()===sportart.toLowerCase());
+  let ok = 0, fehler = 0;
+
+  for (const tr of zeilen) {
+    const disziplin = tr.querySelector('[data-field="disziplin"]')?.value.trim();
+    const platz     = parseInt(tr.querySelector('[data-field="platz"]')?.value) || null;
+    const typ       = tr.querySelector('[data-field="typ"]')?.value || 'Meisterschaft';
+    const ergebnis  = tr.querySelector('[data-field="ergebnis"]')?.value.trim();
+    if (!disziplin) continue;
+
+    const medaille = platz===1?'Gold':platz===2?'Silber':platz===3?'Bronze':'keine';
+    const titel = `${athlet} – ${platz?platz+'. Platz ':''} ${disziplin} (${typ})`.trim();
+    const wbVoll = `${wettbewerb}${typ==='Jugendmeisterschaft'?' (Jugend)':''}`;
+
+    const res = await DB.erstelleErfolg({
+      meldungsart: 'Einzelerfolg',
+      titel, sportartId: sportartObj?.id || null, sportartText: sportart,
+      disziplin, wettbewerbText: wbVoll, datum, ort, ebene,
+      platzierung: platz, medaille, ergebnisText: ergebnis||'',
+      beteiligte: [{anzeigename: athlet, rolle: 'Athlet/in', einwilligungStatus: 'ausstehend'}],
+      status: 'Eingereicht'
+    });
+    if (res?.ok) ok++; else fehler++;
+  }
+  toast(`✅ ${ok} Titel eingereicht${fehler?', '+fehler+' Fehler':''}`, ok?'success':'warning');
+  if (ok) { APP.selectedMeldungsart = null; navigateTo('meine-meldungen'); }
+}
+
+// ══════════════════════════════════════════════════════════════
+// OPTION B: VERANSTALTUNGS-BILANZ
+// Mehrere Athleten, eine Veranstaltung – ein gemeinsames Poster
+// ══════════════════════════════════════════════════════════════
+function renderVeranstaltungsBilanzForm() {
+  return `<div class="page">
+    ${formularKopf('Veranstaltungs-Bilanz','🏟️')}
+    <div class="alert alert-info mb-3"><span class="alert-icon">ℹ️</span>
+      <span>Alle Erfolge werden als <strong>eine Meldung</strong> gespeichert und ergeben ein gemeinsames Poster.</span></div>
+
+    <div class="card mb-3">
+      <div class="card-header"><h2>🏟️ Veranstaltung</h2></div>
+      <div class="card-body">
+        <div class="form-row cols-2">
+          <div class="form-group">
+            <label>Veranstaltungsname <span class="required">*</span></label>
+            <input type="text" id="vb-wettbewerb" placeholder="z.B. Deutsche Meisterschaften Schwimmen" style="width:100%">
+          </div>
+          <div class="form-group">
+            <label>Sportart <span class="required">*</span></label>
+            <input type="text" id="vb-sportart" list="vb-sportarten-list" placeholder="z.B. Schwimmen" style="width:100%">
+            <datalist id="vb-sportarten-list">${SLZB_DB.sportarten.map(s=>`<option value="${esc(s.name)}">`).join('')}</datalist>
+          </div>
+          <div class="form-group">
+            <label>Datum <span class="required">*</span></label>
+            <input type="date" id="vb-datum" style="width:100%">
+          </div>
+          <div class="form-group">
+            <label>Ort</label>
+            <input type="text" id="vb-ort" placeholder="z.B. Berlin" style="width:100%">
+          </div>
+          <div class="form-group">
+            <label>Ebene</label>
+            <select id="vb-ebene" style="width:100%"><option value="">– wählen –</option>${ebeneOptions()}</select>
+          </div>
+          <div class="form-group">
+            <label>Gesamttitel der Meldung <span class="required">*</span></label>
+            <input type="text" id="vb-titel" placeholder="z.B. SLZB bei den Deutschen Meisterschaften 2026" style="width:100%">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+        <h2>🏆 Erfolge der Athleten</h2>
+        <button class="btn btn-ghost btn-sm" onclick="vbErfolgHinzu()">+ Erfolg hinzufügen</button>
+      </div>
+      <div class="card-body" style="padding:0;overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:.85rem">
+          <thead>
+            <tr style="background:rgba(226,0,26,0.12)">
+              <th style="padding:8px 6px;text-align:left;min-width:140px">Athlet <span class="required">*</span></th>
+              <th style="padding:8px 6px;text-align:left;min-width:140px">Disziplin <span class="required">*</span></th>
+              <th style="padding:8px 6px;text-align:left;min-width:70px">Platz</th>
+              <th style="padding:8px 6px;text-align:left;min-width:120px">Ergebnis/Zeit</th>
+              <th style="padding:8px 4px;width:36px"></th>
+            </tr>
+          </thead>
+          <tbody id="vb-tbody"></tbody>
+        </table>
+      </div>
+      <div class="card-footer" style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-ghost btn-sm" onclick="vbErfolgHinzu()">+ Zeile</button>
+        <span id="vb-zaehler" class="text-xs text-muted">0 Erfolge</span>
+        <div style="flex:1"></div>
+        <button class="btn btn-primary" onclick="vbEinreichen()">📤 Als Bilanz einreichen</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function vbErfolgHinzu() {
+  const tbody = document.getElementById('vb-tbody');
+  if (!tbody) return;
+  const tr = document.createElement('tr');
+  tr.style.borderBottom = '1px solid rgba(255,255,255,.08)';
+  tr.innerHTML = `
+    <td style="padding:4px 6px"><input type="text" placeholder="Vorname Nachname" style="width:100%;background:#222;color:#fff;border:1px solid #444;border-radius:4px;padding:4px 6px;font-size:.82rem" data-field="athlet"></td>
+    <td style="padding:4px 6px"><input type="text" placeholder="z.B. 100m Rücken" style="width:100%;background:#222;color:#fff;border:1px solid #444;border-radius:4px;padding:4px 6px;font-size:.82rem" data-field="disziplin"></td>
+    <td style="padding:4px 6px"><input type="number" min="1" max="100" placeholder="1" style="width:60px;background:#222;color:#fff;border:1px solid #444;border-radius:4px;padding:4px 6px;font-size:.82rem" data-field="platz"></td>
+    <td style="padding:4px 6px"><input type="text" placeholder="z.B. 1:02,34" style="width:100%;background:#222;color:#fff;border:1px solid #444;border-radius:4px;padding:4px 6px;font-size:.82rem" data-field="ergebnis"></td>
+    <td style="padding:4px 6px;text-align:center"><button onclick="this.closest('tr').remove();vbZaehlerAktualisieren()" style="background:none;border:none;color:#E2001A;cursor:pointer;font-size:1rem">✕</button></td>`;
+  tbody.appendChild(tr);
+  vbZaehlerAktualisieren();
+}
+
+function vbZaehlerAktualisieren() {
+  const n = document.getElementById('vb-tbody')?.rows.length || 0;
+  const el = document.getElementById('vb-zaehler');
+  if (el) el.textContent = n + ' Erfolge';
+}
+
+async function vbEinreichen() {
+  const titel     = document.getElementById('vb-titel')?.value.trim();
+  const wettbewerb = document.getElementById('vb-wettbewerb')?.value.trim();
+  const sportart  = document.getElementById('vb-sportart')?.value.trim();
+  const datum     = document.getElementById('vb-datum')?.value;
+  const ort       = document.getElementById('vb-ort')?.value.trim();
+  const ebene     = document.getElementById('vb-ebene')?.value;
+  const tbody     = document.getElementById('vb-tbody');
+
+  if (!titel || !wettbewerb || !sportart || !datum) {
+    toast('Bitte Titel, Veranstaltung, Sportart und Datum ausfüllen.', 'warning'); return;
+  }
+  const zeilen = Array.from(tbody?.rows || []).filter(tr =>
+    tr.querySelector('[data-field="athlet"]')?.value.trim() &&
+    tr.querySelector('[data-field="disziplin"]')?.value.trim()
+  );
+  if (!zeilen.length) { toast('Bitte mindestens einen Erfolg eintragen.', 'warning'); return; }
+
+  const sportartObj = SLZB_DB.sportarten.find(s=>s.name.toLowerCase()===sportart.toLowerCase());
+
+  // Alle Erfolge als strukturierten Text zusammenfassen
+  const erfolgListe = zeilen.map(tr => {
+    const athlet   = tr.querySelector('[data-field="athlet"]')?.value.trim();
+    const disziplin = tr.querySelector('[data-field="disziplin"]')?.value.trim();
+    const platz    = tr.querySelector('[data-field="platz"]')?.value;
+    const ergebnis = tr.querySelector('[data-field="ergebnis"]')?.value.trim();
+    return `${athlet}: ${platz?platz+'. Platz – ':''}${disziplin}${ergebnis?' ('+ergebnis+')':''}`;
+  }).join('\n');
+
+  // Beteiligte aus allen Zeilen
+  const athletenNamen = [...new Set(zeilen.map(tr =>
+    tr.querySelector('[data-field="athlet"]')?.value.trim()).filter(Boolean))];
+  const beteiligte = athletenNamen.map(n => ({
+    anzeigename: n, rolle: 'Athlet/in', einwilligungStatus: 'ausstehend'
+  }));
+
+  // Beste Platzierung für Medaille
+  const plaetze = zeilen.map(tr => parseInt(tr.querySelector('[data-field="platz"]')?.value)||99).filter(p=>p<99);
+  const bestePlatz = plaetze.length ? Math.min(...plaetze) : null;
+  const medaille = bestePlatz===1?'Gold':bestePlatz===2?'Silber':bestePlatz===3?'Bronze':'keine';
+
+  const res = await DB.erstelleErfolg({
+    meldungsart: 'Teamerfolg',
+    titel, sportartId: sportartObj?.id||null, sportartText: sportart,
+    wettbewerbText: wettbewerb, datum, ort, ebene,
+    platzierung: bestePlatz, medaille,
+    ergebnisText: erfolgListe,
+    beteiligte, status: 'Eingereicht'
+  });
+
+  if (res?.ok) {
+    toast('✅ Veranstaltungs-Bilanz eingereicht!', 'success');
+    APP.selectedMeldungsart = null;
+    navigateTo('meine-meldungen');
+  } else {
+    toast('❌ Fehler: ' + (res?.fehler||'Unbekannt'), 'danger');
+  }
 }
 
 function renderMinimalmeldungForm() {
