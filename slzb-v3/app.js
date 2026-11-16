@@ -1587,16 +1587,25 @@ async function sammelCSVInRaster() {
     if (!zeilen.length) { toast('Keine Daten gefunden','warning'); return; }
     sammelTabWechsel('raster');
     zeilen.forEach(z=>{
+      // Datum: DD.MM.YYYY → YYYY-MM-DD für input[type=date]
+      const rawDatum = z.datum||z.Datum||z['Datum']||z.date||'';
+      let datumISO = rawDatum;
+      if (rawDatum && rawDatum.includes('.')) {
+        const [d,m,y] = rawDatum.split('.');
+        if (d&&m&&y) datumISO = `${y.trim()}-${m.trim().padStart(2,'0')}-${d.trim().padStart(2,'0')}`;
+      }
+      // Athlet: verschiedene Spaltennamen abfangen
+      const athlet = z['Athlet/Team']||z['athlet/team']||z.athlet||z.Athlet||z['Athlet']||z.name||z.Name||'';
       sammelRasterZeileHinzu({
-        titel: z.titel||z.Titel||z.title||'',
-        sportart: z.sportart||z.Sportart||z.sport||'',
-        datum: z.datum||z.Datum||z.date||'',
-        wettbewerb: z.wettbewerb||z.Wettbewerb||z.competition||'',
-        platz: z.platz||z.Platz||z.placement||'',
-        medaille: z.medaille||z.Medaille||z.medal||'',
-        athlet: z.athlet||z.Athlet||z.name||z.Name||'',
-        ebene: z.ebene||z.Ebene||z.level||'',
-        kurzinfo: z.kurzinfo||z.Kurzinfo||z.info||'',
+        titel:     z.titel||z.Titel||z['Titel']||z.title||'',
+        sportart:  z.sportart||z.Sportart||z['Sportart']||z.sport||'',
+        datum:     datumISO,
+        wettbewerb:z.wettbewerb||z.Wettbewerb||z['Wettbewerb']||z.competition||'',
+        platz:     z.platz||z.Platz||z['Platz']||z.placement||'',
+        medaille:  z.medaille||z.Medaille||z['Medaille']||z.medal||'',
+        athlet,
+        ebene:     z.ebene||z.Ebene||z['Ebene']||z.level||'',
+        kurzinfo:  z.kurzinfo||z.Kurzinfo||z['Kurzinfo']||z.info||'',
       });
     });
     toast(`${zeilen.length} Zeilen ins Raster übernommen`,'success');
