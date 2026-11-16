@@ -246,7 +246,7 @@ function zeichneSlzbKarte(ctx, W, H, opts, akzent='rot') {
       const maxTW = cardW - cardPad*2;
       const wbSz = Math.round(H*0.016);
       ctx.font=`700 ${wbSz}px Montserrat, Arial, sans-serif`;
-      ctx.fillStyle='rgba(255,255,255,0.8)';
+      ctx.fillStyle='#003366';
       ctx.textAlign='center'; ctx.textBaseline='top';
       // Font-Scaling
       let sz = wbSz;
@@ -256,7 +256,7 @@ function zeichneSlzbKarte(ctx, W, H, opts, akzent='rot') {
       ctx.fillText(rechtsText.toUpperCase(), cx, y, maxTW);
       y += sz + 4;
       if (opts.wettbewerb && opts.zusatz) {
-        ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.font=`600 ${Math.round(sz*0.85)}px Montserrat, Arial, sans-serif`;
+        ctx.fillStyle='rgba(0,51,102,0.65)'; ctx.font=`600 ${Math.round(sz*0.85)}px Montserrat, Arial, sans-serif`;
         ctx.fillText(opts.zusatz.toUpperCase(), cx, y, maxTW);
       }
     }
@@ -265,7 +265,7 @@ function zeichneSlzbKarte(ctx, W, H, opts, akzent='rot') {
   // Ergebnis anzeigen (Wert + Einheit oder Text)
   if (opts.ergebnis) {
     y += Math.round(H*0.075);
-    ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.font=`700 ${Math.round(H*0.018)}px Montserrat, Arial, sans-serif`;
+    ctx.fillStyle='#1B1C1F'; ctx.font=`700 ${Math.round(H*0.018)}px Montserrat, Arial, sans-serif`;
     ctx.textAlign='center'; ctx.textBaseline='top';
     ctx.fillText('⏱ ' + opts.ergebnis, cx, y, cardW-cardPad*2);
     y += Math.round(H*0.022);
@@ -274,11 +274,11 @@ function zeichneSlzbKarte(ctx, W, H, opts, akzent='rot') {
   // Ort anzeigen
   if (opts.ort && !opts.ergebnis) {
     y += Math.round(H*0.075);
-    ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.font=`${Math.round(H*0.015)}px Montserrat, Arial, sans-serif`;
+    ctx.fillStyle='rgba(0,30,80,0.65)'; ctx.font=`${Math.round(H*0.015)}px Montserrat, Arial, sans-serif`;
     ctx.textAlign='center'; ctx.textBaseline='top';
     ctx.fillText('📍 ' + opts.ort, cx, y, cardW-cardPad*2);
   } else if (opts.ort && opts.ergebnis) {
-    ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.font=`${Math.round(H*0.015)}px Montserrat, Arial, sans-serif`;
+    ctx.fillStyle='rgba(0,30,80,0.65)'; ctx.font=`${Math.round(H*0.015)}px Montserrat, Arial, sans-serif`;
     ctx.textAlign='center'; ctx.textBaseline='top';
     ctx.fillText('📍 ' + opts.ort, cx, y, cardW-cardPad*2);
   }
