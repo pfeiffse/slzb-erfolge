@@ -137,16 +137,16 @@ function zeichneSlzbKarte(ctx, W, H, opts, akzent='rot') {
   const cardH = Math.min(maxCardH, Math.max(minCardH, _contentH));
 
   // Glasmorphismus-Hintergrund
-  // Helles Schema: weißer Hintergrund mit Schatten
-  ctx.fillStyle = 'rgba(255,255,255,0.92)';
+  // Halbtransparentes Weiß – Bild bleibt sichtbar
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
   slzbRoundRect(ctx, cardX, cardTop, cardW, cardH, Math.round(W*0.017)); ctx.fill();
   // Schatten-Effekt
-  ctx.shadowColor = 'rgba(0,0,30,0.3)';
-  ctx.shadowBlur = 20;
-  ctx.shadowOffsetY = -4;
+  ctx.shadowColor = 'rgba(0,0,30,0.25)';
+  ctx.shadowBlur = 18;
+  ctx.shadowOffsetY = -3;
   slzbRoundRect(ctx, cardX, cardTop, cardW, cardH, Math.round(W*0.017)); ctx.fill();
   ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-  ctx.strokeStyle = 'rgba(0,51,102,0.15)'; ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(0,51,102,0.20)'; ctx.lineWidth = 1.5;
   slzbRoundRect(ctx, cardX, cardTop, cardW, cardH, Math.round(W*0.017)); ctx.stroke();
 
   let y = cardTop + Math.round(H*0.045);
