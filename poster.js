@@ -804,9 +804,11 @@ function zeichneA3Header(ctx, W, e, transparent=false) {
   const sportart = e.sportartText || SLZB_DB.getSportart(e.sportartId)?.name || '';
   const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'}) : '';
 
+  // Druckerrand berücksichtigen: Header-Balken beginnt nach dem Rand
+  const RAND_OB_H = 40; // muss mit zeichneA3DruckerrandFinal übereinstimmen
   // Blauer Header-Balken (bei Vollbild halbtransparent)
   ctx.fillStyle = transparent ? 'rgba(0,51,102,0.55)' : SLZB_COLORS.blue;
-  ctx.fillRect(0, 0, W, HEADER_H);
+  ctx.fillRect(0, 0, W, HEADER_H + RAND_OB_H);
 
   // Logo (korrekte Ratio) – mit Sicherheitsabstand und vertikalem Abstand
   const TOP = 46; // Abstand von oben (Druckerrand 40px + 6px Luft)
@@ -972,7 +974,7 @@ async function zeichneA3Landscape(canvas, e, bild, meta) {
   }
   // Datum
   const _datumL2 = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'}) : '';
-  if (_datumL2 && !_datumA3L && y < textEndY - 16) {
+  if (_datumL2 && y < textEndY - 16) {
     ctx.fillStyle='#666'; ctx.font='13px Montserrat, Arial, sans-serif';
     ctx.textAlign='center'; ctx.textBaseline='top'; ctx.fillText(_datumL2, W/2, y);
   }
@@ -1209,7 +1211,6 @@ async function zeichneSocialBeitragLandscape(ctx, e, bild, meta, W, H) {
     ctx.fillText('📸 Folge uns auf Instagram: @slzberlin', W-Math.round(W*0.03), H-Math.round(H*0.025));
   }
   zeichneSlzbFooterNeu(ctx, W, H);
-  zeichneA3DruckerrandFinal(ctx, W, H);
 }
 
 // Social Beitrag: Hochformat-Bild (Vollhintergrund)
