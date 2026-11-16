@@ -36,7 +36,7 @@ async function renderErfolgDetail() {
       ${Auth.canDo('bearbeiten') ? `
         <div style="display:flex;gap:8px;flex-shrink:0">
           <button class="btn btn-outline btn-sm" onclick="dupliziereMeldung('${e.id}')" title="Meldung duplizieren">📋 Duplizieren</button>
-          <button class=\\"btn btn-outline btn-sm\\" onclick=\\"zeigeMeldungZusammenfassen('${e.id}')\\" title=\\"Mit anderen Meldungen zusammenfassen\\" style=\\"color:#0B63CE;border-color:#0B63CE\\">🔗 Zusammenfassen</button>
+          <button class="btn btn-outline btn-sm" onclick="zeigeMeldungZusammenfassen('${e.id}')" title="Meldung duplizieren">🔗 Zusammenfassen</button>
           <button class="btn btn-danger btn-sm" onclick="loescheMeldung('${e.id}','${esc(e.titel)}')" style="background:#c0392b;border-color:#c0392b;color:#fff">🗑️ Löschen</button>
         </div>` : ''}
     </div>
