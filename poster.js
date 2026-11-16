@@ -1173,7 +1173,14 @@ async function zeichneSocialFormat(canvasId, e, format) {
   canvas.width=W; canvas.height=H;
   const ctx = canvas.getContext('2d');
 
-  
+  if (format==='story' || format==='reel') {
+    await zeichneSocialStory(ctx, e, bild, hauptbild, W, H);
+  } else {
+    // Beitrag: kein Bild → KeinBild, Hochformat → Portrait, sonst Landscape
+    if (!bild) await zeichneSocialBeitragKeinBild(ctx, e, W, H);
+    else if (fmt==='portrait') await zeichneSocialBeitragPortrait(ctx, e, bild, hauptbild, W, H);
+    else await zeichneSocialBeitragLandscape(ctx, e, bild, hauptbild, W, H);
+  }
 }
 
 // Social Beitrag: Querformat-Bild
