@@ -36,6 +36,7 @@ async function renderErfolgDetail() {
       ${Auth.canDo('bearbeiten') ? `
         <div style="display:flex;gap:8px;flex-shrink:0">
           <button class="btn btn-outline btn-sm" onclick="dupliziereMeldung('${e.id}')" title="Meldung duplizieren">📋 Duplizieren</button>
+          <button class=\\"btn btn-outline btn-sm\\" onclick=\\"zeigeMeldungZusammenfassen('${e.id}')\\" title=\\"Mit anderen Meldungen zusammenfassen\\" style=\\"color:#0B63CE;border-color:#0B63CE\\">🔗 Zusammenfassen</button>
           <button class="btn btn-danger btn-sm" onclick="loescheMeldung('${e.id}','${esc(e.titel)}')" style="background:#c0392b;border-color:#c0392b;color:#fff">🗑️ Löschen</button>
         </div>` : ''}
     </div>
@@ -4606,6 +4607,157 @@ async function renderPapierkorb() {
 // ══════════════════════════════════════════════════════════════
 // MELDUNG DUPLIZIEREN
 // ══════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════
+// MELDUNGEN ZUSAMMENFASSEN
+// ══════════════════════════════════════════════════════════════
+async function zeigeMeldungZusammenfassen(erfolgId) {
+  // Alle eigenen/sichtbaren Meldungen laden
+  const alle = await ladeErfolge();
+  const aktuelle = alle.find(e=>e.id===erfolgId);
+  if (!aktuelle) { toast('Meldung nicht gefunden', 'danger'); return; }
+
+  // Andere Meldungen gleicher Sportart als Kandidaten
+  const kandidaten = alle.filter(e =>
+    e.id !== erfolgId &&
+    !e.deleted_at &&
+    (e.sportartText === aktuelle.sportartText || !aktuelle.sportartText)
+  ).slice(0, 50);
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.maxWidth = '600px';
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>🔗 Meldungen zusammenfassen</h3>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-info mb-3"><span class="alert-icon">ℹ️</span>
+        <span>Wähle Meldungen aus, die mit <strong>${esc(aktuelle.titel)}</strong> zusammengefasst werden sollen.</span></div>
+
+      <div style="margin-bottom:12px">
+        <label style="font-weight:600;display:block;margin-bottom:6px">Zusammenfassungs-Typ:</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+            <input type="radio" name="zf-typ" value="mehrtitel" checked> 🏆 Mehrtitel-Athlet
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+            <input type="radio" name="zf-typ" value="bilanz"> 🏟️ Veranstaltungs-Bilanz
+          </label>
+        </div>
+      </div>
+
+      <div style="font-weight:600;margin-bottom:6px;font-size:.85rem">Meldungen auswählen:</div>
+      <div style="max-height:300px;overflow-y:auto;border:1px solid rgba(255,255,255,.1);border-radius:8px">
+        <!-- Aktuelle Meldung (immer dabei) -->
+        <div style="padding:10px 12px;background:rgba(226,0,26,0.1);border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px">
+          <input type="checkbox" checked disabled style="accent-color:#E2001A">
+          <div>
+            <div style="font-weight:600;font-size:.85rem">${esc(aktuelle.titel)}</div>
+            <div style="font-size:.75rem;color:#888">${esc(aktuelle.sportartText||'–')} · ${aktuelle.datum?new Date(aktuelle.datum).toLocaleDateString('de-DE'):''} · ${esc(aktuelle.beteiligte?.[0]?.anzeigename||'–')}</div>
+          </div>
+          <span style="margin-left:auto;font-size:.7rem;color:#E2001A">Aktuelle Meldung</span>
+        </div>
+        ${kandidaten.length ? kandidaten.map(e=>`
+        <div style="padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px">
+          <input type="checkbox" class="zf-check" value="${e.id}" style="accent-color:#0B63CE">
+          <div>
+            <div style="font-weight:600;font-size:.85rem">${esc(e.titel)}</div>
+            <div style="font-size:.75rem;color:#888">${esc(e.sportartText||'–')} · ${e.datum?new Date(e.datum).toLocaleDateString('de-DE'):''} · ${esc(e.beteiligte?.[0]?.anzeigename||'–')}</div>
+          </div>
+        </div>`).join('') : '<div style="padding:16px;text-align:center;color:#888;font-size:.85rem">Keine weiteren Meldungen gefunden.</div>'}
+      </div>
+
+      <div style="margin-top:12px">
+        <label style="font-weight:600;display:block;margin-bottom:4px;font-size:.85rem">Titel der zusammengefassten Meldung:</label>
+        <input type="text" id="zf-titel" value="${esc(aktuelle.wettbewerbText||aktuelle.titel)}"
+          style="width:100%;background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px 10px;font-size:.85rem">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="fuehreMeldungenZusammen('${erfolgId}')">🔗 Zusammenfassen</button>
+    </div>`;
+
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+async function fuehreMeldungenZusammen(hauptId) {
+  const typ = document.querySelector('input[name="zf-typ"]:checked')?.value || 'mehrtitel';
+  const titel = document.getElementById('zf-titel')?.value.trim();
+  const gewaehlteIds = [...document.querySelectorAll('.zf-check:checked')].map(cb=>cb.value);
+
+  if (!gewaehlteIds.length) { toast('Bitte mindestens eine weitere Meldung auswählen.', 'warning'); return; }
+  if (!titel) { toast('Bitte einen Titel eingeben.', 'warning'); return; }
+
+  const alle = await ladeErfolge();
+  const hauptMeldung = alle.find(e=>e.id===hauptId);
+  const weitereIds = gewaehlteIds;
+  const weitereIds_set = new Set(weitereIds);
+  const weitere = alle.filter(e=>weitereIds_set.has(e.id));
+  const alleMeldungen = [hauptMeldung, ...weitere].filter(Boolean);
+
+  // Alle Beteiligten sammeln
+  const alleBeteiligte = [];
+  const seenNames = new Set();
+  for (const m of alleMeldungen) {
+    for (const b of (m.beteiligte||[])) {
+      if (b.anzeigename && !seenNames.has(b.anzeigename)) {
+        seenNames.add(b.anzeigename);
+        alleBeteiligte.push(b);
+      }
+    }
+  }
+
+  // Ergebnis-Text aus allen Meldungen
+  const erfolgListe = alleMeldungen.map(m => {
+    const athlet = m.beteiligte?.[0]?.anzeigename || '–';
+    const platz = m.platzierung ? m.platzierung + '. Platz – ' : '';
+    return `${athlet}: ${platz}${m.titel}`;
+  }).join('\n');
+
+  const bestePlatz = Math.min(...alleMeldungen.map(m=>m.platzierung||99).filter(p=>p<99));
+  const medaille = bestePlatz===1?'Gold':bestePlatz===2?'Silber':bestePlatz===3?'Bronze':'keine';
+  const erste = alleMeldungen[0];
+
+  // Neue zusammengefasste Meldung erstellen
+  const res = await DB.erstelleErfolg({
+    meldungsart: typ === 'bilanz' ? 'Teamerfolg' : 'Einzelerfolg',
+    titel,
+    sportartId: erste.sportartId||null,
+    sportartText: erste.sportartText||'',
+    wettbewerbText: erste.wettbewerbText||'',
+    datum: erste.datum,
+    ort: erste.ort||'',
+    ebene: erste.ebene||'',
+    platzierung: bestePlatz < 99 ? bestePlatz : null,
+    medaille,
+    ergebnisText: erfolgListe,
+    status: 'Eingereicht',
+  }, alleBeteiligte);
+
+  if (!res?.ok) { toast('Fehler: ' + (res?.fehler||'Unbekannt'), 'danger'); return; }
+
+  // Originalmeldungen in Papierkorb (optional)
+  const loeschen = confirm(`Zusammengefasste Meldung erstellt!\n\nSollen die ${alleMeldungen.length} Original-Meldungen in den Papierkorb verschoben werden?`);
+  if (loeschen) {
+    for (const m of alleMeldungen) {
+      try { await DB.softDelete(m.id, 'Zusammengefasst in: ' + titel); } catch(_) {}
+    }
+  }
+
+  document.querySelector('.modal-overlay')?.remove();
+  APP._erfolgeCache = null;
+  toast('✅ Meldungen zusammengefasst!', 'success');
+  navigateTo('meine-meldungen');
+}
+
 async function dupliziereMeldung(erfolgId) {
   if (!confirm('Meldung duplizieren?\n\nEs wird eine Kopie als Entwurf erstellt.')) return;
 

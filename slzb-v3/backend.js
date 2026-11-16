@@ -210,8 +210,16 @@ const DB = {
       .eq('id', erfolgId)
       .is('deleted_at', null);
     if (error) throw new Error(error.message);
-    await this.protokolliere(erfolgId, null, null,
-      `Soft-Delete durch ${Auth.name()}${grund ? ': ' + grund : ''}`);
+    // Protokoll ohne Status-Änderung (nur Kommentar)
+    try {
+      await Backend.client.from('achievement_status_history').insert([{
+        achievement_id:  erfolgId,
+        changed_at:      new Date().toISOString(),
+        changed_by:      Auth.id(),
+        changed_by_name: Auth.name(),
+        comment:         `Soft-Delete durch ${Auth.name()}${grund ? ': ' + grund : ''}`,
+      }]);
+    } catch(_) {}
   },
 
   // Wiederherstellen: deleted_at zurücksetzen
@@ -221,8 +229,15 @@ const DB = {
       .update({ deleted_at: null, deleted_by: null, deleted_by_name: null, delete_reason: null })
       .eq('id', erfolgId);
     if (error) throw new Error(error.message);
-    await this.protokolliere(erfolgId, null, null,
-      `Wiederhergestellt durch ${Auth.name()}`);
+    try {
+      await Backend.client.from('achievement_status_history').insert([{
+        achievement_id:  erfolgId,
+        changed_at:      new Date().toISOString(),
+        changed_by:      Auth.id(),
+        changed_by_name: Auth.name(),
+        comment:         `Wiederhergestellt durch ${Auth.name()}`,
+      }]);
+    } catch(_) {}
   },
 
   // Hard-Delete: wirklich löschen (nur Admin)
