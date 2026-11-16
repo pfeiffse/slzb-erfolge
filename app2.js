@@ -130,8 +130,8 @@ async function renderErfolgDetail() {
                   <div class="text-xs text-muted mt-1">📸 ${esc(b.creator||'–')}</div>
                   <div class="text-xs text-muted">📂 ${esc(b.source||'–')}</div>
                   <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
-                    ${b.signedUrl?`<button class=\\"btn btn-ghost btn-sm\\" style=\\"font-size:.75rem\\" onclick=\\"zeigeLightbox('${b.signedUrl}','','')\\">&#128269; Vollbild</button>`:''}
-                    ${Auth.canDo('erfassen')?`<button class=\\"btn btn-sm\\" style=\\"font-size:.75rem;background:#c0392b;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer\\" onclick=\\"loescheBild('${b.id}','${(b.storagePath||'').replace(/'/g,\\\"\\\\'\\\")}','${e.id}')\\">🗑️ Löschen</button>`:''}
+                    ${b.signedUrl?`<button class=\"btn btn-ghost btn-sm\" style=\"font-size:.75rem\" onclick=\"zeigeLightbox('${b.signedUrl}','','')\" >&#128269; Vollbild</button>`:''}
+                    ${Auth.canDo('erfassen')?`<button class=\"btn btn-sm\" style=\"font-size:.75rem;background:#c0392b;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer\" onclick=\"loescheBild('${b.id}','${b.storagePath||''}','${e.id}')\">🗑️ Löschen</button>`:''}
                   </div>
                 </div>
               </div>`).join('')}</div>`}
