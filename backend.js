@@ -534,7 +534,8 @@ const DB = {
       const { error } = await Backend.client
         .from('achievements')
         .update(updateData)
-        .eq('id', erfolgId);
+        .eq('id', erfolgId)
+        .is('deleted_at', null);
 
       if (error) return { ok: false, fehler: error.message };
       return { ok: true };

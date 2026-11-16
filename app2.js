@@ -649,7 +649,7 @@ async function zeigeBildschirmModal(erfolgId) {
           <button class=\"tab-btn\" style=\"color:#aaa;flex:1\" onclick=\"wechsleBildschirmFormat('infografik')\">📈 Infografik</button>
           <button class=\"tab-btn\" style=\"color:#aaa;flex:1\" onclick=\"wechsleBildschirmFormat('portrait')\">👤 Porträt</button>
           <button class=\"tab-btn\" style=\"color:#aaa;flex:1\" onclick=\"wechsleBildschirmFormat('multierfolg')\">🏅 Multi-Erfolg</button>
-          <button class=\\"tab-btn\\" style=\\"color:#aaa;flex:1\\" onclick=\\"wechsleBildschirmFormat('slzb-screen')\\">📺 SLZB-Bildschirm</button>
+          <button class=\"tab-btn\" style=\"color:#aaa;flex:1\" onclick=\"wechsleBildschirmFormat('slzb-screen')\">📺 SLZB-Bildschirm</button>
         </div>
         ${posterEditorHTML(e)}
         <div style=\"text-align:center\">
