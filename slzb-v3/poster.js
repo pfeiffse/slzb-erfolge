@@ -24,9 +24,14 @@ const SLZB_COLORS = {
 // Gradient: schwarz oben → dunkelrot unten (wie HTML-Vorlage)
 // ══════════════════════════════════════════════════════════════
 
-// Gemeinsamer Hintergrund-Gradient (wie HTML: schwarz → dunkelrot)
-// akzent: 'rot' (Standard), 'blau', 'gruen'
-
+function zeichneSlzbHintergrund(ctx, W, H, bild, akzent='rot') {
+  ctx.fillStyle = '#000'; ctx.fillRect(0,0,W,H);
+  if (bild) {
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, 0, W, H); ctx.clip();
+    drawCover(ctx, bild, 0, 0, W, H);
+    ctx.restore();
+  }
   const grad = ctx.createLinearGradient(0, 0, 0, H);
   if (akzent === 'blau') {
     grad.addColorStop(0,   'rgba(0,0,0,0.15)');
