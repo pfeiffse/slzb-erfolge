@@ -26,14 +26,7 @@ const SLZB_COLORS = {
 
 // Gemeinsamer Hintergrund-Gradient (wie HTML: schwarz → dunkelrot)
 // akzent: 'rot' (Standard), 'blau', 'gruen'
-function zeichneSlzbHintergrund(ctx, W, H, bild, akzent='rot') {
-  ctx.fillStyle = '#000'; ctx.fillRect(0,0,W,H);
-  if (bild) {
-    const scale = Math.max(W/bild.width, H/bild.height);
-    const bW = bild.width*scale, bH = bild.height*scale;
-    const bX = (W-bW)/2, bY = 0;
-    ctx.drawImage(bild, bX, bY, bW, bH);
-  }
+
   const grad = ctx.createLinearGradient(0, 0, 0, H);
   if (akzent === 'blau') {
     grad.addColorStop(0,   'rgba(0,0,0,0.15)');
@@ -1175,14 +1168,7 @@ async function zeichneSocialFormat(canvasId, e, format) {
   canvas.width=W; canvas.height=H;
   const ctx = canvas.getContext('2d');
 
-  if (format==='story' || format==='reel') {
-    await zeichneSocialStory(ctx, e, bild, hauptbild, W, H);
-  } else {
-    // Beitrag: Layout je Bildformat
-    if (fmt==='landscape') await zeichneSocialBeitragLandscape(ctx, e, bild, hauptbild, W, H);
-    else if (fmt==='portrait') await zeichneSocialBeitragPortrait(ctx, e, bild, hauptbild, W, H);
-    else await zeichneSocialBeitragKeinBild(ctx, e, W, H);
-  }
+  
 }
 
 // Social Beitrag: Querformat-Bild
