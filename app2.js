@@ -129,7 +129,10 @@ async function renderErfolgDetail() {
                   ${b.caption?`<div class="text-sm font-bold">${esc(b.caption)}</div>`:''}
                   <div class="text-xs text-muted mt-1">📸 ${esc(b.creator||'–')}</div>
                   <div class="text-xs text-muted">📂 ${esc(b.source||'–')}</div>
-                  ${b.signedUrl?`<button class=\"btn btn-ghost btn-sm mt-2\" style=\"font-size:.75rem\" onclick=\"zeigeLightbox('${b.signedUrl}','','')\">&#128269; Vollbild</button>`:''}
+                  <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+                    ${b.signedUrl?`<button class=\\"btn btn-ghost btn-sm\\" style=\\"font-size:.75rem\\" onclick=\\"zeigeLightbox('${b.signedUrl}','','')\\">&#128269; Vollbild</button>`:''}
+                    ${Auth.canDo('erfassen')?`<button class=\\"btn btn-sm\\" style=\\"font-size:.75rem;background:#c0392b;color:#fff;border:none;border-radius:4px;padding:4px 8px;cursor:pointer\\" onclick=\\"loescheBild('${b.id}','${(b.storagePath||'').replace(/'/g,\\\"\\\\'\\\")}','${e.id}')\\">🗑️ Löschen</button>`:''}
+                  </div>
                 </div>
               </div>`).join('')}</div>`}
         </div>
@@ -1385,6 +1388,38 @@ function zeigeBildUploadModal(erfolgId) {
     </div>
   </div>`;
   document.body.appendChild(overlay);
+}
+
+// ── Bild löschen ─────────────────────────────────────────────────────────────
+async function loescheBild(bildId, storagePath, erfolgId) {
+  if (!confirm('Bild wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.')) return;
+  try {
+    // 1. Metadaten aus DB löschen
+    const { error: dbErr } = await Backend.client
+      .from('achievement_media')
+      .delete()
+      .eq('id', bildId);
+    if (dbErr) throw new Error('DB: ' + dbErr.message);
+
+    // 2. Datei aus Storage löschen (optional – kein Fehler wenn nicht vorhanden)
+    if (storagePath) {
+      const { error: storErr } = await Backend.client.storage
+        .from('achievement-media')
+        .remove([storagePath]);
+      if (storErr) console.warn('Storage-Löschung:', storErr.message);
+    }
+
+    toast('✅ Bild gelöscht', 'success');
+
+    // 3. Detailansicht neu laden
+    if (erfolgId) {
+      APP._erfolgeCache = null; // Cache invalidieren
+      navigateTo('erfolg-detail', { currentErfolgId: erfolgId });
+    }
+  } catch(e) {
+    toast('❌ Fehler: ' + e.message, 'danger');
+    console.error('Bild löschen:', e);
+  }
 }
 
 async function fuehreBildUploadDurch(erfolgId) {
