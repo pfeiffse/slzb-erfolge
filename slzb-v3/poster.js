@@ -1213,6 +1213,45 @@ async function zeichneSocialBeitragLandscape(ctx, e, bild, meta, W, H) {
   zeichneSlzbFooterNeu(ctx, W, H);
 }
 
+// SLZB-Bildschirm-Format: 1080x988px (18,04:16,51) – wie Insta-Beitrag
+async function zeichneSlzbBildschirmFormat(canvasId, e) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const W = 1080, H = 988;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  await ladeMontserrat(); await ladeLogo();
+
+  const hauptbild = (e.bilder||[]).find(b=>b.signedUrl) || null;
+  const bild = hauptbild ? await ladeBild(hauptbild.signedUrl) : null;
+  const sportart = e.sportartText || SLZB_DB.getSportart(e.sportartId)?.name || '';
+  const platz = e.platzierung || '';
+  const medaille = e.medaille && e.medaille!=='keine' ? e.medaille : '';
+  const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
+  const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  const _athletS = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet'&&n.trim()!=='').join(', ');
+  const teile = _athletS ? _athletS.trim().split(' ') : [];
+  const vorname = teile.length>1 ? teile.slice(0,-1).join(' ') : '';
+  const nachname = teile.length>0 ? teile[teile.length-1] : '';
+
+  // Hintergrund mit Bild (wie Insta-Beitrag)
+  zeichneSlzbHintergrundMitFallback(ctx, W, H, bild, 'rot', sportart);
+  zeichneSlzbDeko(ctx, W, H);
+  zeichneSlzbHeader(ctx, W, H, sportart, datum);
+  zeichneSlzbKarte(ctx, W, H, {
+    subtitle: sportart,
+    vorname: vorname||null,
+    nachname: nachname||null,
+    titel: nachname?null:titel,
+    platz, medaille,
+    zusatz: e.disziplin||null,
+    wettbewerb: e.wettbewerbText,
+    ergebnis: e.ergebnisWert ? `${e.ergebnisWert}${e.ergebnisEinheit?' '+e.ergebnisEinheit:''}` : (e.ergebnisText||null),
+    ort: e.ort||null
+  });
+  zeichneSlzbFooterNeu(ctx, W, H);
+}
+
 // Social Beitrag: Hochformat-Bild (Vollhintergrund)
 async function zeichneSocialBeitragPortrait(ctx, e, bild, meta, W, H) {
   const sportart = e.sportartText || SLZB_DB.getSportart(e.sportartId)?.name || '';

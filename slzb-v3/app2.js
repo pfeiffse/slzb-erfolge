@@ -649,6 +649,7 @@ async function zeigeBildschirmModal(erfolgId) {
           <button class=\"tab-btn\" style=\"color:#aaa;flex:1\" onclick=\"wechsleBildschirmFormat('infografik')\">📈 Infografik</button>
           <button class=\"tab-btn\" style=\"color:#aaa;flex:1\" onclick=\"wechsleBildschirmFormat('portrait')\">👤 Porträt</button>
           <button class=\"tab-btn\" style=\"color:#aaa;flex:1\" onclick=\"wechsleBildschirmFormat('multierfolg')\">🏅 Multi-Erfolg</button>
+          <button class=\\"tab-btn\\" style=\\"color:#aaa;flex:1\\" onclick=\\"wechsleBildschirmFormat('slzb-screen')\\">📺 SLZB-Bildschirm</button>
         </div>
         ${posterEditorHTML(e)}
         <div style=\"text-align:center\">
@@ -798,6 +799,10 @@ async function wechsleBildschirmFormat(format) {
     if (canvas) { canvas.width=1080; canvas.height=1350; canvas.style.maxHeight='65vh'; }
     if (info) info.textContent='1080×1350 px · Multi-Erfolg-Layout';
     await zeichneMultiErfolgLayout('screen-canvas', e);
+  } else if (format==='slzb-screen') {
+    if (canvas) { canvas.width=1080; canvas.height=988; canvas.style.maxHeight='60vh'; }
+    if (info) info.textContent='1080×988 px · SLZB-Bildschirm (18,04:16,51)';
+    await zeichneSlzbBildschirmFormat('screen-canvas', e);
   } else {
     if (canvas) { canvas.width=1080; canvas.height=1350; canvas.style.maxHeight='65vh'; }
     if (info) info.textContent='1080×1350 px · Hochformat';
