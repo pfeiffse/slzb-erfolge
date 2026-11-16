@@ -1141,6 +1141,21 @@ function renderSammelmeldungForm() {
   return `<div class="page">
     ${formularKopf('Sammelmeldung','📊')}
 
+    <!-- Modus-Wähler -->
+    <div class="card mb-3" style="background:rgba(226,0,26,0.06);border-color:rgba(226,0,26,0.2)">
+      <div class="card-body" style="padding:12px">
+        <div style="font-size:.78rem;color:#888;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Modus wählen</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button id="modus-einzel" class="btn btn-primary btn-sm" onclick="sammelModusWechsel('einzel')">🏅 Einzelne Meldungen</button>
+          <button id="modus-mehrtitel" class="btn btn-ghost btn-sm" onclick="sammelModusWechsel('mehrtitel')">🏆 Mehrtitel-Athlet</button>
+          <button id="modus-bilanz" class="btn btn-ghost btn-sm" onclick="sammelModusWechsel('bilanz')">🏟️ Veranstaltungs-Bilanz</button>
+        </div>
+        <div id="modus-hinweis" style="font-size:.78rem;color:#888;margin-top:6px">
+          Einzelne Meldungen: Jede Zeile wird als separate Meldung eingereicht.
+        </div>
+      </div>
+    </div>
+
     <!-- Tabs -->
     <div class="tabs mb-3" style="display:flex;gap:8px">
       <button class="tab-btn active" id="tab-raster" onclick="sammelTabWechsel('raster')">📋 Raster-Eingabe</button>
@@ -1225,6 +1240,38 @@ function renderSammelmeldungForm() {
 // ── Sammelmeldung Raster-Logik ────────────────────────────────
 let _sammelZeilen = [];
 let _sammelNaechsteId = 1;
+
+// Aktueller Sammelmeldungs-Modus
+window._sammelModus = 'einzel';
+
+function sammelModusWechsel(modus) {
+  window._sammelModus = modus;
+  // Buttons aktualisieren
+  ['einzel','mehrtitel','bilanz'].forEach(m => {
+    const btn = document.getElementById('modus-' + m);
+    if (!btn) return;
+    btn.className = m === modus ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm';
+  });
+  // Hinweis aktualisieren
+  const hinweise = {
+    einzel:    'Einzelne Meldungen: Jede Zeile wird als separate Meldung eingereicht.',
+    mehrtitel: 'Mehrtitel-Athlet: Alle Zeilen gehören zu einem Athleten – Athlet-Spalte = Name, Disziplin-Spalte = Disziplin.',
+    bilanz:    'Veranstaltungs-Bilanz: Alle Zeilen werden als eine gemeinsame Meldung eingereicht (ein Poster).'
+  };
+  const el = document.getElementById('modus-hinweis');
+  if (el) el.textContent = hinweise[modus] || '';
+
+  // Einreichen-Button anpassen
+  const btn = document.querySelector('#sammel-raster-panel .btn-primary');
+  if (btn) {
+    const labels = {
+      einzel:    '📤 Alle einreichen',
+      mehrtitel: '🏆 Als Mehrtitel-Athlet einreichen',
+      bilanz:    '🏟️ Als Veranstaltungs-Bilanz einreichen'
+    };
+    btn.textContent = labels[modus] || '📤 Einreichen';
+  }
+}
 
 function sammelTabWechsel(tab) {
   document.getElementById('sammel-raster-panel').style.display = tab==='raster' ? '' : 'none';
@@ -1369,6 +1416,13 @@ function sammelRasterVorschau() {
 }
 
 async function sammelRasterEinreichen() {
+  const modus = window._sammelModus || 'einzel';
+
+  // Modus-spezifische Einreich-Logik
+  if (modus === 'mehrtitel') { await sammelEinreichenMehrtitel(); return; }
+  if (modus === 'bilanz')    { await sammelEinreichenBilanz();    return; }
+
+  // Standard: Einzelne Meldungen
   const zeilen = sammelRasterDatenLesen();
   const gueltig = zeilen.filter(z=>z.titel?.trim()&&z.sportart?.trim()&&z.datum);
   const fehler = sammelRasterValidieren(gueltig);
@@ -1439,6 +1493,92 @@ async function sammelRasterEinreichen() {
 }
 
 // CSV-Daten ins Raster übernehmen
+
+// ── Sammelmeldung: Mehrtitel-Athlet-Modus ────────────────────
+async function sammelEinreichenMehrtitel() {
+  const zeilen = sammelRasterDatenLesen();
+  const gueltig = zeilen.filter(z=>z.titel?.trim()&&z.sportart?.trim()&&z.datum);
+  if (!gueltig.length) { toast('Keine gültigen Zeilen', 'warning'); return; }
+
+  // Athleten gruppieren (nach Athlet-Spalte)
+  const gruppen = {};
+  for (const z of gueltig) {
+    const key = (z.athlet||z.titel||'Unbekannt').trim();
+    if (!gruppen[key]) gruppen[key] = [];
+    gruppen[key].push(z);
+  }
+
+  let ok = 0, fehler = 0;
+  for (const [athlet, zeilen] of Object.entries(gruppen)) {
+    const erste = zeilen[0];
+    const sp = SLZB_DB.sportarten.find(s=>s.name.toLowerCase()===erste.sportart.toLowerCase());
+    const medaille = zeilen.some(z=>z.platz==1)?'Gold':zeilen.some(z=>z.platz==2)?'Silber':zeilen.some(z=>z.platz==3)?'Bronze':'keine';
+    const bestePlatz = Math.min(...zeilen.map(z=>z.platz||99).filter(p=>p<99));
+
+    // Jede Disziplin als eigene Meldung
+    for (const z of zeilen) {
+      const m = z.medaille || (z.platz==1?'Gold':z.platz==2?'Silber':z.platz==3?'Bronze':'keine');
+      const res = await DB.erstelleErfolg({
+        meldungsart: 'Einzelerfolg',
+        titel: z.titel.trim(),
+        sportartId: sp?.id||null, sportartText: erste.sportart.trim(),
+        wettbewerbText: z.wettbewerb?.trim()||'',
+        datum: z.datum, ebene: z.ebene||'',
+        platzierung: z.platz ? Number(z.platz) : null,
+        medaille: m, kurzinfo: z.kurzinfo?.trim()||'',
+        status: 'Eingereicht',
+      }, [{schuelerId:null, anzeigename:athlet, rolle:'Athlet', einwilligungsstatus:'Nicht geprüft'}]);
+      if (res?.ok) ok++; else fehler++;
+    }
+  }
+  toast(`✅ ${ok} Titel eingereicht${fehler?' ('+fehler+' Fehler)':''}`, ok?'success':'warning');
+  if (ok) navigateTo('meine-meldungen');
+}
+
+// ── Sammelmeldung: Veranstaltungs-Bilanz-Modus ───────────────
+async function sammelEinreichenBilanz() {
+  const zeilen = sammelRasterDatenLesen();
+  const gueltig = zeilen.filter(z=>z.titel?.trim()&&z.sportart?.trim()&&z.datum);
+  if (!gueltig.length) { toast('Keine gültigen Zeilen', 'warning'); return; }
+
+  const erste = gueltig[0];
+  const sp = SLZB_DB.sportarten.find(s=>s.name.toLowerCase()===erste.sportart.toLowerCase());
+
+  // Gesamttitel aus Wettbewerb oder erstem Titel
+  const wettbewerb = erste.wettbewerb?.trim() || erste.titel.trim();
+  const gesamtTitel = `${sp?.name||erste.sportart} bei: ${wettbewerb}`;
+
+  // Alle Erfolge als Text
+  const erfolgListe = gueltig.map(z =>
+    `${z.athlet||'–'}: ${z.platz?z.platz+'. Platz – ':''}${z.titel}${z.kurzinfo?' ('+z.kurzinfo+')':''}`
+  ).join('\n');
+
+  // Beteiligte (eindeutige Athleten)
+  const athleten = [...new Set(gueltig.map(z=>z.athlet?.trim()).filter(Boolean))];
+  const beteiligte = athleten.map(n=>({schuelerId:null, anzeigename:n, rolle:'Athlet', einwilligungsstatus:'Nicht geprüft'}));
+
+  const bestePlatz = Math.min(...gueltig.map(z=>z.platz||99).filter(p=>p<99));
+  const medaille = bestePlatz===1?'Gold':bestePlatz===2?'Silber':bestePlatz===3?'Bronze':'keine';
+
+  const res = await DB.erstelleErfolg({
+    meldungsart: 'Teamerfolg',
+    titel: gesamtTitel,
+    sportartId: sp?.id||null, sportartText: erste.sportart.trim(),
+    wettbewerbText: wettbewerb,
+    datum: erste.datum, ebene: erste.ebene||'',
+    platzierung: bestePlatz < 99 ? bestePlatz : null,
+    medaille, ergebnisText: erfolgListe,
+    status: 'Eingereicht',
+  }, beteiligte);
+
+  if (res?.ok) {
+    toast('✅ Veranstaltungs-Bilanz eingereicht!', 'success');
+    navigateTo('meine-meldungen');
+  } else {
+    toast('❌ Fehler: ' + (res?.fehler||'Unbekannt'), 'danger');
+  }
+}
+
 async function sammelCSVInRaster() {
   const input = document.getElementById('import-file');
   if (!input?.files?.length) { toast('Bitte zuerst CSV-Datei auswählen','warning'); return; }
