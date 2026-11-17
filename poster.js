@@ -659,12 +659,40 @@ function zeichneTextbereich(ctx, e, W, H, startY, mColor, sportart, platz, medai
     y += 80;
   }
 
-  // Ergebnis
+  // Ergebnis (einfach oder mehrzeilige Erfolgs-Liste)
   if (e.ergebnisWert || e.ergebnisText) {
-    const erg = e.ergebnisWert ? `${e.ergebnisWert} ${e.ergebnisEinheit||''}` : e.ergebnisText;
-    ctx.fillStyle=SLZB_COLORS.gray1; ctx.font='20px Montserrat, Arial, sans-serif';
-    ctx.textAlign='center'; ctx.textBaseline='top';
-    ctx.fillText(erg, W/2, y); y += 32;
+    const ergRaw = e.ergebnisWert ? `${e.ergebnisWert} ${e.ergebnisEinheit||''}` : e.ergebnisText;
+    const ergZeilen = ergRaw.includes(' | ')
+      ? ergRaw.split(' | ').filter(z=>z.trim())
+      : ergRaw.split('\n').filter(z=>z.trim());
+    const istMehrzeilig = ergZeilen.length > 1;
+    const ergSz = istMehrzeilig ? Math.max(13, Math.min(18, Math.floor(200 / ergZeilen.length))) : 20;
+    const ergZH = Math.round(ergSz * 1.4);
+    ctx.textBaseline='top';
+    if (istMehrzeilig) {
+      ctx.textAlign='left';
+      const listX = Math.round(W*0.06);
+      const maxW = W - listX*2;
+      for (const zeile of ergZeilen) {
+        if (y + ergZH > H - 120) break;
+        const parts = zeile.split(': ');
+        if (parts.length >= 2) {
+          ctx.fillStyle=SLZB_COLORS.blue; ctx.font=`bold ${ergSz}px Montserrat, Arial, sans-serif`;
+          const nW = Math.min(ctx.measureText(parts[0]+': ').width, maxW*0.38);
+          ctx.fillText(parts[0]+':', listX, y, maxW*0.38);
+          ctx.fillStyle=SLZB_COLORS.gray1; ctx.font=`${ergSz}px Montserrat, Arial, sans-serif`;
+          ctx.fillText(parts.slice(1).join(': ').trim(), listX+nW+4, y, maxW*0.62);
+        } else {
+          ctx.fillStyle=SLZB_COLORS.gray1; ctx.font=`${ergSz}px Montserrat, Arial, sans-serif`;
+          ctx.fillText(zeile, listX, y, maxW);
+        }
+        y += ergZH;
+      }
+    } else {
+      ctx.fillStyle=SLZB_COLORS.gray1; ctx.font='20px Montserrat, Arial, sans-serif';
+      ctx.textAlign='center';
+      ctx.fillText(ergRaw, W/2, y); y += 32;
+    }
   }
 
   // Datum + Ort
