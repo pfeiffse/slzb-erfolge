@@ -265,7 +265,11 @@ function zeichneSlzbKarte(ctx, W, H, opts, akzent='rot') {
   // Ergebnis anzeigen (Wert + Einheit oder mehrzeilige Erfolgs-Liste)
   if (opts.ergebnis) {
     y += Math.round(H*0.012);
-    const ergZeilen = String(opts.ergebnis).split('\n').filter(z=>z.trim());
+    // Trennzeichen: | (neu) oder \n (alt) oder – als Fallback
+    const ergRaw = String(opts.ergebnis);
+    const ergZeilen = ergRaw.includes(' | ')
+      ? ergRaw.split(' | ').filter(z=>z.trim())
+      : ergRaw.split('\n').filter(z=>z.trim());
     const istMehrzeilig = ergZeilen.length > 1;
     const ergSz = istMehrzeilig
       ? Math.max(Math.round(H*0.013), Math.min(Math.round(H*0.016), Math.floor((cardH - y + cardTop - Math.round(H*0.03)) / (ergZeilen.length * 1.4))))
