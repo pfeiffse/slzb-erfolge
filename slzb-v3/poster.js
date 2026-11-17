@@ -262,13 +262,45 @@ function zeichneSlzbKarte(ctx, W, H, opts, akzent='rot') {
     }
   }
 
-  // Ergebnis anzeigen (Wert + Einheit oder Text)
+  // Ergebnis anzeigen (Wert + Einheit oder mehrzeilige Erfolgs-Liste)
   if (opts.ergebnis) {
-    y += Math.round(H*0.075);
-    ctx.fillStyle='#1B1C1F'; ctx.font=`700 ${Math.round(H*0.018)}px Montserrat, Arial, sans-serif`;
-    ctx.textAlign='center'; ctx.textBaseline='top';
-    ctx.fillText('⏱ ' + opts.ergebnis, cx, y, cardW-cardPad*2);
-    y += Math.round(H*0.022);
+    y += Math.round(H*0.012);
+    const ergZeilen = String(opts.ergebnis).split('\n').filter(z=>z.trim());
+    const istMehrzeilig = ergZeilen.length > 1;
+    const ergSz = istMehrzeilig
+      ? Math.max(Math.round(H*0.013), Math.min(Math.round(H*0.016), Math.floor((cardH - y + cardTop - Math.round(H*0.03)) / (ergZeilen.length * 1.4))))
+      : Math.round(H*0.018);
+    const ergZH = Math.round(ergSz * 1.35);
+    const maxErgW = cardW - cardPad*2;
+
+    if (istMehrzeilig) {
+      // Mehrzeilige Erfolgs-Liste (z.B. bei Zusammenfassung)
+      ctx.textAlign='left'; ctx.textBaseline='top';
+      const listX = cardX + cardPad;
+      for (const zeile of ergZeilen) {
+        if (y + ergZH > cardTop + cardH - Math.round(H*0.02)) break; // Overflow-Schutz
+        // Bullet + Text
+        const parts = zeile.split(':');
+        if (parts.length >= 2) {
+          // "Athlet: Platz – Disziplin" → Athlet fett, Rest normal
+          ctx.fillStyle='rgba(0,51,102,0.9)'; ctx.font=`700 ${ergSz}px Montserrat, Arial, sans-serif`;
+          const nameW = ctx.measureText(parts[0]+':').width;
+          ctx.fillText(parts[0]+':', listX, y, maxErgW*0.4);
+          ctx.fillStyle='#1B1C1F'; ctx.font=`${ergSz}px Montserrat, Arial, sans-serif`;
+          ctx.fillText(parts.slice(1).join(':').trim(), listX + Math.min(nameW+6, maxErgW*0.42), y, maxErgW*0.58);
+        } else {
+          ctx.fillStyle='#1B1C1F'; ctx.font=`${ergSz}px Montserrat, Arial, sans-serif`;
+          ctx.fillText(zeile, listX, y, maxErgW);
+        }
+        y += ergZH;
+      }
+    } else {
+      // Einzelne Ergebnis-Zeile
+      ctx.fillStyle='#1B1C1F'; ctx.font=`700 ${ergSz}px Montserrat, Arial, sans-serif`;
+      ctx.textAlign='center'; ctx.textBaseline='top';
+      ctx.fillText('⏱ ' + opts.ergebnis, cx, y, maxErgW);
+      y += Math.round(H*0.022);
+    }
   }
 
   // Ort anzeigen
