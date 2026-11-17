@@ -1069,6 +1069,15 @@ async function zeichneA3Landscape(canvas, e, bild, meta) {
     ctx.textAlign='center'; ctx.textBaseline='top';
     ctx.fillText(_athL.toUpperCase(), W/2, y, W-80); y += athSz + 6;
   }
+  // Ergebnis / Erfolgs-Liste
+  if ((e.ergebnisText || e.ergebnisWert) && y < textEndY - 20) {
+    const ergRawA3 = e.ergebnisWert ? `${e.ergebnisWert} ${e.ergebnisEinheit||''}` : e.ergebnisText;
+    const verfA3 = textEndY - y - 30;
+    ctx.textAlign='left';
+    y = zeichneErgebnisListe(ctx, ergRawA3, Math.round(W*0.05), y, W*0.9, verfA3, null);
+    y += 6;
+  }
+
   // Datum
   const _datumL2 = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'}) : '';
   if (_datumL2 && y < textEndY - 16) {
@@ -1162,6 +1171,12 @@ async function zeichneA3Portrait(canvas, e, bild, meta) {
     zeilen.slice(0,3).forEach(z => { ctx.fillText(z, tx, y); y+=22; });
   }
 
+  // Ergebnis / Erfolgs-Liste
+  if (e.ergebnisText || e.ergebnisWert) {
+    const _ergRawA3 = e.ergebnisWert ? `${e.ergebnisWert} ${e.ergebnisEinheit||''}` : e.ergebnisText;
+    ctx.textAlign='left';
+    zeichneErgebnisListe(ctx, _ergRawA3, Math.round(W*0.05), y, W*0.9, 120, null);
+  }
   zeichneA3Footer(ctx, W, H, meta);
   zeichneA3DruckerrandFinal(ctx, W, H);
 }
@@ -1232,6 +1247,12 @@ async function zeichneA3KeinBild(canvas, e) {
     const _yDK = y + (platz ? 80 : 20) + (_athK ? 44 : 0);
     ctx.fillStyle='#666'; ctx.font='16px Montserrat, Arial, sans-serif';
     ctx.textAlign='center'; ctx.fillText(_datumK, W/2, _yDK);
+  }
+  // Ergebnis / Erfolgs-Liste
+  if (e.ergebnisText || e.ergebnisWert) {
+    const _ergRawA3 = e.ergebnisWert ? `${e.ergebnisWert} ${e.ergebnisEinheit||''}` : e.ergebnisText;
+    ctx.textAlign='left';
+    zeichneErgebnisListe(ctx, _ergRawA3, Math.round(W*0.05), y, W*0.9, 120, null);
   }
   zeichneA3Footer(ctx, W, H, null);
   zeichneA3DruckerrandFinal(ctx, W, H);
