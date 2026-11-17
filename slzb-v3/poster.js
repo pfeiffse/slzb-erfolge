@@ -155,7 +155,7 @@ function zeichneSlzbKarte(ctx, W, H, opts, akzent='rot') {
   const cardPad = Math.round(W*0.030);
   const cardX = Math.round(W*0.026);
   const cardW = W - 2*cardX;
-  const cardTop = Math.round(H*0.58); // Tiefer = mehr Bild sichtbar
+  const _cardTopBase = Math.round(H*0.58); // Tiefer = mehr Bild sichtbar
   const FOOTER_H = Math.round(H*0.095); // Platz für Footer
 
   // ── Inhaltshöhe vorab berechnen (für dynamische Kartenhöhe) ──
@@ -171,29 +171,45 @@ function zeichneSlzbKarte(ctx, W, H, opts, akzent='rot') {
   _contentH += Math.round(H*0.012); // Abstand vor Oval
   if (opts.platz || opts.wettbewerb) _contentH += Math.round(H*0.047) + Math.round(H*0.020);
   if (opts.zusatz) _contentH += Math.round(H*0.020);
-  if (opts.ergebnis) _contentH += Math.round(H*0.022);
+  if (opts.ergebnis) {
+    const _ergZeilen = String(opts.ergebnis).includes(' | ')
+      ? String(opts.ergebnis).split(' | ').filter(z=>z.trim())
+      : String(opts.ergebnis).split('\n').filter(z=>z.trim());
+    const _ergAnz = Math.max(1, _ergZeilen.length);
+    const _ergSzEst = Math.max(Math.round(H*0.012), Math.min(Math.round(H*0.015), Math.floor((H*0.35) / (_ergAnz * 1.4))));
+    _contentH += _ergAnz * Math.round(_ergSzEst * 1.45) + Math.round(H*0.01);
+  }
   if (opts.ort) _contentH += Math.round(H*0.020);
   _contentH += Math.round(H*0.030); // unterer Innenabstand
 
   // Kartenhöhe: Inhalt + Mindesthöhe, aber nie über Footer
   const minCardH = Math.round(H*0.25);
-  const maxCardH = H - cardTop - FOOTER_H;
+  // cardTop_dyn dynamisch nach oben verschieben wenn Inhalt groß
+  const _benoetigtH = Math.max(minCardH, _contentH);
+  const _maxCardTop = Math.round(H*0.58); // Standard
+  const _minCardTop = Math.round(H*0.25); // Minimum (Bild bleibt sichtbar)
+  const FOOTER_H_DYN = FOOTER_H;
+  const _verfuegbarH = H - _maxCardTop - FOOTER_H_DYN;
+  const cardTop_dyn = _benoetigtH > _verfuegbarH
+    ? Math.max(_minCardTop, H - _benoetigtH - FOOTER_H_DYN - Math.round(H*0.02))
+    : _maxCardTop;
+  const maxCardH = H - cardTop_dyn - FOOTER_H;
   const cardH = Math.min(maxCardH, Math.max(minCardH, _contentH));
 
   // Glasmorphismus-Hintergrund
   // Halbtransparentes Weiß – Bild bleibt sichtbar
   ctx.fillStyle = 'rgba(255,255,255,0.55)';
-  slzbRoundRect(ctx, cardX, cardTop, cardW, cardH, Math.round(W*0.017)); ctx.fill();
+  slzbRoundRect(ctx, cardX, cardTop_dyn, cardW, cardH, Math.round(W*0.017)); ctx.fill();
   // Schatten-Effekt
   ctx.shadowColor = 'rgba(0,0,30,0.25)';
   ctx.shadowBlur = 18;
   ctx.shadowOffsetY = -3;
-  slzbRoundRect(ctx, cardX, cardTop, cardW, cardH, Math.round(W*0.017)); ctx.fill();
+  slzbRoundRect(ctx, cardX, cardTop_dyn, cardW, cardH, Math.round(W*0.017)); ctx.fill();
   ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
   ctx.strokeStyle = 'rgba(0,51,102,0.20)'; ctx.lineWidth = 1.5;
-  slzbRoundRect(ctx, cardX, cardTop, cardW, cardH, Math.round(W*0.017)); ctx.stroke();
+  slzbRoundRect(ctx, cardX, cardTop_dyn, cardW, cardH, Math.round(W*0.017)); ctx.stroke();
 
-  let y = cardTop + Math.round(H*0.045);
+  let y = cardTop_dyn + Math.round(H*0.045);
   const cx = W/2;
 
   // Subtitle (akzentfarbe, gesperrt)
@@ -327,7 +343,7 @@ function zeichneSlzbKarte(ctx, W, H, opts, akzent='rot') {
       // Mehrzeilige Erfolgs-Liste → zentrale Hilfsfunktion
       ctx.textAlign='left';
       const listX = cardX + cardPad;
-      const verfH = cardTop + cardH - y - Math.round(H*0.03);
+      const verfH = cardTop_dyn + cardH - y - Math.round(H*0.03);
       y = zeichneErgebnisListe(ctx, String(opts.ergebnis), listX, y, maxErgW, verfH, ergSz);
     } else {
       // Einzelne Ergebnis-Zeile
