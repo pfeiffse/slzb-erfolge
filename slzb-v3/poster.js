@@ -104,6 +104,52 @@ function zeichneSlzbHeader(ctx, W, H, sportart, datum, akzent='rot') {
 }
 
 // Glasmorphismus-Karte mit Vorname/Nachname/Platz
+
+// ── Mehrzeilige Erfolgs-Liste zeichnen ───────────────────────
+// Gibt die neue Y-Position zurück
+function zeichneErgebnisListe(ctx, ergRaw, x, y, maxW, maxH, fontSize) {
+  if (!ergRaw) return y;
+  // Athletennamen entfernen wenn alle gleich (z.B. "Willy Hoffmann: ...")
+  const zeilen = ergRaw.includes(' | ')
+    ? ergRaw.split(' | ').filter(z=>z.trim())
+    : ergRaw.split('\n').filter(z=>z.trim());
+  if (!zeilen.length) return y;
+
+  // Athletennamen-Präfix entfernen wenn alle Zeilen mit gleichem Namen beginnen
+  const prefixMatch = zeilen[0].match(/^([^:]+):/);
+  const gemeinsamerName = prefixMatch && zeilen.every(z=>z.startsWith(prefixMatch[1]+':'))
+    ? prefixMatch[1].trim() : null;
+
+  const bereinigte = gemeinsamerName
+    ? zeilen.map(z=>z.replace(gemeinsamerName+':', '').trim())
+    : zeilen;
+
+  const sz = fontSize || Math.max(11, Math.min(16, Math.floor(maxH / (bereinigte.length * 1.5))));
+  const zH = Math.round(sz * 1.45);
+
+  ctx.textBaseline = 'top';
+  for (const zeile of bereinigte) {
+    if (y + zH > y + maxH) break;
+    // Platz fett, Rest normal
+    const platzMatch = zeile.match(/^(\d+\.\s*Platz\s*[–-]\s*)(.*)/i);
+    if (platzMatch) {
+      ctx.fillStyle = 'rgba(0,51,102,0.9)';
+      ctx.font = `bold ${sz}px Montserrat, Arial, sans-serif`;
+      const platzW = ctx.measureText(platzMatch[1]).width;
+      ctx.fillText(platzMatch[1], x, y, maxW * 0.35);
+      ctx.fillStyle = '#1B1C1F';
+      ctx.font = `${sz}px Montserrat, Arial, sans-serif`;
+      ctx.fillText(platzMatch[2], x + Math.min(platzW + 4, maxW * 0.37), y, maxW * 0.63);
+    } else {
+      ctx.fillStyle = '#1B1C1F';
+      ctx.font = `${sz}px Montserrat, Arial, sans-serif`;
+      ctx.fillText(zeile, x, y, maxW);
+    }
+    y += zH;
+  }
+  return y;
+}
+
 function zeichneSlzbKarte(ctx, W, H, opts, akzent='rot') {
   // opts: { subtitle, vorname, nachname, platz, medaille, zusatz, wettbewerb }
   const cardPad = Math.round(W*0.030);
@@ -272,32 +318,17 @@ function zeichneSlzbKarte(ctx, W, H, opts, akzent='rot') {
       : ergRaw.split('\n').filter(z=>z.trim());
     const istMehrzeilig = ergZeilen.length > 1;
     const ergSz = istMehrzeilig
-      ? Math.max(Math.round(H*0.013), Math.min(Math.round(H*0.016), Math.floor((cardH - y + cardTop - Math.round(H*0.03)) / (ergZeilen.length * 1.4))))
+      ? Math.max(Math.round(H*0.012), Math.min(Math.round(H*0.015), Math.floor((cardH * 0.45) / (ergZeilen.length * 1.4))))
       : Math.round(H*0.018);
     const ergZH = Math.round(ergSz * 1.35);
     const maxErgW = cardW - cardPad*2;
 
     if (istMehrzeilig) {
-      // Mehrzeilige Erfolgs-Liste (z.B. bei Zusammenfassung)
-      ctx.textAlign='left'; ctx.textBaseline='top';
+      // Mehrzeilige Erfolgs-Liste → zentrale Hilfsfunktion
+      ctx.textAlign='left';
       const listX = cardX + cardPad;
-      for (const zeile of ergZeilen) {
-        if (y + ergZH > cardTop + cardH - Math.round(H*0.02)) break; // Overflow-Schutz
-        // Bullet + Text
-        const parts = zeile.split(':');
-        if (parts.length >= 2) {
-          // "Athlet: Platz – Disziplin" → Athlet fett, Rest normal
-          ctx.fillStyle='rgba(0,51,102,0.9)'; ctx.font=`700 ${ergSz}px Montserrat, Arial, sans-serif`;
-          const nameW = ctx.measureText(parts[0]+':').width;
-          ctx.fillText(parts[0]+':', listX, y, maxErgW*0.4);
-          ctx.fillStyle='#1B1C1F'; ctx.font=`${ergSz}px Montserrat, Arial, sans-serif`;
-          ctx.fillText(parts.slice(1).join(':').trim(), listX + Math.min(nameW+6, maxErgW*0.42), y, maxErgW*0.58);
-        } else {
-          ctx.fillStyle='#1B1C1F'; ctx.font=`${ergSz}px Montserrat, Arial, sans-serif`;
-          ctx.fillText(zeile, listX, y, maxErgW);
-        }
-        y += ergZH;
-      }
+      const verfH = cardTop + cardH - y - Math.round(H*0.03);
+      y = zeichneErgebnisListe(ctx, String(opts.ergebnis), listX, y, maxErgW, verfH, ergSz);
     } else {
       // Einzelne Ergebnis-Zeile
       ctx.fillStyle='#1B1C1F'; ctx.font=`700 ${ergSz}px Montserrat, Arial, sans-serif`;
@@ -673,21 +704,7 @@ function zeichneTextbereich(ctx, e, W, H, startY, mColor, sportart, platz, medai
       ctx.textAlign='left';
       const listX = Math.round(W*0.06);
       const maxW = W - listX*2;
-      for (const zeile of ergZeilen) {
-        if (y + ergZH > H - 120) break;
-        const parts = zeile.split(': ');
-        if (parts.length >= 2) {
-          ctx.fillStyle=SLZB_COLORS.blue; ctx.font=`bold ${ergSz}px Montserrat, Arial, sans-serif`;
-          const nW = Math.min(ctx.measureText(parts[0]+': ').width, maxW*0.38);
-          ctx.fillText(parts[0]+':', listX, y, maxW*0.38);
-          ctx.fillStyle=SLZB_COLORS.gray1; ctx.font=`${ergSz}px Montserrat, Arial, sans-serif`;
-          ctx.fillText(parts.slice(1).join(': ').trim(), listX+nW+4, y, maxW*0.62);
-        } else {
-          ctx.fillStyle=SLZB_COLORS.gray1; ctx.font=`${ergSz}px Montserrat, Arial, sans-serif`;
-          ctx.fillText(zeile, listX, y, maxW);
-        }
-        y += ergZH;
-      }
+      y = zeichneErgebnisListe(ctx, ergRaw, listX, y, maxW, H - y - 120, ergSz);
     } else {
       ctx.fillStyle=SLZB_COLORS.gray1; ctx.font='20px Montserrat, Arial, sans-serif';
       ctx.textAlign='center';
