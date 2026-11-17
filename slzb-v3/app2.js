@@ -4717,11 +4717,11 @@ async function fuehreMeldungenZusammen(hauptId) {
 
   // Ergebnis-Text aus allen Meldungen
   const erfolgListe = alleMeldungen.map(m => {
-    const athlet = m.beteiligte?.[0]?.anzeigename || '–';
+    const _bArr = m.beteiligte || [];
+    const athlet = _bArr.map(b => b.anzeigename || b.name || '').filter(Boolean).join(', ') || '–';
     const platz = m.platzierung ? m.platzierung + '. Platz – ' : '';
     return `${athlet}: ${platz}${m.titel}`;
-  }).join('\n');
-
+  }).join(' | ');
   const bestePlatz = Math.min(...alleMeldungen.map(m=>m.platzierung||99).filter(p=>p<99));
   const medaille = bestePlatz===1?'Gold':bestePlatz===2?'Silber':bestePlatz===3?'Bronze':'keine';
   const erste = alleMeldungen[0];
