@@ -5439,7 +5439,7 @@ function zeigeVotingErstellen() {
         <span>Kandidaten manuell eintragen oder aus freigegebenen Meldungen auswählen.</span>
         <button class="btn btn-outline btn-sm" style="white-space:nowrap;flex-shrink:0" onclick="zeigeVotingKandidatenAuswahl()">📋 Aus Meldungen wählen</button>
       </div>
-      ${[1,2,3].map(i => `
+      ${[1,2,3,4,5,6,7].map(i => `
         <div class="card mb-3" style="border:2px solid var(--slzb-border)">
           <div class="card-body">
             <div style="font-weight:700;margin-bottom:10px;color:var(--slzb-primary)">Kandidat ${i}</div>
@@ -5482,8 +5482,8 @@ function zeigeVotingErstellen() {
   overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
   document.body.appendChild(overlay);
 
-  // Bild-Vorschau für alle 3 Kandidaten
-  [1,2,3].forEach(i => {
+  // Bild-Vorschau für alle 7 Kandidaten
+  [1,2,3,4,5,6,7].forEach(i => {
     const input = document.getElementById(`v-bild-${i}`);
     if (!input) return;
     input.addEventListener('change', () => {
@@ -5522,7 +5522,7 @@ async function speichereVoting(status) {
     if (kErr) throw new Error(kErr.message);
 
     // Kandidaten anlegen
-    for (let i = 1; i <= 3; i++) {
+    for (let i = 1; i <= 7; i++) {
       const name = document.getElementById(`v-name-${i}`)?.value?.trim();
       if (!name) continue;
       // Bild hochladen in öffentlichen Bucket (für vote.html ohne Login)
@@ -5543,11 +5543,19 @@ async function speichereVoting(status) {
           } else { console.warn('Bild-Upload:', upErr.message); }
         } catch(imgErr) { console.warn('Bild-Upload:', imgErr.message); }
       } else if (bildInput?.dataset?.storagePath) {
-        // Bild aus Meldung: Public URL (Bucket ist öffentlich)
+        // Bild aus Meldung: Signed URL (achievement-media ist privat)
         const sp = bildInput.dataset.storagePath;
         const bucket = bildInput.dataset.storageBucket || 'achievement-media';
-        const { data: pubData } = Backend.client.storage.from(bucket).getPublicUrl(sp);
-        bildUrl = pubData?.publicUrl || null;
+        if (bucket === 'achievement-media') {
+          // Privater Bucket → Signed URL mit langer Gültigkeit (1 Jahr)
+          const { data: signedData } = await Backend.client.storage
+            .from(bucket).createSignedUrl(sp, 365 * 24 * 3600);
+          bildUrl = signedData?.signedUrl || null;
+        } else {
+          // Öffentlicher Bucket (poster-exports) → Public URL
+          const { data: pubData } = Backend.client.storage.from(bucket).getPublicUrl(sp);
+          bildUrl = pubData?.publicUrl || null;
+        }
       } else if (bildInput?.dataset?.vorhandeneUrl) {
         bildUrl = bildInput.dataset.vorhandeneUrl;
       }
