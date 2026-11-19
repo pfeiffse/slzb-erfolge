@@ -5370,6 +5370,7 @@ async function renderVotingVerwaltung() {
           <button class=\"btn btn-ghost btn-sm\" onclick=\"zeigeVotingLink('${k.id}')\">🔗 Link</button>
           <button class=\"btn btn-ghost btn-sm\" onclick=\"zeigeVotingAushang('${k.id}')\">📢 Poster</button>
           ${Auth.canDo('bearbeiten')?`
+            <button class=\"btn btn-ghost btn-sm\" onclick=\"bearbeiteVotingKampagne('${k.id}')\">✏️ Bearbeiten</button>
             <button class=\"btn btn-ghost btn-sm\" onclick=\"zeigeVotingErgebnis('${k.id}')\">📊 Ergebnis</button>
             <button class=\"btn btn-ghost btn-sm\" onclick=\"toggleVotingStatus('${k.id}','${k.status}')\">
               ${k.status==='aktiv'?'⏹️ Beenden':k.status==='entwurf'?'▶️ Aktivieren':'🔄 Reaktivieren'}
@@ -6330,6 +6331,142 @@ function zeigeVotingLink(kampagneId) {
 }
 
 // ── Voting-Kampagne löschen ───────────────────────────────────
+
+// ── Abstimmung bearbeiten ─────────────────────────────────────
+async function bearbeiteVotingKampagne(kampagneId) {
+  const { data: k } = await Backend.client.from('voting_campaigns').select('*').eq('id', kampagneId).single();
+  const { data: kandidatenRaw } = await Backend.client.from('voting_candidates')
+    .select('*').eq('campaign_id', kampagneId).order('reihenfolge');
+
+  // Signed URLs erneuern
+  const kandidaten = await Promise.all((kandidatenRaw||[]).map(async k2 => {
+    if (k2.storage_path && (k2.storage_bucket||'achievement-media') === 'achievement-media') {
+      const { data: sd } = await Backend.client.storage
+        .from('achievement-media').createSignedUrl(k2.storage_path, 3600);
+      return { ...k2, bild_url: sd?.signedUrl || k2.bild_url };
+    }
+    return k2;
+  }));
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.maxWidth = '700px';
+
+  const startVal = k.start_at ? k.start_at.slice(0,16) : '';
+  const endVal   = k.end_at   ? k.end_at.slice(0,16)   : '';
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>✏️ Abstimmung bearbeiten</h3>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group mb-3">
+        <label style="font-weight:600">Titel <span class="required">*</span></label>
+        <input type="text" id="ve-titel" value="${esc(k.titel||'')}" style="width:100%">
+      </div>
+      <div class="form-row cols-2 mb-3">
+        <div class="form-group">
+          <label style="font-weight:600">Start</label>
+          <input type="datetime-local" id="ve-start" value="${startVal}" style="width:100%">
+        </div>
+        <div class="form-group">
+          <label style="font-weight:600">Ende</label>
+          <input type="datetime-local" id="ve-end" value="${endVal}" style="width:100%">
+        </div>
+      </div>
+      <div style="font-weight:600;margin-bottom:8px">Kandidaten:</div>
+      ${kandidaten.map((k2,i) => `
+        <div class="card mb-2" style="border:1px solid var(--slzb-border)">
+          <div class="card-body" style="padding:10px">
+            <div style="font-weight:700;color:var(--slzb-primary);margin-bottom:8px">Kandidat ${i+1}</div>
+            <div class="form-row cols-2">
+              <div class="form-group">
+                <label style="font-size:.8rem">Name</label>
+                <input type="text" id="ve-name-${k2.id}" value="${esc(k2.name||'')}" style="width:100%;font-size:.85rem">
+              </div>
+              <div class="form-group">
+                <label style="font-size:.8rem">Sportart</label>
+                <input type="text" id="ve-sport-${k2.id}" value="${esc(k2.sportart||'')}" style="width:100%;font-size:.85rem">
+              </div>
+              <div class="form-group" style="grid-column:1/-1">
+                <label style="font-size:.8rem">Erfolg</label>
+                <input type="text" id="ve-erfolg-${k2.id}" value="${esc(k2.erfolg||'')}" style="width:100%;font-size:.85rem">
+              </div>
+              <div class="form-group">
+                <label style="font-size:.8rem">Klasse</label>
+                <input type="text" id="ve-klasse-${k2.id}" value="${esc(k2.klasse||'')}" style="width:100%;font-size:.85rem">
+              </div>
+              <div class="form-group">
+                <label style="font-size:.8rem">Bild</label>
+                ${k2.bild_url ? `<div style="margin-bottom:6px"><img src="${esc(k2.bild_url)}" style="max-height:60px;border-radius:6px;object-fit:cover"></div>` : ''}
+                <input type="file" id="ve-bild-${k2.id}" accept="image/jpeg,image/png,image/webp"
+                  style="width:100%;font-size:.8rem">
+                <div style="font-size:.7rem;color:#888;margin-top:2px">Neues Bild hochladen um bestehendes zu ersetzen</div>
+              </div>
+            </div>
+          </div>
+        </div>`).join('')}
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="speichereVotingBearbeitung('${kampagneId}', ${JSON.stringify(kandidaten.map(k2=>k2.id))})">💾 Speichern</button>
+    </div>`;
+
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+async function speichereVotingBearbeitung(kampagneId, kandidatenIds) {
+  const titel = document.getElementById('ve-titel')?.value.trim();
+  if (!titel) { toast('Titel darf nicht leer sein', 'warning'); return; }
+
+  // Kampagne aktualisieren
+  const { error: kErr } = await Backend.client.from('voting_campaigns').update({
+    titel,
+    start_at: document.getElementById('ve-start')?.value || null,
+    end_at:   document.getElementById('ve-end')?.value   || null,
+  }).eq('id', kampagneId);
+  if (kErr) { toast('Fehler: ' + kErr.message, 'danger'); return; }
+
+  // Kandidaten aktualisieren
+  for (const kid of kandidatenIds) {
+    const name   = document.getElementById(`ve-name-${kid}`)?.value.trim();
+    const sport  = document.getElementById(`ve-sport-${kid}`)?.value.trim();
+    const erfolg = document.getElementById(`ve-erfolg-${kid}`)?.value.trim();
+    const klasse = document.getElementById(`ve-klasse-${kid}`)?.value.trim();
+    const bildInput = document.getElementById(`ve-bild-${kid}`);
+
+    let bildUrl = null;
+    let storagePath = null;
+
+    if (bildInput?.files?.[0]) {
+      // Neues Bild hochladen
+      const file = bildInput.files[0];
+      const pfad = `voting/${kampagneId}_${kid}_${Date.now()}.${file.name.split('.').pop()}`;
+      const { error: upErr } = await Backend.client.storage
+        .from('poster-exports').upload(pfad, file, { contentType: file.type, upsert: true });
+      if (!upErr) {
+        const { data: urlData } = Backend.client.storage.from('poster-exports').getPublicUrl(pfad);
+        bildUrl = urlData?.publicUrl || null;
+        storagePath = pfad;
+      }
+    }
+
+    const updateData = { name, sportart: sport, erfolg, klasse };
+    if (bildUrl) { updateData.bild_url = bildUrl; updateData.storage_path = storagePath; updateData.storage_bucket = 'poster-exports'; }
+
+    await Backend.client.from('voting_candidates').update(updateData).eq('id', kid);
+  }
+
+  document.querySelector('.modal-overlay')?.remove();
+  toast('✅ Abstimmung gespeichert', 'success');
+  navigateTo('sportler-des-monats');
+}
+
 async function loescheVotingKampagne(kampagneId, titel) {
   if (!confirm(`Abstimmung "${titel}" wirklich löschen?\n\nAlle Kandidaten und Stimmen werden ebenfalls gelöscht.`)) return;
   try {
@@ -6447,8 +6584,18 @@ async function zeigeVotingSiegerPoster(typ) {
 // ── Abstimmungs-Poster (Aushang + Social) ────────────────────
 async function zeigeVotingAushang(kampagneId) {
   const { data: k } = await Backend.client.from('voting_campaigns').select('*').eq('id', kampagneId).single();
-  const { data: kandidaten } = await Backend.client.from('voting_candidates')
+  const { data: kandidatenRaw } = await Backend.client.from('voting_candidates')
     .select('*').eq('campaign_id', kampagneId).order('reihenfolge');
+
+  // Signed URLs für achievement-media erneuern
+  const kandidaten = await Promise.all((kandidatenRaw||[]).map(async k2 => {
+    if (k2.storage_path && k2.storage_bucket === 'achievement-media') {
+      const { data: sd } = await Backend.client.storage
+        .from('achievement-media').createSignedUrl(k2.storage_path, 3600);
+      return { ...k2, bild_url: sd?.signedUrl || k2.bild_url };
+    }
+    return k2;
+  }));
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
