@@ -6218,7 +6218,7 @@ function toggleVotingKandidat(id, name, sport, titel, erfolg, bildUrl, storagePa
     if (card) card.style.borderColor = 'var(--slzb-border)';
     if (check) { check.textContent = ''; check.style.background = ''; check.style.borderColor = 'var(--slzb-border)'; }
   } else {
-    if (auswahl.length >= 3) { toast('Maximal 3 Kandidaten auswählbar', 'warning'); return; }
+    if (auswahl.length >= 7) { toast('Maximal 7 Kandidaten auswählbar', 'warning'); return; }
     auswahl.push({ id, name, sport, titel, erfolg, bildUrl, storagePath, storageBucket });
     if (card) card.style.borderColor = 'var(--slzb-primary)';
     if (check) { check.textContent = '✓'; check.style.background = 'var(--slzb-primary)'; check.style.color = '#fff'; check.style.borderColor = 'var(--slzb-primary)'; }
@@ -6226,7 +6226,7 @@ function toggleVotingKandidat(id, name, sport, titel, erfolg, bildUrl, storagePa
 
   window._votingAuswahl = auswahl;
   const zaehler = document.getElementById('voting-auswahl-zaehler');
-  if (zaehler) zaehler.textContent = `${auswahl.length} von 3 ausgewählt`;
+  if (zaehler) zaehler.textContent = `${auswahl.length} von 7 ausgewählt`;
 }
 
 function uebernehmeVotingKandidaten() {
