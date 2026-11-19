@@ -3,9 +3,11 @@
 <html lang="de">
 <head>
 <meta charset="utf-8"/>
+<link href="favicon.png" rel="icon" type="image/png"/>
+<link href="favicon.svg" rel="icon" type="image/svg+xml"/>
 <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0" name="viewport"/>
 <title>SLZB-Erfolge v3</title>
-<link href="style.css" rel="stylesheet"/>
+<link href="style.css" rel="stylesheet">
 <style>
     .login-screen {
       min-height:100vh; display:flex; align-items:center; justify-content:center;
@@ -71,7 +73,7 @@
       max-height:120px; overflow-y:auto; display:none;
     }
   </style>
-</head>
+</link></head>
 <body>
 <!-- Loading -->
 <div class="loading-overlay" id="loading-overlay">
@@ -83,7 +85,7 @@
 <div class="login-screen">
 <div class="login-card">
 <div class="login-logo">
-<div class="logo-big"><img src="slzb-sport-erfolge-logo.png" alt="SLZB Sport-Erfolge Logo" onerror="this.parentNode.innerHTML='S'"></div>
+<div class="logo-big"><img alt="SLZB Sport-Erfolge Logo" onerror="this.parentNode.innerHTML='S'" src="slzb-sport-erfolge-logo.png?expires=1797690229&amp;signature=8b63ef49b334554008b1f762602ccbfe30bbfc7be32d708fbaec71b26809b939&amp;kid=prod-250922"/></div>
 <h1>SLZB-Erfolge</h1>
 <p>Schul- und Leistungssportzentrum Berlin · v3</p>
 </div>
@@ -109,7 +111,7 @@
 <aside class="sidebar" id="sidebar"></aside>
 <div class="main-content">
 <header class="topbar">
-<button class="mobile-menu-btn" onclick="toggleSidebar()" style="display:none;align-items:center;justify-content:center;width:40px;height:40px;background:none;border:none;cursor:pointer;font-size:1.5rem;color:var(--slzb-primary);border-radius:8px;padding:0;flex-shrink:0" id="hamburger-btn">☰</button>
+<button class="mobile-menu-btn" id="hamburger-btn" onclick="toggleSidebar()" style="display:none;align-items:center;justify-content:center;width:40px;height:40px;background:none;border:none;cursor:pointer;font-size:1.5rem;color:var(--slzb-primary);border-radius:8px;padding:0;flex-shrink:0">☰</button>
 <div style="flex:1">
 <div class="topbar-title">SLZB-Erfolge</div>
 <div class="topbar-subtitle" id="topbar-subtitle">Schul- und Leistungssportzentrum Berlin</div>
@@ -125,7 +127,7 @@
 <!-- Debug Panel (Strg+D) -->
 <div id="debug-panel"></div>
 <!-- Google Fonts: Montserrat -->
-<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com" rel="preconnect">
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,700;1,700&amp;display=swap" rel="stylesheet"/>
 <!-- Supabase lokal (kein CDN – verhindert Tracking-Prevention-Blockierung) -->
 <script src="supabase.min.js"></script>
@@ -354,5 +356,5 @@ document.addEventListener('click', (e) => {
 // Auch beim Laden
 document.addEventListener('DOMContentLoaded', () => setTimeout(optimiereFormular, 500));
 </script>
-</body>
+</link></body>
 </html>
