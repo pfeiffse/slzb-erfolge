@@ -6338,13 +6338,15 @@ async function bearbeiteVotingKampagne(kampagneId) {
   const { data: kandidatenRaw } = await Backend.client.from('voting_candidates')
     .select('*').eq('campaign_id', kampagneId).order('reihenfolge');
 
-  // Signed URLs erneuern
+  // Signed URLs erneuern (achievement-media ist privat)
   const kandidaten = await Promise.all((kandidatenRaw||[]).map(async k2 => {
-    if (k2.storage_path && (k2.storage_bucket||'achievement-media') === 'achievement-media') {
+    const bucket = k2.storage_bucket || 'achievement-media';
+    if (k2.storage_path && bucket === 'achievement-media') {
       const { data: sd } = await Backend.client.storage
         .from('achievement-media').createSignedUrl(k2.storage_path, 3600);
       return { ...k2, bild_url: sd?.signedUrl || k2.bild_url };
     }
+    // poster-exports ist öffentlich → bild_url direkt verwenden
     return k2;
   }));
 
@@ -6593,11 +6595,13 @@ async function zeigeVotingAushang(kampagneId) {
 
   // Signed URLs für achievement-media erneuern
   const kandidaten = await Promise.all((kandidatenRaw||[]).map(async k2 => {
-    if (k2.storage_path && k2.storage_bucket === 'achievement-media') {
+    const bucket = k2.storage_bucket || 'achievement-media';
+    if (k2.storage_path && bucket === 'achievement-media') {
       const { data: sd } = await Backend.client.storage
         .from('achievement-media').createSignedUrl(k2.storage_path, 3600);
       return { ...k2, bild_url: sd?.signedUrl || k2.bild_url };
     }
+    // Kein storage_path: bild_url direkt verwenden (poster-exports ist öffentlich)
     return k2;
   }));
 
@@ -6626,6 +6630,7 @@ async function zeigeVotingAushang(kampagneId) {
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Schließen</button>
+      <button class="btn btn-outline" onclick="zeigeVotingBildausschnitt()">🖼️ Bildausschnitt</button>
       <button class="btn btn-primary" onclick="downloadVotingAushang()">📥 PNG herunterladen</button>
     </div>`;
 
@@ -6639,6 +6644,42 @@ async function zeigeVotingAushang(kampagneId) {
 
   setTimeout(() => zeichneVotingAushang('a3'), 100);
 }
+
+// Bildausschnitt-Editor für Voting-Aushang
+function zeigeVotingBildausschnitt() {
+  // Bildoffset/Zoom zurücksetzen
+  window._bildOffset = window._bildOffset || { x: 0.5, y: 0.5 };
+  window._bildZoom   = window._bildZoom   || 1.0;
+  // Öffne den Standard-Bildausschnitt-Editor
+  zeigeBildPositionEditor();
+  // Nach "Anwenden" soll der Voting-Aushang neu gezeichnet werden
+  // Wir überschreiben posterEditorAktualisieren temporär
+  const _orig = window._votingBildRefresh;
+  window._votingBildRefresh = true;
+}
+
+// Override: aktualisiereBildOffset ruft bei Voting-Modus den Aushang neu
+const _origAktualisiereBildOffset = window.aktualisiereBildOffset;
+window.aktualisiereBildOffset = function() {
+  const x    = parseInt(document.getElementById('bild-offset-x')?.value ?? 50) / 100;
+  const y    = parseInt(document.getElementById('bild-offset-y')?.value ?? 50) / 100;
+  const zoom = parseInt(document.getElementById('bild-zoom')?.value ?? 100) / 100;
+  window._bildOffset = { x, y };
+  window._bildZoom   = zoom;
+  const zoomLbl = document.getElementById('bild-zoom-label');
+  const oxLbl   = document.getElementById('bild-ox-label');
+  const oyLbl   = document.getElementById('bild-oy-label');
+  if (zoomLbl) zoomLbl.textContent = Math.round(zoom * 100) + '%';
+  if (oxLbl)   oxLbl.textContent   = Math.round(x * 100) + '%';
+  if (oyLbl)   oyLbl.textContent   = Math.round(y * 100) + '%';
+  _bildVorschauAktualisieren();
+  // Voting-Aushang neu zeichnen wenn aktiv
+  if (window._votingBildRefresh && window._votingAushangKampagne) {
+    zeichneVotingAushang(window._votingAushangFormat || 'a3');
+  } else if (!window._votingBildRefresh) {
+    posterEditorAktualisieren();
+  }
+};
 
 function switchVotingAushangTab(format, btn) {
   document.querySelectorAll('.modal .tab-btn').forEach(b => b.classList.remove('active'));
