@@ -6412,15 +6412,19 @@ async function bearbeiteVotingKampagne(kampagneId) {
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
-      <button class="btn btn-primary" onclick="speichereVotingBearbeitung('${kampagneId}', ${JSON.stringify(kandidaten.map(k2=>k2.id))})">💾 Speichern</button>
+      <button class=\"btn btn-primary\" onclick=\"speichereVotingBearbeitung('${kampagneId}')\">💾 Speichern</button>
     </div>`;
 
   overlay.appendChild(modal);
   overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
   document.body.appendChild(overlay);
+  // IDs für speichereVotingBearbeitung merken
+  window._veKandidatenIds = kandidaten.map(k2 => k2.id);
 }
 
 async function speichereVotingBearbeitung(kampagneId, kandidatenIds) {
+  // IDs aus window-Variable wenn nicht übergeben
+  const ids = kandidatenIds || window._veKandidatenIds || [];
   const titel = document.getElementById('ve-titel')?.value.trim();
   if (!titel) { toast('Titel darf nicht leer sein', 'warning'); return; }
 
