@@ -6141,10 +6141,10 @@ async function zeigeVotingKandidatenAuswahl() {
     const storagePathMap = {};
     for (const m of (medien||[])) {
       if (!medienMap[m.achievement_id] && m.storage_path) {
-        // Public URL (Bucket ist jetzt öffentlich)
-        const { data: pubData } = Backend.client.storage
-          .from('achievement-media').getPublicUrl(m.storage_path);
-        medienMap[m.achievement_id] = pubData?.publicUrl || null;
+        // achievement-media ist privat → Signed URL (1 Jahr gültig)
+        const { data: signedData } = await Backend.client.storage
+          .from('achievement-media').createSignedUrl(m.storage_path, 365 * 24 * 3600);
+        medienMap[m.achievement_id] = signedData?.signedUrl || null;
         storagePathMap[m.achievement_id] = m.storage_path;
       }
     }
