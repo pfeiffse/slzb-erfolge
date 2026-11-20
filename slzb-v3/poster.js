@@ -456,18 +456,17 @@ async function ladeBild(url) {
 
   const anonKey = window.SLZB_CONFIG?.supabaseAnonKey || '';
   const istSupabaseStorage = url.includes('.supabase.co/storage/');
+  // Signed URLs enthalten bereits einen Token – keine Auth-Header nötig
+  const istSignedUrl = url.includes('/object/sign/') || url.includes('token=');
 
   try {
-    // Supabase Storage braucht immer den apikey-Header (auch bei "public" Buckets).
-    // Kein Bearer-Token für öffentliche Objekte – nur apikey reicht.
-    let session = null;
-    try { session = await Backend.session(); } catch(_) {}
-    const accessToken = session?.access_token || '';
-
     const headers = {};
-    if (istSupabaseStorage && anonKey) {
+    if (istSupabaseStorage && !istSignedUrl && anonKey) {
+      // Nur für nicht-signierte URLs Auth-Header setzen
+      let session = null;
+      try { session = await Backend.session(); } catch(_) {}
+      const accessToken = session?.access_token || '';
       headers['apikey'] = anonKey;
-      // Nur wenn eingeloggt: auch Authorization mitschicken (für private Buckets)
       if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
     }
 
