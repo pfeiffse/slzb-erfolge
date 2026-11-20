@@ -167,11 +167,79 @@ const PDF = {
     a.click(); URL.revokeObjectURL(url);
   },
 
+  // ── Datei einlesen: Excel (.xlsx) oder CSV ───────────────────
+  async leseCSVFlexibel(datei) {
+    if (datei.name.match(/\.xlsx?$/i)) return this.leseExcel(datei);
+    return this._leseCSVText(datei);
+  },
+
+  async leseExcel(datei) {
+    if (!window.XLSX) {
+      await new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+        s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
+    }
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+          const daten = rows.map(row => {
+            const obj = {};
+            for (const [k, v] of Object.entries(row)) {
+              let val = v instanceof Date ? v.toISOString().slice(0,10) : String(v).trim();
+              obj[k] = val;
+              // Normalisierte Aliases für Kompatibilität
+              const nk = String(k).toLowerCase().replace(/[^a-z0-9]/g,'');
+              if (nk==='titel') obj['Titel'] = val;
+              if (nk==='sportart') obj['Sportart'] = val;
+              if (nk==='datum') obj['Datum'] = val;
+              if (nk==='wettbewerb') obj['Wettbewerb'] = val;
+              if (nk==='platz'||nk==='platzierung') obj['Platz'] = val;
+              if (nk==='medaille') obj['Medaille'] = val;
+              if (nk==='athletteam'||nk==='athlet'||nk==='athletinteam') obj['Athlet/Team'] = val;
+              if (nk==='ebene') obj['Ebene'] = val;
+              if (nk==='kurzinfo') obj['Kurzinfo'] = val;
+            }
+            return obj;
+          }).filter(obj => Object.values(obj).some(v => v && v !== ''));
+          resolve(daten);
+        } catch(err) { reject(err); }
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(datei);
+    });
+  },
+
+  async downloadExcelVorlage() {
+    if (!window.XLSX) {
+      await new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+        s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
+    }
+    const wb = XLSX.utils.book_new();
+    const headers = ['Titel *', 'Sportart *', 'Datum *', 'Wettbewerb', 'Platz', 'Medaille', 'Athlet/Team', 'Ebene', 'Kurzinfo'];
+    const beispiel = ['Max Mustermann – 1. Platz 100m Rücken', 'Schwimmen', '15.11.2026', 'Deutsche Meisterschaften', '1', 'Gold', 'Max Mustermann', 'Bundesebene', 'Toller Wettkampf!'];
+    const ws = XLSX.utils.aoa_to_sheet([headers, beispiel]);
+    ws['!cols'] = [{wch:40},{wch:15},{wch:12},{wch:30},{wch:8},{wch:10},{wch:25},{wch:15},{wch:25}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Meldungen');
+    XLSX.writeFile(wb, 'SLZB_Importvorlage.xlsx');
+  },
+
+  // ── CSV einlesen (ohne SheetJS) ───────────────────────────────
   // ── CSV einlesen (ohne SheetJS) ───────────────────────────
   async leseCSV(datei) { return this.leseCSVFlexibel(datei); },
 
   // CSV einlesen – unterstützt Semikolon und Komma als Trennzeichen
-  async leseCSVFlexibel(datei) {
+  async _leseCSVText(datei) {
     return new Promise((resolve,reject)=>{
       const reader=new FileReader();
       reader.onload=(e)=>{

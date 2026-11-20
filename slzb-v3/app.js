@@ -507,36 +507,58 @@ function bilderBlock() {
 
 function kerndatenFelder(extra='') {
   return `<div id="form-errors"></div>
-  <div class="form-group"><label>Titel <span class="required">*</span></label>
-    <input type="text" id="f-titel" placeholder="z.B. Landesmeister 100m Sprint 2026" maxlength="300"></div>
+
+  <!-- Pflichtfelder -->
+  <div class="form-group">
+    <label>Titel <span class="required">*</span>
+      <span style="font-weight:400;color:#888;font-size:.8rem"> – z.B. "Max Mustermann – 1. Platz 100m Rücken"</span>
+    </label>
+    <input type="text" id="f-titel" placeholder="z.B. Landesmeister 100m Sprint 2026" maxlength="300" style="font-size:1rem;padding:10px 12px">
+  </div>
   <div class="form-row cols-2">
     <div class="form-group"><label>Sportart <span class="required">*</span></label>
-      <input type="text" id="f-sportart-text" placeholder="z.B. Leichtathletik" autocomplete="off"></div>
-    <div class="form-group"><label>Disziplin</label>
-      <input type="text" id="f-disziplin" placeholder="z.B. 100m Sprint" autocomplete="off"></div>
+      <input type="text" id="f-sportart-text" placeholder="z.B. Schwimmen" autocomplete="off"></div>
+    <div class="form-group"><label>Datum <span class="required">*</span></label>
+      <input type="date" id="f-datum"></div>
   </div>
-  <div class="form-group"><label>Wettbewerb / Veranstaltung</label>
-    <input type="text" id="f-wettbewerb-text" placeholder="z.B. Berliner Landesmeisterschaften 2026" autocomplete="off"></div>
-  <div class="form-row cols-4">
-    <div class="form-group"><label>Datum <span class="required">*</span></label><input type="date" id="f-datum"></div>
-    <div class="form-group"><label>Ort</label><input type="text" id="f-ort" placeholder="z.B. Berlin"></div>
-    <div class="form-group"><label>Ebene</label>
-      <select id="f-ebene"><option value="">–</option>${ebeneOptions()}</select></div>
-    <div class="form-group"><label>Medaille</label>
-      <select id="f-medaille" onchange=\"syncMedaillePlatz(this.value)\">${['keine','Bronze','Silber','Gold'].map(m=>`<option>${m}</option>`).join('')}</select></div>
-  </div>
-  <div class="form-row cols-3">
+  <div class="form-row cols-2">
     <div class="form-group"><label>Platzierung</label>
-      <input type="number" id="f-platzierung" min="1" placeholder="1" oninput=\"syncPlatzMedaille(this.value)\">"1"></div>
-    <div class="form-group"><label>Ergebnis (Wert)</label>
-      <input type="number" id="f-ergebnis-wert" step="0.001" placeholder="10.85"></div>
-    <div class="form-group"><label>Einheit</label>
-      <input type="text" id="f-ergebnis-einheit" placeholder="Sekunden / Meter / Punkte"></div>
+      <input type="number" id="f-platzierung" min="1" placeholder="1" oninput=\\"syncPlatzMedaille(this.value)\\"></div>
+    <div class="form-group"><label>Wettbewerb / Veranstaltung</label>
+      <input type="text" id="f-wettbewerb-text" placeholder="z.B. Deutsche Meisterschaften 2026" autocomplete="off"></div>
   </div>
-  <div class="form-group"><label>Ergebnis (Text)</label>
-    <input type="text" id="f-ergebnis-text" placeholder="z.B. Neuer Schulrekord"></div>
-  <div class="form-group"><label>Kurzinfo</label>
-    <textarea id="f-kurzinfo" rows="3" placeholder="Kurze Beschreibung..."></textarea></div>
+
+  <!-- Weitere Details ausklappbar -->
+  <details style="margin-top:8px;border:1px solid var(--slzb-border);border-radius:8px;padding:0">
+    <summary style="padding:10px 14px;cursor:pointer;font-weight:600;color:var(--slzb-primary);list-style:none;display:flex;align-items:center;gap:8px">
+      <span>⚙️ Weitere Details</span>
+      <span style="font-weight:400;font-size:.8rem;color:#888">(Disziplin, Ort, Ebene, Ergebnis...)</span>
+    </summary>
+    <div style="padding:12px 14px;border-top:1px solid var(--slzb-border)">
+      <div class="form-row cols-2">
+        <div class="form-group"><label>Disziplin</label>
+          <input type="text" id="f-disziplin" placeholder="z.B. 100m Sprint" autocomplete="off"></div>
+        <div class="form-group"><label>Ort</label>
+          <input type="text" id="f-ort" placeholder="z.B. Berlin"></div>
+      </div>
+      <div class="form-row cols-2">
+        <div class="form-group"><label>Ebene</label>
+          <select id="f-ebene"><option value="">–</option>${ebeneOptions()}</select></div>
+        <div class="form-group"><label>Medaille</label>
+          <select id="f-medaille" onchange=\\"syncMedaillePlatz(this.value)\\">${['keine','Bronze','Silber','Gold'].map(m=>`<option>${m}</option>`).join('')}</select></div>
+      </div>
+      <div class="form-row cols-3">
+        <div class="form-group"><label>Ergebnis (Wert)</label>
+          <input type="number" id="f-ergebnis-wert" step="0.001" placeholder="10.85"></div>
+        <div class="form-group"><label>Einheit</label>
+          <input type="text" id="f-ergebnis-einheit" placeholder="Sek / m / Pkt"></div>
+        <div class="form-group"><label>Ergebnis (Text)</label>
+          <input type="text" id="f-ergebnis-text" placeholder="z.B. Neuer Schulrekord"></div>
+      </div>
+      <div class="form-group"><label>Kurzinfo</label>
+        <textarea id="f-kurzinfo" rows="2" placeholder="Kurze Beschreibung..."></textarea></div>
+    </div>
+  </details>
   ${extra}`;
 }
 
@@ -1223,9 +1245,9 @@ function renderSammelmeldungForm() {
         <div class="card-header"><h2>📥 CSV-Import</h2></div>
         <div class="card-body">
           <div class="alert alert-info"><span class="alert-icon">ℹ️</span>
-            <span>Pflichtfelder: Titel, Sportart, Datum. Trennzeichen: Semikolon oder Komma.</span></div>
+            <span>Pflichtfelder: Titel, Sportart, Datum. Unterstützt <strong>Excel (.xlsx)</strong> und CSV. Einfach Vorlage herunterladen, ausfüllen und hochladen.</span></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-            <button class="btn btn-outline btn-sm" onclick="PDF.downloadImportvorlage()">⬇️ Vorlage herunterladen (CSV)</button>
+            <button class="btn btn-primary btn-sm" onclick="PDF.downloadExcelVorlage()">📥 Excel-Vorlage (.xlsx) herunterladen</button>
             <button class="btn btn-ghost btn-sm" onclick="sammelCSVInRaster()">📋 In Raster übernehmen</button>
           </div>
           <div class="form-group mt-3"><label>CSV-Datei hochladen</label>
