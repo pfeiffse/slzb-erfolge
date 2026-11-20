@@ -6593,25 +6593,28 @@ async function zeigeVotingAushang(kampagneId) {
   const { data: kandidatenRaw } = await Backend.client.from('voting_candidates')
     .select('*').eq('campaign_id', kampagneId).order('reihenfolge');
 
-  // Signed URLs für achievement-media erneuern
+  // Bilder für Kandidaten laden: Signed URL aus storage_path oder achievement_media
   const kandidaten = await Promise.all((kandidatenRaw||[]).map(async k2 => {
-    const bucket = k2.storage_bucket || 'achievement-media';
-    // storage_path aus bild_url extrahieren wenn nicht direkt gespeichert
+    // 1. storage_path aus bild_url extrahieren
     let storagePath = k2.storage_path;
     if (!storagePath && k2.bild_url) {
-      // Signed URL Format: .../object/sign/achievement-media/PATH?token=...
-      // Public URL Format: .../object/public/achievement-media/PATH
-      const signMatch = k2.bild_url.match(/\/object\/sign\/achievement-media\/([^?]+)/);
-      const pubMatch  = k2.bild_url.match(/\/object\/public\/achievement-media\/([^?]+)/);
-      storagePath = (signMatch || pubMatch)?.[1] || null;
+      const m = k2.bild_url.match(/\/object\/(?:sign|public)\/achievement-media\/([^?]+)/);
+      storagePath = m?.[1] || null;
     }
-
+    // 2. Neue Signed URL generieren
     if (storagePath) {
-      const { data: sd, error: sdErr } = await Backend.client.storage
-        .from('achievement-media').createSignedUrl(storagePath, 3600);
-      if (sd?.signedUrl) return { ...k2, bild_url: sd.signedUrl, storage_path: storagePath };
+      const { data: sd } = await Backend.client.storage.from('achievement-media').createSignedUrl(storagePath, 3600);
+      if (sd?.signedUrl) return { ...k2, bild_url: sd.signedUrl };
     }
-    // Fallback: bild_url direkt (poster-exports öffentlich oder kein Bild)
+    // 3. Fallback: Bild aus achievement_media über achievement_id
+    if (!storagePath && k2.achievement_id) {
+      const { data: media } = await Backend.client.from('achievement_media')
+        .select('storage_path').eq('achievement_id', k2.achievement_id).limit(1).single();
+      if (media?.storage_path) {
+        const { data: sd } = await Backend.client.storage.from('achievement-media').createSignedUrl(media.storage_path, 3600);
+        if (sd?.signedUrl) return { ...k2, bild_url: sd.signedUrl };
+      }
+    }
     return k2;
   }));
 
