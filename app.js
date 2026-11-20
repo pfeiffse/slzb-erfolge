@@ -1817,6 +1817,7 @@ function leseDatenAusFormular(meldungsart) {
     sportartId:      sp?.id||null, sportartText,
     disziplin:       document.getElementById('f-disziplin')?.value||'',
     wettbewerbId:    wb?.id||null,
+    wettbewerbText,
     datum:           document.getElementById('f-datum')?.value||null,
     ort:             document.getElementById('f-ort')?.value||'',
     ebene:           document.getElementById('f-ebene')?.value||'',

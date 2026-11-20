@@ -426,32 +426,18 @@ function getStatusAktionen(status,rolle) {
     
     redaktion:{
       'Eingereicht':[
-        {status:'Datenprüfung',label:'🔍 Datenprüfung',cls:'outline'},
+        {status:'Freigegeben',label:'✅ Freigeben',cls:'success'},
         {status:'Rückfrage an Melder',label:'💬 Rückfrage',cls:'warning'},
         {status:'Unvollständig',label:'⚠️ Unvollständig',cls:'warning'},
         {status:'Dublettenverdacht',label:'🔁 Dublette',cls:'danger'},
       ],
-      'Datenprüfung':[
-        {status:'Einwilligungsprüfung',label:'🔒 Einwilligung prüfen',cls:'outline'},
-        {status:'Redaktion',label:'✏️ In Redaktion',cls:'primary'},
-        {status:'Rückfrage an Melder',label:'💬 Rückfrage',cls:'warning'},
-      ],
-      'Einwilligungsprüfung':[
-        {status:'Redaktion',label:'✏️ In Redaktion',cls:'primary'},
-        {status:'Wegen Einwilligung gesperrt',label:'🔒 Sperren',cls:'danger'},
-      ],
       'Dublettenverdacht':[
-        {status:'Redaktion',label:'✏️ Kein Duplikat',cls:'primary'},
+        {status:'Freigegeben',label:'✅ Kein Duplikat – Freigeben',cls:'success'},
         {status:'Gelöscht/Anonymisiert',label:'🗑️ Als Duplikat löschen',cls:'danger'},
-      ],
-      'Redaktion':[
-        {status:'Freigegeben',label:'✅ Freigeben',cls:'success'},
-        {status:'Freigabe Öffentlichkeitsarbeit',label:'📢 Zur ÖA-Freigabe (optional)',cls:'outline'},
-        {status:'Rückfrage an Melder',label:'💬 Rückfrage',cls:'warning'},
       ],
       'Unvollständig':[
         {status:'Rückfrage an Melder',label:'💬 Rückfrage senden',cls:'warning'},
-        {status:'Redaktion',label:'✏️ Vollständig – In Redaktion',cls:'primary'},
+        {status:'Freigegeben',label:'✅ Vollständig – Freigeben',cls:'success'},
       ],
     },
     oea:{
@@ -478,12 +464,10 @@ function getStatusAktionen(status,rolle) {
     admin:{
       'Entwurf':[{status:'Eingereicht',label:'📤 Einreichen',cls:'primary'}],
       'Eingereicht':[
-        {status:'Redaktion',label:'✏️ In Redaktion',cls:'primary'},
+        {status:'Freigegeben',label:'✅ Freigeben',cls:'success'},
         {status:'Rückfrage an Melder',label:'💬 Rückfrage',cls:'warning'},
         {status:'Dublettenverdacht',label:'🔁 Dublette',cls:'danger'},
       ],
-      'Redaktion':[{status:'Freigabe Öffentlichkeitsarbeit',label:'📢 Zur ÖA-Freigabe',cls:'primary'}],
-      'Freigabe Öffentlichkeitsarbeit':[{status:'Freigegeben',label:'✅ Freigeben',cls:'success'}],
       'Freigegeben':[
         {status:'Veröffentlicht',label:'🌐 Veröffentlicht',cls:'success'},
         {status:'Archiviert',label:'🗄️ Archivieren',cls:'ghost'},
