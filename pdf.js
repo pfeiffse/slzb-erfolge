@@ -225,12 +225,59 @@ const PDF = {
         document.head.appendChild(s);
       });
     }
+    const SPORTARTEN = ['Basketball','Beachvolleyball','Bogenschießen','Boxen','Eishockey','Eiskunstlauf','Eisschnelllauf','Fechten','Fußball','Gewichtheben','Handball','Judo','Leichtathletik','Para-Schwimmen','Radsport','Schwimmen','Turnen (männlich)','Volleyball','Wasserspringen'];
     const wb = XLSX.utils.book_new();
-    const headers = ['Titel *', 'Sportart *', 'Datum *', 'Wettbewerb', 'Platz', 'Medaille', 'Athlet/Team', 'Ebene', 'Kurzinfo'];
-    const beispiel = ['Max Mustermann – 1. Platz 100m Rücken', 'Schwimmen', '15.11.2026', 'Deutsche Meisterschaften', '1', 'Gold', 'Max Mustermann', 'Bundesebene', 'Toller Wettkampf!'];
-    const ws = XLSX.utils.aoa_to_sheet([headers, beispiel]);
-    ws['!cols'] = [{wch:40},{wch:15},{wch:12},{wch:30},{wch:8},{wch:10},{wch:25},{wch:15},{wch:25}];
-    XLSX.utils.book_append_sheet(wb, ws, 'Meldungen');
+
+    // ── Blatt 1: Meldungen ──
+    const headers = ['Titel *','Sportart *','Datum *','Wettbewerb','Platz','Medaille','Athlet/Team *','Ebene','Disziplin','Ort','Kurzinfo'];
+    const rows = [headers];
+    // 2 Beispielzeilen
+    rows.push(['Max Mustermann – 1. Platz Schwimmen (15.11.2026)','Schwimmen','15.11.2026','Deutsche Meisterschaften','1','Gold','Max Mustermann','Bundesebene','100m Rücken','Berlin','Toller Wettkampf!']);
+    rows.push(['Anna Schmidt – 2. Platz Judo (20.11.2026)','Judo','20.11.2026','Berliner Meisterschaften','2','Silber','Anna Schmidt','Landesebene','U18 -52kg','Berlin','']);
+    // 47 leere Eingabezeilen
+    for (let i = 0; i < 47; i++) rows.push(['','','','','','','','','','','']);
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:50},{wch:18},{wch:12},{wch:30},{wch:8},{wch:10},{wch:25},{wch:15},{wch:20},{wch:15},{wch:30}];
+    ws['!freeze'] = {xSplit:0, ySplit:1};
+    // Dropdown-Validierungen
+    ws['!dataValidation'] = [
+      {sqref:'B2:B50',type:'list',formula1:'"'+SPORTARTEN.join(',') +'"',showErrorMessage:true,errorTitle:'Ungültige Sportart',error:'Bitte aus der Liste wählen.',errorStyle:'warning'},
+      {sqref:'F2:F50',type:'list',formula1:'"Gold,Silber,Bronze,keine"',showErrorMessage:true,errorTitle:'Ungültige Medaille',error:'Bitte Gold, Silber, Bronze oder keine.',errorStyle:'warning'},
+      {sqref:'H2:H50',type:'list',formula1:'"Schulebene,Bezirk,Landesebene,Bundesebene,International,Weltmeisterschaft,Olympia,Sonstiges"',showErrorMessage:true,errorTitle:'Ungültige Ebene',error:'Bitte aus der Liste wählen.',errorStyle:'warning'},
+      {sqref:'E2:E50',type:'whole',operator:'between',formula1:'1',formula2:'100',showErrorMessage:true,errorTitle:'Ungültige Platzierung',error:'Zahl zwischen 1 und 100.',errorStyle:'warning'}
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, '📋 Meldungen');
+
+    // ── Blatt 2: Hilfe ──
+    const hilfe = [
+      ['SLZB-Erfolge – Import-Hilfe','',''],
+      ['','',''],
+      ['PFLICHTFELDER (rot markiert)','',''],
+      ['Spalte','Beschreibung','Beispiel'],
+      ['Titel *','Kurze Beschreibung. Kann manuell eingegeben werden.','Max Mustermann – 1. Platz Deutsche Meisterschaften'],
+      ['Sportart *','Aus Dropdown-Liste wählen','Schwimmen'],
+      ['Datum *','Format: TT.MM.JJJJ','15.11.2026'],
+      ['Athlet/Team *','Name des Athleten oder Teams','Max Mustermann'],
+      ['','',''],
+      ['OPTIONALE FELDER','',''],
+      ['Wettbewerb','Name der Veranstaltung','Deutsche Meisterschaften 2026'],
+      ['Platz','Platzierung als Zahl (1-100)','1'],
+      ['Medaille','Gold, Silber, Bronze oder keine','Gold'],
+      ['Ebene','Wettkampfebene aus Dropdown','Bundesebene'],
+      ['Disziplin','Spezifische Disziplin','100m Rücken'],
+      ['Ort','Ort des Wettkampfs','Berlin'],
+      ['Kurzinfo','Zusätzliche Informationen','Neuer Schulrekord!'],
+      ['','',''],
+      ['TIPPS','',''],
+      ['','Beispielzeilen (Zeilen 2-3) können gelöscht werden',''],
+      ['','Mehrere Athleten: Komma-getrennt in Athlet/Team','Max M., Anna S.'],
+      ['','Datum-Format: TT.MM.JJJJ (z.B. 15.11.2026)',''],
+      ['','Keine leeren Zeilen zwischen Meldungen lassen',''],
+    ];
+    const wsH = XLSX.utils.aoa_to_sheet(hilfe);
+    wsH['!cols'] = [{wch:25},{wch:55},{wch:45}];
+    XLSX.utils.book_append_sheet(wb, wsH, '❓ Hilfe');
+
     XLSX.writeFile(wb, 'SLZB_Importvorlage.xlsx');
   },
 
