@@ -227,7 +227,65 @@ function initApp() {
   renderSidebar();
   document.getElementById('topbar-subtitle').textContent =
     `Angemeldet als: ${Auth.name()} (${Auth.rolle()})`;
+  renderBottomNav();
+  renderFAB();
   navigateTo('dashboard');
+}
+
+// ── Bottom Navigation Bar (Mobile) ───────────────────────────
+function renderBottomNav() {
+  if (document.getElementById('bottom-nav')) return;
+  const r = Auth.rolle();
+  const nav = document.createElement('nav');
+  nav.id = 'bottom-nav';
+  nav.className = 'bottom-nav';
+  nav.innerHTML = `
+    <button class="bottom-nav-item active" id="bn-dashboard" onclick="navigateTo('dashboard');updateBottomNav('dashboard')">
+      <span class="nav-icon-big">🏠</span>
+      <span>Start</span>
+    </button>
+    <button class="bottom-nav-item" id="bn-meine-meldungen" onclick="navigateTo('meine-meldungen');updateBottomNav('meine-meldungen')">
+      <span class="nav-icon-big">📋</span>
+      <span>Meldungen</span>
+    </button>
+    <button class="bottom-nav-item" id="bn-neue-meldung" onclick="APP.selectedMeldungsart=null;navigateTo('neue-meldung');updateBottomNav('neue-meldung')" style="position:relative">
+      <span class="nav-icon-big">➕</span>
+      <span>Neu</span>
+    </button>
+    ${r==='admin'||r==='redaktion'||r==='oea' ? `
+    <button class="bottom-nav-item" id="bn-redaktion" onclick="navigateTo('redaktion');updateBottomNav('redaktion')" style="position:relative">
+      <span class="nav-icon-big">✏️</span>
+      <span>Prüfen</span>
+      <span class="bottom-nav-badge hidden" id="bn-badge-redaktion"></span>
+    </button>` : ''}
+    <button class="bottom-nav-item" id="bn-ausgaben" onclick="navigateTo('ausgaben');updateBottomNav('ausgaben')">
+      <span class="nav-icon-big">📤</span>
+      <span>Ausgaben</span>
+    </button>
+  `;
+  document.body.appendChild(nav);
+}
+
+function updateBottomNav(page) {
+  document.querySelectorAll('.bottom-nav-item').forEach(btn => {
+    btn.classList.toggle('active', btn.id === 'bn-' + page);
+  });
+}
+
+// ── Floating Action Button (Neue Meldung) ────────────────────
+function renderFAB() {
+  if (document.getElementById('fab-neu')) return;
+  const fab = document.createElement('button');
+  fab.id = 'fab-neu';
+  fab.className = 'fab';
+  fab.title = 'Neue Meldung';
+  fab.innerHTML = '➕';
+  fab.onclick = () => {
+    APP.selectedMeldungsart = null;
+    navigateTo('neue-meldung');
+    updateBottomNav('neue-meldung');
+  };
+  document.body.appendChild(fab);
 }
 
 
