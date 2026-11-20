@@ -6426,7 +6426,10 @@ async function bearbeiteVotingKampagne(kampagneId) {
 
 async function speichereVotingBearbeitung(kampagneId, kandidatenIds) {
   // IDs aus window-Variable wenn nicht übergeben
-  const ids = kandidatenIds || window._veKandidatenIds || [];
+  let ids = kandidatenIds || window._veKandidatenIds || [];
+  // Sicherstellen dass ids ein Array ist
+  if (typeof ids === 'string') { try { ids = JSON.parse(ids); } catch(_) { ids = []; } }
+  if (!Array.isArray(ids)) ids = [];
   const titel = document.getElementById('ve-titel')?.value.trim();
   if (!titel) { toast('Titel darf nicht leer sein', 'warning'); return; }
 
