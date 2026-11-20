@@ -5,8 +5,18 @@
 <meta charset="utf-8"/>
 <link href="favicon.png" rel="icon" type="image/png"/>
 <link href="favicon.svg" rel="icon" type="image/svg+xml"/>
-<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0" name="viewport"/>
-<title>SLZB-Erfolge v3</title>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>SLZB-Erfolge</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#003366">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SLZB-Erfolge">
+<link rel="apple-touch-icon" href="icons/icon-192x192.png">
+<link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152x152.png">
 <link href="style.css" rel="stylesheet">
 <style>
     .login-screen {
@@ -356,5 +366,43 @@ document.addEventListener('click', (e) => {
 // Auch beim Laden
 document.addEventListener('DOMContentLoaded', () => setTimeout(optimiereFormular, 500));
 </script>
-</link></body>
+</link><script>
+// Service Worker registrieren (PWA)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js', { scope: '/slzb-erfolge/slzb-v3/' })
+      .then(reg => console.log('[PWA] Service Worker registriert:', reg.scope))
+      .catch(err => console.warn('[PWA] SW-Fehler:', err));
+  });
+}
+
+// Install-Banner für Android
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Install-Button anzeigen wenn verfügbar
+  const btn = document.getElementById('pwa-install-btn');
+  if (btn) btn.style.display = 'flex';
+});
+
+window.addEventListener('appinstalled', () => {
+  console.log('[PWA] App installiert!');
+  const btn = document.getElementById('pwa-install-btn');
+  if (btn) btn.style.display = 'none';
+});
+
+function installPWA() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(choice => {
+      if (choice.outcome === 'accepted') {
+        console.log('[PWA] Nutzer hat installiert');
+      }
+      deferredPrompt = null;
+    });
+  }
+}
+</script>
+</body>
 </html>
