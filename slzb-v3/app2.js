@@ -6596,14 +6596,22 @@ async function zeigeVotingAushang(kampagneId) {
   // Signed URLs für achievement-media erneuern
   const kandidaten = await Promise.all((kandidatenRaw||[]).map(async k2 => {
     const bucket = k2.storage_bucket || 'achievement-media';
-    console.log('[Voting] Kandidat:', k2.name, '| bucket:', bucket, '| storage_path:', k2.storage_path, '| bild_url:', k2.bild_url?.substring(0,60));
-    if (k2.storage_path && bucket === 'achievement-media') {
-      const { data: sd, error: sdErr } = await Backend.client.storage
-        .from('achievement-media').createSignedUrl(k2.storage_path, 3600);
-      console.log('[Voting] Signed URL:', sd?.signedUrl?.substring(0,60), '| Fehler:', sdErr?.message);
-      return { ...k2, bild_url: sd?.signedUrl || k2.bild_url };
+    // storage_path aus bild_url extrahieren wenn nicht direkt gespeichert
+    let storagePath = k2.storage_path;
+    if (!storagePath && k2.bild_url) {
+      // Signed URL Format: .../object/sign/achievement-media/PATH?token=...
+      // Public URL Format: .../object/public/achievement-media/PATH
+      const signMatch = k2.bild_url.match(/\/object\/sign\/achievement-media\/([^?]+)/);
+      const pubMatch  = k2.bild_url.match(/\/object\/public\/achievement-media\/([^?]+)/);
+      storagePath = (signMatch || pubMatch)?.[1] || null;
     }
-    // Kein storage_path: bild_url direkt verwenden (poster-exports ist öffentlich)
+
+    if (storagePath) {
+      const { data: sd, error: sdErr } = await Backend.client.storage
+        .from('achievement-media').createSignedUrl(storagePath, 3600);
+      if (sd?.signedUrl) return { ...k2, bild_url: sd.signedUrl, storage_path: storagePath };
+    }
+    // Fallback: bild_url direkt (poster-exports öffentlich oder kein Bild)
     return k2;
   }));
 
