@@ -3468,3 +3468,139 @@ async function zeichneAthletErfolge(ctx, W, H, opts) {
 
   zeichneSlzbFooterNeu(ctx, W, H, akzent);
 }
+
+
+// ── Carousel-Nummerierungs-Badge ──────────────────────────────
+function zeichneCarouselBadge(ctx, W, H, aktuell, gesamt) {
+  const txt = `${aktuell}/${gesamt}`;
+  const sz = Math.round(W * 0.032);
+  ctx.font = `bold ${sz}px Montserrat, Arial, sans-serif`;
+  const tw = ctx.measureText(txt).width;
+  const bw = tw + 24, bh = sz + 14;
+  const bx = W - bw - 20, by = 20;
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  slzbRoundRect(ctx, bx, by, bw, bh, bh/2); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(txt, bx + bw/2, by + bh/2);
+}
+
+// ── Carousel Deckblatt (1080×1350) ───────────────────────────
+async function zeichneCarouselDeckblatt(ctx, W, H, opts) {
+  // opts: { veranstaltung, sportart, datum, gesamt, bild, akzent }
+  const akzent = opts.akzent || 'blau';
+  await ladeMontserrat(); await ladeLogo();
+
+  if (opts.bild) {
+    zeichneSlzbHintergrund(ctx, W, H, opts.bild, akzent);
+  } else {
+    zeichneErsatzbild(ctx, W, H, opts.sportart || '');
+    const _g = ctx.createLinearGradient(0,0,0,H);
+    _g.addColorStop(0,'rgba(0,0,0,0.15)'); _g.addColorStop(0.35,'rgba(0,0,0,0.20)');
+    _g.addColorStop(0.65,'rgba(0,30,90,0.55)'); _g.addColorStop(1,'rgba(0,51,153,0.92)');
+    ctx.fillStyle=_g; ctx.fillRect(0,0,W,H);
+  }
+  zeichneSlzbDeko(ctx, W, H);
+  zeichneSlzbHeader(ctx, W, H, opts.sportart||'SLZB', opts.datum||'', akzent);
+  zeichneSlzbKarte(ctx, W, H, {
+    subtitle: 'UNSERE ATHLETEN',
+    titel: opts.veranstaltung || 'Weltcup-Vorschau',
+    wettbewerb: opts.datum || '',
+  }, akzent);
+  zeichneSlzbFooterNeu(ctx, W, H, akzent);
+  if (opts.gesamt) zeichneCarouselBadge(ctx, W, H, 1, opts.gesamt);
+}
+
+// ── Carousel Abschluss-Slide (1080×1350) ─────────────────────
+async function zeichneCarouselAbschluss(ctx, W, H, opts) {
+  const akzent = opts.akzent || 'blau';
+  await ladeMontserrat(); await ladeLogo();
+
+  zeichneErsatzbild(ctx, W, H, opts.sportart || '');
+  const _g = ctx.createLinearGradient(0,0,0,H);
+  _g.addColorStop(0,'rgba(0,0,0,0.15)'); _g.addColorStop(0.35,'rgba(0,0,0,0.20)');
+  _g.addColorStop(0.65,'rgba(0,30,90,0.55)'); _g.addColorStop(1,'rgba(0,51,153,0.92)');
+  ctx.fillStyle=_g; ctx.fillRect(0,0,W,H);
+  zeichneSlzbDeko(ctx, W, H);
+  zeichneSlzbHeader(ctx, W, H, opts.sportart||'SLZB', '', akzent);
+  zeichneSlzbKarte(ctx, W, H, {
+    subtitle: 'DRÜCKT UNS DIE DAUMEN!',
+    titel: opts.veranstaltung || 'Viel Erfolg!',
+    wettbewerb: '#SLZBerlin',
+  }, akzent);
+  zeichneSlzbFooterNeu(ctx, W, H, akzent);
+  if (opts.gesamt) zeichneCarouselBadge(ctx, W, H, opts.gesamt, opts.gesamt);
+}
+
+// ── Athleten-Porträt Quadrat (1080×1080) ─────────────────────
+async function zeichneAthletQuadrat(ctx, W, H, opts) {
+  const akzent = opts.akzent || 'blau';
+  await ladeMontserrat(); await ladeLogo();
+  if (opts.bild) {
+    zeichneSlzbHintergrund(ctx, W, H, opts.bild, akzent);
+  } else {
+    zeichneErsatzbild(ctx, W, H, opts.sportart || '');
+    const _g = ctx.createLinearGradient(0,0,0,H);
+    _g.addColorStop(0,'rgba(0,0,0,0.15)'); _g.addColorStop(1,'rgba(0,51,153,0.92)');
+    ctx.fillStyle=_g; ctx.fillRect(0,0,W,H);
+  }
+  zeichneSlzbDeko(ctx, W, H);
+  zeichneSlzbHeader(ctx, W, H, opts.sportart||'SLZB', '', akzent);
+  zeichneSlzbKarte(ctx, W, H, {
+    subtitle: opts.kader || opts.sportart || '',
+    vorname: opts.vorname || '',
+    nachname: opts.nachname || '',
+    titel: (!opts.vorname && !opts.nachname) ? opts.name : null,
+    zusatz: opts.klasse || null,
+    wettbewerb: opts.ziel || null,
+  }, akzent);
+  zeichneSlzbFooterNeu(ctx, W, H, akzent);
+  if (opts.nr && opts.gesamt) zeichneCarouselBadge(ctx, W, H, opts.nr, opts.gesamt);
+}
+
+// ── Twitter/X-Banner (1500×500) ──────────────────────────────
+async function zeichneTwitterBanner(ctx, W, H, opts) {
+  // opts: { veranstaltung, sportart, athleten[], bild, akzent }
+  const akzent = opts.akzent || 'blau';
+  await ladeMontserrat(); await ladeLogo();
+
+  // Hintergrund
+  if (opts.bild) {
+    ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H); ctx.clip();
+    drawCover(ctx, opts.bild, 0, 0, W, H); ctx.restore();
+  } else {
+    zeichneErsatzbild(ctx, W, H, opts.sportart || '');
+  }
+  // Gradient
+  const _g = ctx.createLinearGradient(0,0,W,0);
+  _g.addColorStop(0,'rgba(0,0,0,0.1)'); _g.addColorStop(0.4,'rgba(0,0,0,0.1)');
+  _g.addColorStop(0.7,'rgba(0,51,102,0.7)'); _g.addColorStop(1,'rgba(0,51,102,0.95)');
+  ctx.fillStyle=_g; ctx.fillRect(0,0,W,H);
+
+  // Logo links
+  drawLogo(ctx, 30, (H-60)/2, 60);
+
+  // Roter Trennstrich
+  ctx.fillStyle='#E2001A'; ctx.fillRect(120, H*0.2, 3, H*0.6);
+
+  // Sportart + Veranstaltung
+  ctx.fillStyle='#E2001A'; ctx.font=`bold ${Math.round(H*0.12)}px Montserrat, Arial, sans-serif`;
+  ctx.textAlign='left'; ctx.textBaseline='top';
+  ctx.fillText((opts.sportart||'SLZB').toUpperCase(), 140, H*0.18);
+
+  ctx.fillStyle='#fff'; ctx.font=`bold italic ${Math.round(H*0.16)}px Montserrat, Arial, sans-serif`;
+  ctx.fillText(opts.veranstaltung||'Weltcup-Vorschau', 140, H*0.35);
+
+  // Athleten-Namen rechts
+  if (opts.athleten?.length) {
+    const namen = opts.athleten.slice(0,5).join('  ·  ');
+    ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.font=`${Math.round(H*0.1)}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign='right';
+    ctx.fillText(namen, W-30, H*0.72);
+  }
+
+  // Footer
+  ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.font=`bold ${Math.round(H*0.09)}px Montserrat, Arial, sans-serif`;
+  ctx.textAlign='right';
+  ctx.fillText('#SLZBerlin', W-30, H*0.84);
+}

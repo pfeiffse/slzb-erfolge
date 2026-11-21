@@ -6923,8 +6923,16 @@ async function zeigeAthletenVorstellung() {
       <button class="btn btn-ghost btn-sm mt-2" onclick="avAthletHinzu()">+ Athlet hinzufügen</button>
     </div>
     <div class="modal-footer">
+      <div class="form-group" style="flex:1;min-width:180px;margin:0">
+        <select id="av-format" style="width:100%;background:var(--slzb-bg-secondary);color:var(--slzb-text);border:1px solid var(--slzb-border);border-radius:6px;padding:7px 10px">
+          <option value="carousel">📱 Carousel (Story-Format + Deckblatt)</option>
+          <option value="quadrat">⬛ Quadrat 1080×1080 (Instagram-Post)</option>
+          <option value="story">📱 Story 1080×1920</option>
+          <option value="twitter">🐦 Twitter/X-Banner 1500×500</option>
+        </select>
+      </div>
       <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
-      <button class="btn btn-primary" onclick="erstelleAthletenVorstellung()">🖼️ Poster erstellen & herunterladen</button>
+      <button class="btn btn-primary" onclick="erstelleAthletenVorstellung()">🖼️ Erstellen & herunterladen</button>
     </div>`;
 
   overlay.appendChild(modal);
@@ -6980,37 +6988,26 @@ function avAthletHinzu() {
 async function erstelleAthletenVorstellung() {
   const veranstaltung = document.getElementById('av-veranstaltung')?.value.trim();
   const sportart = document.getElementById('av-sportart')?.value.trim();
+  const format = document.getElementById('av-format')?.value || 'carousel';
   if (!veranstaltung) { toast('Bitte Veranstaltungsname eingeben', 'warning'); return; }
 
-  const athletenDivs = document.querySelectorAll('[id^="av-athlet-"]');
+  const athletenDivs = [...document.querySelectorAll('[id^="av-athlet-"]')];
   if (!athletenDivs.length) { toast('Bitte mindestens einen Athleten hinzufügen', 'warning'); return; }
 
-  toast('⏳ Poster werden erstellt...', 'info');
-  document.querySelector('.modal-overlay')?.remove();
-
-  const canvas = document.createElement('canvas');
-  canvas.width = 1080; canvas.height = 1350;
-  document.body.appendChild(canvas);
-  canvas.style.display = 'none';
-
-  let posterCount = 0;
-
+  // Athleten-Daten sammeln
+  const athleten = [];
   for (const div of athletenDivs) {
     const idMatch = div.id.match(/av-athlet-(\d+)/);
     if (!idMatch) continue;
     const id = idMatch[1];
-
     const vorname  = document.getElementById(`av-vorname-${id}`)?.value.trim() || '';
     const nachname = document.getElementById(`av-nachname-${id}`)?.value.trim() || '';
+    if (!vorname && !nachname) continue;
     const kader    = document.getElementById(`av-kader-${id}`)?.value.trim() || '';
     const ziel     = document.getElementById(`av-ziel-${id}`)?.value.trim() || '';
     const erfolgeStr = document.getElementById(`av-erfolge-${id}`)?.value.trim() || '';
     const erfolge  = erfolgeStr ? erfolgeStr.split(',').map(s=>s.trim()).filter(Boolean) : [];
     const bildInput = document.getElementById(`av-bild-${id}`);
-
-    if (!vorname && !nachname) continue;
-
-    // Bild laden
     let bild = null;
     if (bildInput?.files?.[0]) {
       const url = URL.createObjectURL(bildInput.files[0]);
@@ -7018,33 +7015,107 @@ async function erstelleAthletenVorstellung() {
         const img = new Image(); img.onload = () => res(img); img.onerror = () => res(null); img.src = url;
       });
     }
-
-    const opts = { vorname, nachname, name: `${vorname} ${nachname}`.trim(), sportart, kader, ziel, bild, akzent: 'blau' };
-
-    // Poster 1: Porträt
-    const ctx1 = canvas.getContext('2d');
-    ctx1.clearRect(0,0,1080,1350);
-    await zeichneAthletPortrait(ctx1, 1080, 1350, opts);
-    const a1 = document.createElement('a');
-    a1.download = `SLZB_${(vorname+nachname).replace(/\s/g,'_')}_Portrait.png`;
-    a1.href = canvas.toDataURL('image/png');
-    a1.click();
-    posterCount++;
-    await new Promise(r => setTimeout(r, 300));
-
-    // Poster 2: Erfolge
-    const ctx2 = canvas.getContext('2d');
-    ctx2.clearRect(0,0,1080,1350);
-    await zeichneAthletErfolge(ctx2, 1080, 1350, { ...opts, erfolge });
-    const a2 = document.createElement('a');
-    a2.download = `SLZB_${(vorname+nachname).replace(/\s/g,'_')}_Erfolge.png`;
-    a2.href = canvas.toDataURL('image/png');
-    a2.click();
-    posterCount++;
-    await new Promise(r => setTimeout(r, 300));
+    athleten.push({ vorname, nachname, name: `${vorname} ${nachname}`.trim(), kader, ziel, erfolge, bild });
   }
 
-  canvas.remove();
+  if (!athleten.length) { toast('Keine gültigen Athleten', 'warning'); return; }
+
+  document.querySelector('.modal-overlay')?.remove();
+  toast(`⏳ Erstelle ${format === 'carousel' ? athleten.length + 2 : athleten.length} Poster...`, 'info');
+
+  const opts_base = { veranstaltung, sportart, akzent: 'blau' };
+
+  // Hilfsfunktion: Canvas → Download
+  async function downloadCanvas(canvas, dateiname) {
+    return new Promise(resolve => {
+      canvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = dateiname;
+        document.body.appendChild(a); a.click();
+        setTimeout(() => { URL.revokeObjectURL(url); a.remove(); resolve(); }, 200);
+      }, 'image/png');
+    });
+  }
+
+  let posterCount = 0;
+
+  if (format === 'carousel') {
+    // ── Carousel: Deckblatt + Athleten + Abschluss ──
+    const gesamt = athleten.length + 2;
+    const W = 1080, H = 1350;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+
+    // 1. Deckblatt
+    const ctx0 = canvas.getContext('2d');
+    await zeichneCarouselDeckblatt(ctx0, W, H, { ...opts_base, gesamt });
+    await downloadCanvas(canvas, `01_Deckblatt_${veranstaltung.replace(/[^a-zA-Z0-9]/g,'-')}.png`);
+    posterCount++;
+
+    // 2. Athleten
+    for (let i = 0; i < athleten.length; i++) {
+      const a = athleten[i];
+      ctx0.clearRect(0,0,W,H);
+      await zeichneAthletQuadrat(ctx0, W, H, { ...opts_base, ...a, nr: i+2, gesamt });
+      const nr = String(i+2).padStart(2,'0');
+      await downloadCanvas(canvas, `${nr}_${a.name.replace(/\s/g,'_')}.png`);
+      posterCount++;
+      await new Promise(r => setTimeout(r, 150));
+    }
+
+    // 3. Abschluss
+    ctx0.clearRect(0,0,W,H);
+    await zeichneCarouselAbschluss(ctx0, W, H, { ...opts_base, gesamt });
+    const nr = String(gesamt).padStart(2,'0');
+    await downloadCanvas(canvas, `${nr}_Abschluss.png`);
+    posterCount++;
+
+  } else if (format === 'quadrat') {
+    // ── Quadrat 1080×1080 ──
+    const W = 1080, H = 1080;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    for (let i = 0; i < athleten.length; i++) {
+      ctx.clearRect(0,0,W,H);
+      await zeichneAthletQuadrat(ctx, W, H, { ...opts_base, ...athleten[i] });
+      const nr = String(i+1).padStart(2,'0');
+      await downloadCanvas(canvas, `${nr}_${athleten[i].name.replace(/\s/g,'_')}_Quadrat.png`);
+      posterCount++;
+      await new Promise(r => setTimeout(r, 150));
+    }
+
+  } else if (format === 'story') {
+    // ── Story 1080×1920 ──
+    const W = 1080, H = 1920;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    for (let i = 0; i < athleten.length; i++) {
+      ctx.clearRect(0,0,W,H);
+      await zeichneAthletPortrait(ctx, W, H, { ...opts_base, ...athleten[i] });
+      const nr = String(i+1).padStart(2,'0');
+      await downloadCanvas(canvas, `${nr}_${athleten[i].name.replace(/\s/g,'_')}_Story.png`);
+      posterCount++;
+      await new Promise(r => setTimeout(r, 150));
+    }
+
+  } else if (format === 'twitter') {
+    // ── Twitter/X-Banner 1500×500 ──
+    const W = 1500, H = 500;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    await zeichneTwitterBanner(ctx, W, H, {
+      ...opts_base,
+      athleten: athleten.map(a => a.name),
+      bild: athleten[0]?.bild || null,
+    });
+    await downloadCanvas(canvas, `Twitter_Banner_${veranstaltung.replace(/[^a-zA-Z0-9]/g,'-')}.png`);
+    posterCount++;
+  }
+
   toast(`✅ ${posterCount} Poster heruntergeladen!`, 'success');
 }
 
