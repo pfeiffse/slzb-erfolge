@@ -1598,14 +1598,17 @@ async function renderJahreschronik() {
           </select></div>
         <div class="form-group"><label>Ansicht</label>
           <select id="chr-ansicht" onchange="aktualisiereChronik()">
-            <option value="tabelle">Tabelle</option>
-            <option value="karten">Karten mit Bildern</option>
-            <option value="timeline">Timeline</option>
+            <option value="tabelle">📋 Tabelle</option>
+            <option value="karten">🖼️ Karten mit Bildern</option>
+            <option value="timeline">📍 Timeline</option>
           </select></div>
       </div>
       <div class="flex gap-2 mt-2" style="flex-wrap:wrap">
         <button class="btn btn-outline btn-sm" onclick="druckeChronik()">🖨️ Drucken</button>
-        <button class="btn btn-outline btn-sm" onclick="exportiereChronikCSV()">⬇️ CSV-Export</button>
+        <button class="btn btn-outline btn-sm" onclick="exportiereChronikCSV()">⬇️ CSV</button>
+        <button class="btn btn-primary btn-sm" onclick="starteChronikDiashow()" style="background:#003366;border-color:#003366">
+          ▶️ Diashow (Mensa/Konferenz)
+        </button>
       </div>
     </div></div>
     <div id="chronik-inhalt">${renderChronikInhalt(alle,aktuellesSchuljahr,'','','')}</div>
@@ -1784,6 +1787,168 @@ async function aktualisiereChronik() {
   const alle=await ladeErfolge();
   const inhalt=document.getElementById('chronik-inhalt');
   if(inhalt) inhalt.innerHTML=renderChronikInhalt(alle,schuljahr,sportartId,ebene,'',ansicht);
+}
+
+// ── Chronik-Diashow (Mensa / Gesamtkonferenz) ────────────────
+async function starteChronikDiashow() {
+  const alle = await ladeErfolge();
+  const schuljahr = document.getElementById('chr-schuljahr')?.value || '';
+  const sportartId = document.getElementById('chr-sportart')?.value || '';
+  const ebene = document.getElementById('chr-ebene')?.value || '';
+  const zr = window._chrZeitraum || {};
+
+  let gefiltert = alle.filter(e => ['Freigegeben','Veröffentlicht','Archiviert'].includes(e.status));
+  if (schuljahr) gefiltert = gefiltert.filter(e => SLZB_DB.getSchuljahr(e.datum) === schuljahr);
+  if (sportartId) gefiltert = gefiltert.filter(e => e.sportartId === sportartId);
+  if (ebene) gefiltert = gefiltert.filter(e => e.ebene === ebene);
+  if (zr.von) gefiltert = gefiltert.filter(e => e.datum && new Date(e.datum) >= zr.von);
+  if (zr.bis) gefiltert = gefiltert.filter(e => e.datum && new Date(e.datum) <= zr.bis);
+  gefiltert.sort((a,b) => new Date(b.datum) - new Date(a.datum));
+
+  if (!gefiltert.length) { toast('Keine Erfolge für die Diashow', 'warning'); return; }
+
+  // Diashow-Overlay erstellen
+  const overlay = document.createElement('div');
+  overlay.id = 'diashow-overlay';
+  overlay.style.cssText = `
+    position:fixed;inset:0;background:#000;z-index:99999;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    font-family:Montserrat,sans-serif;cursor:none;
+  `;
+
+  let aktuell = 0;
+  let timer = null;
+  let intervall = 5000; // 5 Sekunden pro Folie
+
+  const mi = {Gold:'🥇',Silber:'🥈',Bronze:'🥉'};
+
+  function renderFolie(idx) {
+    const e = gefiltert[idx];
+    const athlet = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(Boolean).join(', ');
+    const bild = e.bilder?.[0]?.signedUrl || null;
+    const sportart = e.sportartText || SLZB_DB.getSportart(e.sportartId)?.name || '';
+    const medailleStr = e.medaille && e.medaille !== 'keine' ? `${mi[e.medaille]||''} ${e.medaille}` : '';
+    const platzStr = e.platzierung ? `${e.platzierung}. Platz` : '';
+
+    overlay.innerHTML = `
+      <!-- Hintergrund -->
+      <div style="position:absolute;inset:0;background:linear-gradient(135deg,#0a0c1a 0%,#1B1C1F 100%)"></div>
+      ${bild ? `<div style="position:absolute;inset:0;background:url('${esc(bild)}') center/cover no-repeat;opacity:0.25"></div>` : ''}
+      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0.3) 0%,rgba(0,51,102,0.7) 100%)"></div>
+
+      <!-- Inhalt -->
+      <div style="position:relative;z-index:1;text-align:center;padding:40px;max-width:1200px;width:100%">
+        <!-- Sportart -->
+        <div style="color:#E2001A;font-size:1.2rem;font-weight:800;letter-spacing:4px;text-transform:uppercase;margin-bottom:16px">
+          ${esc(sportart)}
+        </div>
+
+        <!-- Bild -->
+        ${bild ? `<div style="width:280px;height:280px;border-radius:50%;overflow:hidden;margin:0 auto 32px;border:4px solid #E2001A;box-shadow:0 0 40px rgba(226,0,26,0.4)">
+          <img src="${esc(bild)}" style="width:100%;height:100%;object-fit:cover">
+        </div>` : `<div style="width:200px;height:200px;border-radius:50%;background:rgba(226,0,26,0.2);border:4px solid #E2001A;margin:0 auto 32px;display:flex;align-items:center;justify-content:center;font-size:5rem">🏅</div>`}
+
+        <!-- Titel -->
+        <div style="color:#fff;font-size:clamp(1.5rem,4vw,3rem);font-weight:800;font-style:italic;line-height:1.1;margin-bottom:16px;text-shadow:0 2px 8px rgba(0,0,0,0.5)">
+          ${esc(e.titel)}
+        </div>
+
+        <!-- Athlet -->
+        ${athlet ? `<div style="color:rgba(255,255,255,0.8);font-size:1.4rem;font-weight:600;margin-bottom:12px">👤 ${esc(athlet)}</div>` : ''}
+
+        <!-- Platz + Medaille -->
+        ${(platzStr || medailleStr) ? `<div style="display:inline-flex;align-items:center;gap:12px;background:rgba(226,0,26,0.2);border:2px solid #E2001A;border-radius:40px;padding:10px 28px;margin-bottom:16px">
+          <span style="color:#fff;font-size:1.6rem;font-weight:800">${platzStr}</span>
+          ${medailleStr ? `<span style="font-size:1.4rem">${medailleStr}</span>` : ''}
+        </div>` : ''}
+
+        <!-- Datum + Wettbewerb -->
+        <div style="color:rgba(255,255,255,0.6);font-size:1rem;margin-top:8px">
+          ${fmt(e.datum)}${e.wettbewerbText ? ' · ' + esc(e.wettbewerbText) : ''}
+        </div>
+      </div>
+
+      <!-- Navigation -->
+      <div style="position:absolute;bottom:24px;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:16px;z-index:2">
+        <button onclick="diaShowVorige()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:1.2rem;cursor:pointer">◀</button>
+        <div style="color:rgba(255,255,255,0.5);font-size:.85rem">${idx+1} / ${gefiltert.length}</div>
+        <button onclick="diaShowNaechste()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:1.2rem;cursor:pointer">▶</button>
+        <button onclick="diaShowPause()" id="diashow-pause-btn" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:1.2rem;cursor:pointer">⏸</button>
+        <select id="diashow-speed" onchange="diaShowSpeed(this.value)" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:20px;padding:6px 12px;font-size:.8rem">
+          <option value="3000">3 Sek.</option>
+          <option value="5000" selected>5 Sek.</option>
+          <option value="8000">8 Sek.</option>
+          <option value="12000">12 Sek.</option>
+        </select>
+        <button onclick="document.getElementById('diashow-overlay').remove();clearInterval(window._diashowTimer)" style="background:rgba(226,0,26,0.4);border:1px solid #E2001A;color:#fff;border-radius:20px;padding:8px 16px;font-size:.85rem;cursor:pointer">✕ Beenden</button>
+      </div>
+
+      <!-- Fortschrittsbalken -->
+      <div style="position:absolute;bottom:0;left:0;height:3px;background:#E2001A;transition:width linear;z-index:3" id="diashow-progress"></div>
+
+      <!-- SLZB Branding -->
+      <div style="position:absolute;top:20px;right:24px;color:rgba(255,255,255,0.4);font-size:.75rem;font-weight:700;letter-spacing:2px">#SLZBerlin</div>
+    `;
+
+    // Fortschrittsbalken animieren
+    const prog = document.getElementById('diashow-progress');
+    if (prog) {
+      prog.style.width = '0%';
+      prog.style.transition = 'none';
+      setTimeout(() => {
+        prog.style.transition = `width ${intervall}ms linear`;
+        prog.style.width = '100%';
+      }, 50);
+    }
+  }
+
+  // Globale Funktionen für Buttons
+  window.diaShowNaechste = () => {
+    aktuell = (aktuell + 1) % gefiltert.length;
+    renderFolie(aktuell);
+    clearInterval(window._diashowTimer);
+    window._diashowTimer = setInterval(window.diaShowNaechste, intervall);
+  };
+  window.diaShowVorige = () => {
+    aktuell = (aktuell - 1 + gefiltert.length) % gefiltert.length;
+    renderFolie(aktuell);
+    clearInterval(window._diashowTimer);
+    window._diashowTimer = setInterval(window.diaShowNaechste, intervall);
+  };
+  window.diaShowPause = () => {
+    const btn = document.getElementById('diashow-pause-btn');
+    if (window._diashowTimer) {
+      clearInterval(window._diashowTimer);
+      window._diashowTimer = null;
+      if (btn) btn.textContent = '▶';
+    } else {
+      window._diashowTimer = setInterval(window.diaShowNaechste, intervall);
+      if (btn) btn.textContent = '⏸';
+    }
+  };
+  window.diaShowSpeed = (ms) => {
+    intervall = parseInt(ms);
+    clearInterval(window._diashowTimer);
+    window._diashowTimer = setInterval(window.diaShowNaechste, intervall);
+  };
+
+  // Tastatursteuerung
+  overlay.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ') window.diaShowNaechste();
+    if (e.key === 'ArrowLeft') window.diaShowVorige();
+    if (e.key === 'Escape') { overlay.remove(); clearInterval(window._diashowTimer); }
+  });
+  overlay.setAttribute('tabindex', '0');
+
+  document.body.appendChild(overlay);
+  overlay.focus();
+  renderFolie(0);
+
+  // Auto-Advance starten
+  window._diashowTimer = setInterval(window.diaShowNaechste, intervall);
+
+  // Vollbild versuchen
+  try { overlay.requestFullscreen?.(); } catch(_) {}
 }
 
 function druckeChronik() {
