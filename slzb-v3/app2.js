@@ -3350,8 +3350,10 @@ async function wochenvorschauPoster() {
       // Veranstaltung
       ctx.fillStyle='#fff'; ctx.font='bold 16px Montserrat, Arial, sans-serif';
       ctx.fillText(t.veranstaltung, PAD+14, y+28, W-2*PAD-80);
-      // Ort + Klasse
-      const info = [t.ort, t.klasse].filter(Boolean).join(' · ');
+      // Zeitraum (wenn mehrtägig) + Ort + Klasse
+      const zeitraum = t.datumBis && t.datumBis !== t.datum
+        ? formatDatumZeitraum(t.datum, t.datumBis) : null;
+      const info = [zeitraum, t.ort, t.klasse].filter(Boolean).join(' · ');
       if (info) {
         ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.font='12px Montserrat, Arial, sans-serif';
         ctx.fillText(info, PAD+14, y+50, W-2*PAD-80);
@@ -3509,7 +3511,8 @@ async function wochenvorschauStories() {
         ctx.fillText(t.veranstaltung, 100, y+36, W-160);
 
         // Ort + Klasse
-        const info = [t.ort, t.klasse].filter(Boolean).join(' · ');
+        const zeitraumS = t.datumBis && t.datumBis !== t.datum ? formatDatumZeitraum(t.datum, t.datumBis) : null;
+        const info = [zeitraumS, t.ort, t.klasse].filter(Boolean).join(' · ');
         if (info && ROW_H > 80) {
           ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.font='13px Montserrat, Arial, sans-serif';
           ctx.fillText(info, 100, y+64, W-160);
