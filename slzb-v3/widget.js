@@ -17,7 +17,7 @@
   const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqenZtdmducHhieG1jam9wcXdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTExNzY3MzksImV4cCI6MjEwNjc1MjczOX0.IKVaTqz1e7stm_M-dbkvRmuzwU2DTXVcy-YSlzSQkRo';
 
   async function ladeErfolge(limit, sportart) {
-    let url = `${SUPABASE_URL}/rest/v1/achievements?select=id,title,sport_id,event_date,result_text,article_text,short_info,placement,medal,level&status=in.(Freigegeben,Veröffentlicht)&deleted_at=is.null&order=event_date.desc&limit=${limit}`;
+    let url = `${SUPABASE_URL}/rest/v1/achievements?select=id,title,sport_id,event_date,result_text,article_text,short_info,placement,medal,level&status=in.(Freigegeben,Ver%C3%B6ffentlicht)&deleted_at=is.null&order=event_date.desc&limit=${limit}`;
     if (sportart) url += `&sport_id=eq.${encodeURIComponent(sportart)}`;
 
     const res = await fetch(url, {
@@ -36,8 +36,8 @@
     const data = await res.json();
     if (!data?.[0]?.storage_path) return null;
 
-    // Signed URL generieren
-    const signRes = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/achievement-media/${data[0].storage_path}`, {
+    // Signed URL generieren (korrekter Endpunkt)
+    const signRes = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/achievement-media/${encodeURIComponent(data[0].storage_path)}`, {
       method: 'POST',
       headers: {
         'apikey': SUPABASE_ANON_KEY,
@@ -48,7 +48,10 @@
     });
     if (!signRes.ok) return null;
     const signData = await signRes.json();
-    return signData?.signedURL ? `${SUPABASE_URL}/storage/v1${signData.signedURL}` : null;
+    // Supabase gibt signedURL oder signedUrl zurück
+    const path = signData?.signedURL || signData?.signedUrl || signData?.data?.signedUrl;
+    if (!path) return null;
+    return path.startsWith('http') ? path : `${SUPABASE_URL}/storage/v1${path}`;
   }
 
   async function ladeAthlet(erfolgId) {
