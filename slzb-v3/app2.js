@@ -1142,6 +1142,18 @@ async function renderAusgaben() {
     <div class="alert alert-warning mb-3"><span class="alert-icon">⚠️</span>
       <span>Ausgaben nur für Status <strong>Freigegeben</strong> oder <strong>Veröffentlicht</strong>.</span></div>
 
+    <!-- Athleten-Vorstellung -->
+    <div class="card mb-3">
+      <div class="card-header"><h2>🏅 Athleten-Vorstellung</h2></div>
+      <div class="card-body">
+        <div class="alert alert-info mb-2"><span class="alert-icon">ℹ️</span>
+          <span>Erstellt pro Athlet 2 Poster im SLZB-Stil: Porträt + Erfolge. Ideal für Weltcup-Vorschauen.</span></div>
+        <button class="btn btn-primary" onclick="zeigeAthletenVorstellung()">
+          🖼️ Athleten-Vorstellung erstellen
+        </button>
+      </div>
+    </div>
+
     <!-- Veranstaltungs-Gesamtposter -->
     <div class="card mb-3">
       <div class="card-header"><h2>🏆 Veranstaltungs-Gesamtposter</h2></div>
@@ -6873,6 +6885,167 @@ async function speichereVotingBearbeitung(kampagneId, kandidatenIds) {
   document.querySelector('.modal-overlay')?.remove();
   toast('✅ Abstimmung gespeichert', 'success');
   navigateTo('sportler-des-monats');
+}
+
+// ══════════════════════════════════════════════════════════════
+// ATHLETEN-VORSTELLUNG (Weltcup / Turnier)
+// ══════════════════════════════════════════════════════════════
+async function zeigeAthletenVorstellung() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.maxWidth = '680px';
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>🏅 Athleten-Vorstellung erstellen</h3>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-info mb-3"><span class="alert-icon">ℹ️</span>
+        <span>Erstellt pro Athlet 2 Poster im SLZB-Stil: Porträt + Erfolge. Ideal für Weltcup-Vorschauen.</span>
+      </div>
+      <div class="form-row cols-2 mb-3">
+        <div class="form-group">
+          <label style="font-weight:600">Veranstaltung <span class="required">*</span></label>
+          <input type="text" id="av-veranstaltung" placeholder="z.B. Junioren-Weltcup Eisschnelllauf" style="width:100%">
+        </div>
+        <div class="form-group">
+          <label style="font-weight:600">Sportart</label>
+          <input type="text" id="av-sportart" list="av-sportarten-list" placeholder="z.B. Eisschnelllauf" style="width:100%">
+          <datalist id="av-sportarten-list">${SLZB_DB.sportarten.map(s=>`<option value="${esc(s.name)}">`).join('')}</datalist>
+        </div>
+      </div>
+
+      <div style="font-weight:600;margin-bottom:8px">Athleten:</div>
+      <div id="av-athleten-liste"></div>
+      <button class="btn btn-ghost btn-sm mt-2" onclick="avAthletHinzu()">+ Athlet hinzufügen</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="erstelleAthletenVorstellung()">🖼️ Poster erstellen & herunterladen</button>
+    </div>`;
+
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+
+  // Ersten Athleten direkt hinzufügen
+  avAthletHinzu();
+}
+
+let _avCounter = 0;
+function avAthletHinzu() {
+  const liste = document.getElementById('av-athleten-liste');
+  if (!liste) return;
+  const id = ++_avCounter;
+  const div = document.createElement('div');
+  div.id = `av-athlet-${id}`;
+  div.style.cssText = 'border:1px solid var(--slzb-border);border-radius:8px;padding:12px;margin-bottom:10px';
+  div.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-weight:600;color:var(--slzb-primary)">Athlet ${id}</div>
+      <button onclick="document.getElementById('av-athlet-${id}').remove()" style="background:none;border:none;color:#E2001A;cursor:pointer;font-size:1rem">✕</button>
+    </div>
+    <div class="form-row cols-2">
+      <div class="form-group">
+        <label style="font-size:.8rem">Vorname</label>
+        <input type="text" id="av-vorname-${id}" placeholder="Max" style="width:100%;font-size:.85rem">
+      </div>
+      <div class="form-group">
+        <label style="font-size:.8rem">Nachname</label>
+        <input type="text" id="av-nachname-${id}" placeholder="Mustermann" style="width:100%;font-size:.85rem">
+      </div>
+      <div class="form-group">
+        <label style="font-size:.8rem">Kader / Klasse</label>
+        <input type="text" id="av-kader-${id}" placeholder="z.B. Nationalkader U20" style="width:100%;font-size:.85rem">
+      </div>
+      <div class="form-group">
+        <label style="font-size:.8rem">Ziel / Motto</label>
+        <input type="text" id="av-ziel-${id}" placeholder="z.B. Top 5 beim Weltcup" style="width:100%;font-size:.85rem">
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label style="font-size:.8rem">Bisherige Erfolge (kommagetrennt)</label>
+        <input type="text" id="av-erfolge-${id}" placeholder="z.B. 1. Platz DM 2025, 3. Platz EM 2024" style="width:100%;font-size:.85rem">
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label style="font-size:.8rem">Bild (aus Meldung wählen oder hochladen)</label>
+        <input type="file" id="av-bild-${id}" accept="image/jpeg,image/png,image/webp" style="width:100%;font-size:.8rem">
+      </div>
+    </div>`;
+  liste.appendChild(div);
+}
+
+async function erstelleAthletenVorstellung() {
+  const veranstaltung = document.getElementById('av-veranstaltung')?.value.trim();
+  const sportart = document.getElementById('av-sportart')?.value.trim();
+  if (!veranstaltung) { toast('Bitte Veranstaltungsname eingeben', 'warning'); return; }
+
+  const athletenDivs = document.querySelectorAll('[id^="av-athlet-"]');
+  if (!athletenDivs.length) { toast('Bitte mindestens einen Athleten hinzufügen', 'warning'); return; }
+
+  toast('⏳ Poster werden erstellt...', 'info');
+  document.querySelector('.modal-overlay')?.remove();
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 1080; canvas.height = 1350;
+  document.body.appendChild(canvas);
+  canvas.style.display = 'none';
+
+  let posterCount = 0;
+
+  for (const div of athletenDivs) {
+    const idMatch = div.id.match(/av-athlet-(\d+)/);
+    if (!idMatch) continue;
+    const id = idMatch[1];
+
+    const vorname  = document.getElementById(`av-vorname-${id}`)?.value.trim() || '';
+    const nachname = document.getElementById(`av-nachname-${id}`)?.value.trim() || '';
+    const kader    = document.getElementById(`av-kader-${id}`)?.value.trim() || '';
+    const ziel     = document.getElementById(`av-ziel-${id}`)?.value.trim() || '';
+    const erfolgeStr = document.getElementById(`av-erfolge-${id}`)?.value.trim() || '';
+    const erfolge  = erfolgeStr ? erfolgeStr.split(',').map(s=>s.trim()).filter(Boolean) : [];
+    const bildInput = document.getElementById(`av-bild-${id}`);
+
+    if (!vorname && !nachname) continue;
+
+    // Bild laden
+    let bild = null;
+    if (bildInput?.files?.[0]) {
+      const url = URL.createObjectURL(bildInput.files[0]);
+      bild = await new Promise(res => {
+        const img = new Image(); img.onload = () => res(img); img.onerror = () => res(null); img.src = url;
+      });
+    }
+
+    const opts = { vorname, nachname, name: `${vorname} ${nachname}`.trim(), sportart, kader, ziel, bild, akzent: 'blau' };
+
+    // Poster 1: Porträt
+    const ctx1 = canvas.getContext('2d');
+    ctx1.clearRect(0,0,1080,1350);
+    await zeichneAthletPortrait(ctx1, 1080, 1350, opts);
+    const a1 = document.createElement('a');
+    a1.download = `SLZB_${(vorname+nachname).replace(/\s/g,'_')}_Portrait.png`;
+    a1.href = canvas.toDataURL('image/png');
+    a1.click();
+    posterCount++;
+    await new Promise(r => setTimeout(r, 300));
+
+    // Poster 2: Erfolge
+    const ctx2 = canvas.getContext('2d');
+    ctx2.clearRect(0,0,1080,1350);
+    await zeichneAthletErfolge(ctx2, 1080, 1350, { ...opts, erfolge });
+    const a2 = document.createElement('a');
+    a2.download = `SLZB_${(vorname+nachname).replace(/\s/g,'_')}_Erfolge.png`;
+    a2.href = canvas.toDataURL('image/png');
+    a2.click();
+    posterCount++;
+    await new Promise(r => setTimeout(r, 300));
+  }
+
+  canvas.remove();
+  toast(`✅ ${posterCount} Poster heruntergeladen!`, 'success');
 }
 
 async function loescheVotingKampagne(kampagneId, titel) {

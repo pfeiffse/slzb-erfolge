@@ -3397,3 +3397,74 @@ function zeichneSlzbHintergrundMitFallback(ctx, W, H, bild, akzent, sportartName
     ctx.fillStyle = grad4; ctx.fillRect(0, 0, W, H);
   }
 }
+
+
+// ══════════════════════════════════════════════════════════════
+// ATHLETEN-VORSTELLUNG (Weltcup / Turnier)
+// Erzeugt pro Athlet 2 Poster: Porträt + Erfolge
+// ══════════════════════════════════════════════════════════════
+
+// Poster 1: Athleten-Porträt (1080×1350)
+async function zeichneAthletPortrait(ctx, W, H, opts) {
+  // opts: { name, vorname, nachname, sportart, kader, klasse, ziel, bild, akzent }
+  const akzent = opts.akzent || 'blau';
+  await ladeMontserrat(); await ladeLogo();
+
+  // Hintergrund
+  if (opts.bild) {
+    zeichneSlzbHintergrund(ctx, W, H, opts.bild, akzent);
+  } else {
+    zeichneErsatzbild(ctx, W, H, opts.sportart || '');
+    const _g = ctx.createLinearGradient(0,0,0,H);
+    _g.addColorStop(0,'rgba(0,0,0,0.15)'); _g.addColorStop(0.35,'rgba(0,0,0,0.20)');
+    _g.addColorStop(0.65,'rgba(0,30,90,0.55)'); _g.addColorStop(1,'rgba(0,51,153,0.92)');
+    ctx.fillStyle=_g; ctx.fillRect(0,0,W,H);
+  }
+  zeichneSlzbDeko(ctx, W, H);
+
+  // Header
+  zeichneSlzbHeader(ctx, W, H, opts.sportart||'SLZB', '', akzent);
+
+  // Glasbox unten
+  zeichneSlzbKarte(ctx, W, H, {
+    subtitle: opts.kader || opts.sportart || '',
+    vorname: opts.vorname || '',
+    nachname: opts.nachname || '',
+    titel: (!opts.vorname && !opts.nachname) ? opts.name : null,
+    zusatz: opts.klasse || null,
+    wettbewerb: opts.ziel || null,
+  }, akzent);
+
+  zeichneSlzbFooterNeu(ctx, W, H, akzent);
+}
+
+// Poster 2: Athleten-Erfolge (1080×1350)
+async function zeichneAthletErfolge(ctx, W, H, opts) {
+  // opts: { name, sportart, erfolge[], bild, akzent }
+  const akzent = opts.akzent || 'blau';
+  await ladeMontserrat(); await ladeLogo();
+
+  if (opts.bild) {
+    zeichneSlzbHintergrund(ctx, W, H, opts.bild, akzent);
+  } else {
+    zeichneErsatzbild(ctx, W, H, opts.sportart || '');
+    const _g = ctx.createLinearGradient(0,0,0,H);
+    _g.addColorStop(0,'rgba(0,0,0,0.15)'); _g.addColorStop(0.35,'rgba(0,0,0,0.20)');
+    _g.addColorStop(0.65,'rgba(0,30,90,0.55)'); _g.addColorStop(1,'rgba(0,51,153,0.92)');
+    ctx.fillStyle=_g; ctx.fillRect(0,0,W,H);
+  }
+  zeichneSlzbDeko(ctx, W, H);
+  zeichneSlzbHeader(ctx, W, H, opts.sportart||'SLZB', '', akzent);
+
+  // Erfolge als Text
+  const erfolgText = (opts.erfolge||[]).join(' | ');
+  zeichneSlzbKarte(ctx, W, H, {
+    subtitle: 'BISHERIGE ERFOLGE',
+    vorname: opts.vorname || '',
+    nachname: opts.nachname || '',
+    titel: (!opts.vorname && !opts.nachname) ? opts.name : null,
+    ergebnis: erfolgText || 'Erste internationale Erfahrungen',
+  }, akzent);
+
+  zeichneSlzbFooterNeu(ctx, W, H, akzent);
+}
