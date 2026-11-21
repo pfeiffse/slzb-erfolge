@@ -19,7 +19,8 @@ const SLZB_TERMINE = [
     "klasse": "U17",
     "teilnahme": "Ja",
     "prioritaet": 4,
-    "prioritaetText": "4 – Regulär"
+    "prioritaetText": "4 – Regulär",
+    "datumBis": "2026-07-10"
   },
   {
     "datum": "2026-08-01",
@@ -52,7 +53,8 @@ const SLZB_TERMINE = [
     "klasse": "U17",
     "teilnahme": "Ja",
     "prioritaet": 3,
-    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager"
+    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager",
+    "datumBis": "2026-08-14"
   },
   {
     "datum": "2026-08-21",
@@ -63,7 +65,8 @@ const SLZB_TERMINE = [
     "klasse": "8. Klasse",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2026-08-23"
   },
   {
     "datum": "2026-08-22",
@@ -107,7 +110,8 @@ const SLZB_TERMINE = [
     "klasse": "3. Kl., 4. Kl., 5. Kl.",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-09-06"
   },
   {
     "datum": "2026-09-05",
@@ -129,7 +133,8 @@ const SLZB_TERMINE = [
     "klasse": "5. Kl., 6. Kl., 7. Klasse, 7.+ Kl., 8.+ Kl., 9.+ Kl.",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-09-13"
   },
   {
     "datum": "2026-09-12",
@@ -184,7 +189,8 @@ const SLZB_TERMINE = [
     "klasse": "12. Klasse",
     "teilnahme": "Ja",
     "prioritaet": 4,
-    "prioritaetText": "4 – Regulär"
+    "prioritaetText": "4 – Regulär",
+    "datumBis": "2026-09-19"
   },
   {
     "datum": "2026-09-19",
@@ -239,7 +245,8 @@ const SLZB_TERMINE = [
     "klasse": "Kl. 7h, Kl. 9h",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-09-27"
   },
   {
     "datum": "2026-09-26",
@@ -250,7 +257,8 @@ const SLZB_TERMINE = [
     "klasse": "3. Kl., 4. Kl., 6. Kl., 8.+ Kl.",
     "teilnahme": "Vorläufig",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-09-27"
   },
   {
     "datum": "2026-09-26",
@@ -294,7 +302,8 @@ const SLZB_TERMINE = [
     "klasse": "U17",
     "teilnahme": "Ja",
     "prioritaet": 4,
-    "prioritaetText": "4 – Regulär"
+    "prioritaetText": "4 – Regulär",
+    "datumBis": "2026-10-04"
   },
   {
     "datum": "2026-10-03",
@@ -316,7 +325,8 @@ const SLZB_TERMINE = [
     "klasse": "12. Klasse",
     "teilnahme": "Ja",
     "prioritaet": 4,
-    "prioritaetText": "4 – Regulär"
+    "prioritaetText": "4 – Regulär",
+    "datumBis": "2026-10-10"
   },
   {
     "datum": "2026-10-08",
@@ -327,7 +337,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK II",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2026-10-11"
   },
   {
     "datum": "2026-10-09",
@@ -338,7 +349,8 @@ const SLZB_TERMINE = [
     "klasse": "U17",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-10-10"
   },
   {
     "datum": "2026-10-09",
@@ -349,7 +361,8 @@ const SLZB_TERMINE = [
     "klasse": "U17",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-10-10"
   },
   {
     "datum": "2026-10-10",
@@ -360,7 +373,8 @@ const SLZB_TERMINE = [
     "klasse": "7. Klasse, 9.+ Kl.",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-10-11"
   },
   {
     "datum": "2026-10-10",
@@ -371,7 +385,8 @@ const SLZB_TERMINE = [
     "klasse": "8. Klasse",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-10-11"
   },
   {
     "datum": "2026-10-10",
@@ -382,7 +397,8 @@ const SLZB_TERMINE = [
     "klasse": "8.+ Kl.",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-10-11"
   },
   {
     "datum": "2026-10-10",
@@ -448,7 +464,8 @@ const SLZB_TERMINE = [
     "klasse": "VCO 2 Kader (Jg. 2011)",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-10-15"
   },
   {
     "datum": "2026-10-15",
@@ -459,7 +476,8 @@ const SLZB_TERMINE = [
     "klasse": "8. Klasse",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-10-18"
   },
   {
     "datum": "2026-10-16",
@@ -470,7 +488,8 @@ const SLZB_TERMINE = [
     "klasse": "8.+ Kl.",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-10-18"
   },
   {
     "datum": "2026-10-16",
@@ -481,7 +500,8 @@ const SLZB_TERMINE = [
     "klasse": "9.+ Kl.",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-10-18"
   },
   {
     "datum": "2026-10-16",
@@ -492,7 +512,8 @@ const SLZB_TERMINE = [
     "klasse": "Kl. 7h, Kl. 9h",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2026-10-26"
   },
   {
     "datum": "2026-10-16",
@@ -503,7 +524,8 @@ const SLZB_TERMINE = [
     "klasse": "U18",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-10-21"
   },
   {
     "datum": "2026-10-17",
@@ -580,7 +602,8 @@ const SLZB_TERMINE = [
     "klasse": "VCO 2 Kader (Jg. 2012)",
     "teilnahme": "Ja",
     "prioritaet": 3,
-    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager"
+    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager",
+    "datumBis": "2026-10-25"
   },
   {
     "datum": "2026-10-20",
@@ -602,7 +625,8 @@ const SLZB_TERMINE = [
     "klasse": "8.+ Kl.",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-10-25"
   },
   {
     "datum": "2026-10-24",
@@ -635,7 +659,8 @@ const SLZB_TERMINE = [
     "klasse": "12. Klasse",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-11-01"
   },
   {
     "datum": "2026-10-29",
@@ -657,7 +682,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK II",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2026-11-01"
   },
   {
     "datum": "2026-10-30",
@@ -668,7 +694,8 @@ const SLZB_TERMINE = [
     "klasse": "8.+ Kl.",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-11-01"
   },
   {
     "datum": "2026-10-30",
@@ -679,7 +706,8 @@ const SLZB_TERMINE = [
     "klasse": "Sen.",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2026-11-01"
   },
   {
     "datum": "2026-10-31",
@@ -734,7 +762,8 @@ const SLZB_TERMINE = [
     "klasse": "Klasse 7+8, Klasse 9+10 / Abitur",
     "teilnahme": "Vorläufig",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2026-11-11"
   },
   {
     "datum": "2026-11-03",
@@ -745,7 +774,8 @@ const SLZB_TERMINE = [
     "klasse": "8. Klasse",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-11-08"
   },
   {
     "datum": "2026-11-03",
@@ -767,7 +797,8 @@ const SLZB_TERMINE = [
     "klasse": "Kl. 12.",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2026-11-08"
   },
   {
     "datum": "2026-11-06",
@@ -778,7 +809,8 @@ const SLZB_TERMINE = [
     "klasse": "12. Klasse, 3. Kl., 5. Kl., 6. Kl., 7. Klasse, 7.+ Kl., 8.+ Kl., 9.+ Kl.",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-11-08"
   },
   {
     "datum": "2026-11-06",
@@ -789,7 +821,8 @@ const SLZB_TERMINE = [
     "klasse": "U20",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-11-07"
   },
   {
     "datum": "2026-11-07",
@@ -811,7 +844,8 @@ const SLZB_TERMINE = [
     "klasse": "4. Kl.",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-11-09"
   },
   {
     "datum": "2026-11-07",
@@ -877,7 +911,8 @@ const SLZB_TERMINE = [
     "klasse": "12. Klasse, 7. Klasse, 8.+ Kl., 9.+ Kl.",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-11-15"
   },
   {
     "datum": "2026-11-12",
@@ -888,7 +923,8 @@ const SLZB_TERMINE = [
     "klasse": "8. Klasse",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-11-15"
   },
   {
     "datum": "2026-11-12",
@@ -899,7 +935,8 @@ const SLZB_TERMINE = [
     "klasse": "10g, 8g, 9g",
     "teilnahme": "Ja",
     "prioritaet": 4,
-    "prioritaetText": "4 – Regulär"
+    "prioritaetText": "4 – Regulär",
+    "datumBis": "2026-11-15"
   },
   {
     "datum": "2026-11-13",
@@ -910,7 +947,8 @@ const SLZB_TERMINE = [
     "klasse": "Klasse 9+10 / Abitur",
     "teilnahme": "Vorläufig",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-11-15"
   },
   {
     "datum": "2026-11-13",
@@ -932,7 +970,8 @@ const SLZB_TERMINE = [
     "klasse": "alle",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2026-11-15"
   },
   {
     "datum": "2026-11-14",
@@ -965,7 +1004,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK II",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-11-21"
   },
   {
     "datum": "2026-11-15",
@@ -976,7 +1016,8 @@ const SLZB_TERMINE = [
     "klasse": "Weiblich",
     "teilnahme": "Vorläufig",
     "prioritaet": 3,
-    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager"
+    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager",
+    "datumBis": "2026-11-20"
   },
   {
     "datum": "2026-11-18",
@@ -987,7 +1028,8 @@ const SLZB_TERMINE = [
     "klasse": "8.+ Kl.",
     "teilnahme": "Ja",
     "prioritaet": 4,
-    "prioritaetText": "4 – Regulär"
+    "prioritaetText": "4 – Regulär",
+    "datumBis": "2026-11-22"
   },
   {
     "datum": "2026-11-18",
@@ -998,7 +1040,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK II",
     "teilnahme": "Vorläufig",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-11-19"
   },
   {
     "datum": "2026-11-19",
@@ -1009,7 +1052,8 @@ const SLZB_TERMINE = [
     "klasse": "12. Klasse, 7. Klasse",
     "teilnahme": "Ja",
     "prioritaet": 4,
-    "prioritaetText": "4 – Regulär"
+    "prioritaetText": "4 – Regulär",
+    "datumBis": "2026-11-22"
   },
   {
     "datum": "2026-11-19",
@@ -1020,7 +1064,8 @@ const SLZB_TERMINE = [
     "klasse": "8g",
     "teilnahme": "Ja",
     "prioritaet": 4,
-    "prioritaetText": "4 – Regulär"
+    "prioritaetText": "4 – Regulär",
+    "datumBis": "2026-11-23"
   },
   {
     "datum": "2026-11-20",
@@ -1031,7 +1076,8 @@ const SLZB_TERMINE = [
     "klasse": "Klasse 9+10 / Abitur",
     "teilnahme": "Vorläufig",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-11-22"
   },
   {
     "datum": "2026-11-20",
@@ -1042,7 +1088,8 @@ const SLZB_TERMINE = [
     "klasse": "Klasse 5+6, Klasse 7+8, Klasse 9+10 / Abitur",
     "teilnahme": "Ja",
     "prioritaet": 4,
-    "prioritaetText": "4 – Regulär"
+    "prioritaetText": "4 – Regulär",
+    "datumBis": "2026-11-22"
   },
   {
     "datum": "2026-11-20",
@@ -1064,7 +1111,8 @@ const SLZB_TERMINE = [
     "klasse": "Nachwuchs",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-11-22"
   },
   {
     "datum": "2026-11-21",
@@ -1075,7 +1123,8 @@ const SLZB_TERMINE = [
     "klasse": "8.+ Kl., 9.+ Kl.",
     "teilnahme": "Vorläufig",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-11-22"
   },
   {
     "datum": "2026-11-21",
@@ -1119,7 +1168,8 @@ const SLZB_TERMINE = [
     "klasse": "Männlich",
     "teilnahme": "Vorläufig",
     "prioritaet": 3,
-    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager"
+    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager",
+    "datumBis": "2026-11-27"
   },
   {
     "datum": "2026-11-24",
@@ -1130,7 +1180,8 @@ const SLZB_TERMINE = [
     "klasse": "12. Klasse",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-11-27"
   },
   {
     "datum": "2026-11-27",
@@ -1141,7 +1192,8 @@ const SLZB_TERMINE = [
     "klasse": "Jugend",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-11-29"
   },
   {
     "datum": "2026-11-27",
@@ -1152,7 +1204,8 @@ const SLZB_TERMINE = [
     "klasse": "8g",
     "teilnahme": "Ja",
     "prioritaet": 4,
-    "prioritaetText": "4 – Regulär"
+    "prioritaetText": "4 – Regulär",
+    "datumBis": "2026-11-29"
   },
   {
     "datum": "2026-11-28",
@@ -1174,7 +1227,8 @@ const SLZB_TERMINE = [
     "klasse": "8.+ Kl.",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-11-29"
   },
   {
     "datum": "2026-11-28",
@@ -1185,7 +1239,8 @@ const SLZB_TERMINE = [
     "klasse": "3. Kl., 4. Kl., 5. Kl., 6. Kl.",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-11-29"
   },
   {
     "datum": "2026-11-28",
@@ -1295,7 +1350,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK II",
     "teilnahme": "Vorläufig",
     "prioritaet": 3,
-    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager"
+    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager",
+    "datumBis": "2026-12-03"
   },
   {
     "datum": "2026-12-02",
@@ -1306,7 +1362,8 @@ const SLZB_TERMINE = [
     "klasse": "U17",
     "teilnahme": "Ja",
     "prioritaet": 3,
-    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager"
+    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager",
+    "datumBis": "2026-12-06"
   },
   {
     "datum": "2026-12-03",
@@ -1317,7 +1374,8 @@ const SLZB_TERMINE = [
     "klasse": "U15",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-12-05"
   },
   {
     "datum": "2026-12-04",
@@ -1328,7 +1386,8 @@ const SLZB_TERMINE = [
     "klasse": "alle",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2026-12-06"
   },
   {
     "datum": "2026-12-05",
@@ -1394,7 +1453,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK II",
     "teilnahme": "Ja",
     "prioritaet": 3,
-    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager"
+    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager",
+    "datumBis": "2026-12-13"
   },
   {
     "datum": "2026-12-08",
@@ -1405,7 +1465,8 @@ const SLZB_TERMINE = [
     "klasse": "12. Klasse, 7. Klasse",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2026-12-10"
   },
   {
     "datum": "2026-12-10",
@@ -1416,7 +1477,8 @@ const SLZB_TERMINE = [
     "klasse": "7.+ Kl.",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2026-12-13"
   },
   {
     "datum": "2026-12-10",
@@ -1427,7 +1489,8 @@ const SLZB_TERMINE = [
     "klasse": "9.+ Kl.",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2026-12-13"
   },
   {
     "datum": "2026-12-10",
@@ -1438,7 +1501,8 @@ const SLZB_TERMINE = [
     "klasse": "10g, 8g, 9g",
     "teilnahme": "Ja",
     "prioritaet": 4,
-    "prioritaetText": "4 – Regulär"
+    "prioritaetText": "4 – Regulär",
+    "datumBis": "2026-12-13"
   },
   {
     "datum": "2026-12-11",
@@ -1449,7 +1513,8 @@ const SLZB_TERMINE = [
     "klasse": "Klasse 5+6, Klasse 7+8, Klasse 9+10 / Abitur",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2026-12-13"
   },
   {
     "datum": "2026-12-11",
@@ -1460,7 +1525,8 @@ const SLZB_TERMINE = [
     "klasse": "6. Kl., 8. Klasse, 8.+ Kl.",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2026-12-13"
   },
   {
     "datum": "2026-12-12",
@@ -1504,7 +1570,8 @@ const SLZB_TERMINE = [
     "klasse": "10g, 8g, 9g",
     "teilnahme": "Ja",
     "prioritaet": 4,
-    "prioritaetText": "4 – Regulär"
+    "prioritaetText": "4 – Regulär",
+    "datumBis": "2026-12-20"
   },
   {
     "datum": "2026-12-18",
@@ -1515,7 +1582,8 @@ const SLZB_TERMINE = [
     "klasse": "12. Klasse, 7. Klasse, 8. Klasse",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2026-12-20"
   },
   {
     "datum": "2026-12-19",
@@ -1603,7 +1671,8 @@ const SLZB_TERMINE = [
     "klasse": "VCO 2 Kader (Jg. 2011+)",
     "teilnahme": "Ja",
     "prioritaet": 3,
-    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager"
+    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager",
+    "datumBis": "2027-01-09"
   },
   {
     "datum": "2027-01-09",
@@ -1647,7 +1716,8 @@ const SLZB_TERMINE = [
     "klasse": "U18",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-01-11"
   },
   {
     "datum": "2027-01-09",
@@ -1658,7 +1728,8 @@ const SLZB_TERMINE = [
     "klasse": "U18",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-01-11"
   },
   {
     "datum": "2027-01-09",
@@ -1669,7 +1740,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK II",
     "teilnahme": "Ja",
     "prioritaet": 3,
-    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager"
+    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager",
+    "datumBis": "2027-01-15"
   },
   {
     "datum": "2027-01-13",
@@ -1680,7 +1752,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK I/II",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-01-17"
   },
   {
     "datum": "2027-01-14",
@@ -1691,7 +1764,8 @@ const SLZB_TERMINE = [
     "klasse": "VCO 1 Kader",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-01-17"
   },
   {
     "datum": "2027-01-15",
@@ -1702,7 +1776,8 @@ const SLZB_TERMINE = [
     "klasse": "Klasse 9+10 / Abitur",
     "teilnahme": "Vorläufig",
     "prioritaet": 4,
-    "prioritaetText": "4 – Regulär"
+    "prioritaetText": "4 – Regulär",
+    "datumBis": "2027-01-17"
   },
   {
     "datum": "2027-01-15",
@@ -1713,7 +1788,8 @@ const SLZB_TERMINE = [
     "klasse": "12. Klasse, 6. Kl., 7. Klasse, 7.+ Kl., 8.+ Kl.",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-01-17"
   },
   {
     "datum": "2027-01-15",
@@ -1724,7 +1800,8 @@ const SLZB_TERMINE = [
     "klasse": "Sen.",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-01-17"
   },
   {
     "datum": "2027-01-15",
@@ -1735,7 +1812,8 @@ const SLZB_TERMINE = [
     "klasse": "10g, 8g, 9g",
     "teilnahme": "Ja",
     "prioritaet": 4,
-    "prioritaetText": "4 – Regulär"
+    "prioritaetText": "4 – Regulär",
+    "datumBis": "2027-01-17"
   },
   {
     "datum": "2027-01-16",
@@ -1790,7 +1868,8 @@ const SLZB_TERMINE = [
     "klasse": "U21",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-01-17"
   },
   {
     "datum": "2027-01-19",
@@ -1801,7 +1880,8 @@ const SLZB_TERMINE = [
     "klasse": "12. Klasse, 7. Klasse, 7.+ Kl., 8. Klasse, 9.+ Kl.",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-01-24"
   },
   {
     "datum": "2027-01-19",
@@ -1812,7 +1892,8 @@ const SLZB_TERMINE = [
     "klasse": "8.+ Kl.",
     "teilnahme": "Vorläufig",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-01-24"
   },
   {
     "datum": "2027-01-21",
@@ -1823,7 +1904,8 @@ const SLZB_TERMINE = [
     "klasse": "3. Kl., 5. Kl., 6. Kl.",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-01-22"
   },
   {
     "datum": "2027-01-22",
@@ -1834,7 +1916,8 @@ const SLZB_TERMINE = [
     "klasse": "8.+ Kl.",
     "teilnahme": "Ja",
     "prioritaet": 4,
-    "prioritaetText": "4 – Regulär"
+    "prioritaetText": "4 – Regulär",
+    "datumBis": "2027-01-24"
   },
   {
     "datum": "2027-01-22",
@@ -1845,7 +1928,8 @@ const SLZB_TERMINE = [
     "klasse": "alle",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-01-24"
   },
   {
     "datum": "2027-01-23",
@@ -1900,7 +1984,8 @@ const SLZB_TERMINE = [
     "klasse": "12. Klasse, 7. Klasse",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-01-31"
   },
   {
     "datum": "2027-01-28",
@@ -1911,7 +1996,8 @@ const SLZB_TERMINE = [
     "klasse": "10g, 8g, 9g",
     "teilnahme": "Ja",
     "prioritaet": 4,
-    "prioritaetText": "4 – Regulär"
+    "prioritaetText": "4 – Regulär",
+    "datumBis": "2027-01-31"
   },
   {
     "datum": "2027-01-29",
@@ -1933,7 +2019,8 @@ const SLZB_TERMINE = [
     "klasse": "4. Kl.",
     "teilnahme": "Ja",
     "prioritaet": 4,
-    "prioritaetText": "4 – Regulär"
+    "prioritaetText": "4 – Regulär",
+    "datumBis": "2027-01-30"
   },
   {
     "datum": "2027-01-29",
@@ -1944,7 +2031,8 @@ const SLZB_TERMINE = [
     "klasse": "3. Kl., 5. Kl., 6. Kl.",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-01-31"
   },
   {
     "datum": "2027-01-29",
@@ -1955,7 +2043,8 @@ const SLZB_TERMINE = [
     "klasse": "Jun/Sen",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-01-31"
   },
   {
     "datum": "2027-01-30",
@@ -2010,7 +2099,8 @@ const SLZB_TERMINE = [
     "klasse": "Talente",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-02-07"
   },
   {
     "datum": "2027-02-06",
@@ -2076,7 +2166,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK II",
     "teilnahme": "Ja",
     "prioritaet": 3,
-    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager"
+    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager",
+    "datumBis": "2027-02-13"
   },
   {
     "datum": "2027-02-08",
@@ -2098,7 +2189,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK I/II",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-02-12"
   },
   {
     "datum": "2027-02-09",
@@ -2109,7 +2201,8 @@ const SLZB_TERMINE = [
     "klasse": "12. Klasse, 7. Klasse, 7.+ Kl., 8. Klasse, 9.+ Kl.",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-02-13"
   },
   {
     "datum": "2027-02-09",
@@ -2120,7 +2213,8 @@ const SLZB_TERMINE = [
     "klasse": "8.+ Kl.",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-02-13"
   },
   {
     "datum": "2027-02-12",
@@ -2131,7 +2225,8 @@ const SLZB_TERMINE = [
     "klasse": "Jun/Sen",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-02-14"
   },
   {
     "datum": "2027-02-13",
@@ -2186,7 +2281,8 @@ const SLZB_TERMINE = [
     "klasse": "U15/U18/U21",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-02-14"
   },
   {
     "datum": "2027-02-18",
@@ -2197,7 +2293,8 @@ const SLZB_TERMINE = [
     "klasse": "8. Klasse",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-02-21"
   },
   {
     "datum": "2027-02-18",
@@ -2208,7 +2305,8 @@ const SLZB_TERMINE = [
     "klasse": "U15",
     "teilnahme": "Ja",
     "prioritaet": 3,
-    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager"
+    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager",
+    "datumBis": "2027-02-20"
   },
   {
     "datum": "2027-02-19",
@@ -2219,7 +2317,8 @@ const SLZB_TERMINE = [
     "klasse": "Klasse 9+10 / Abitur",
     "teilnahme": "Ja",
     "prioritaet": 4,
-    "prioritaetText": "4 – Regulär"
+    "prioritaetText": "4 – Regulär",
+    "datumBis": "2027-02-21"
   },
   {
     "datum": "2027-02-19",
@@ -2230,7 +2329,8 @@ const SLZB_TERMINE = [
     "klasse": "8.+ Kl.",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-02-21"
   },
   {
     "datum": "2027-02-19",
@@ -2252,7 +2352,8 @@ const SLZB_TERMINE = [
     "klasse": "Jun D/Masters",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-02-21"
   },
   {
     "datum": "2027-02-20",
@@ -2285,7 +2386,8 @@ const SLZB_TERMINE = [
     "klasse": "VCO 2 Kader (Jg. 2011+)",
     "teilnahme": "Ja",
     "prioritaet": 3,
-    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager"
+    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager",
+    "datumBis": "2027-02-28"
   },
   {
     "datum": "2027-02-24",
@@ -2296,7 +2398,8 @@ const SLZB_TERMINE = [
     "klasse": "12. Klasse",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-02-28"
   },
   {
     "datum": "2027-02-25",
@@ -2307,7 +2410,8 @@ const SLZB_TERMINE = [
     "klasse": "5. Kl., 8.+ Kl.",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-02-28"
   },
   {
     "datum": "2027-02-25",
@@ -2318,7 +2422,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK I/II",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-02-28"
   },
   {
     "datum": "2027-02-25",
@@ -2329,7 +2434,8 @@ const SLZB_TERMINE = [
     "klasse": "alle",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-02-28"
   },
   {
     "datum": "2027-02-25",
@@ -2340,7 +2446,8 @@ const SLZB_TERMINE = [
     "klasse": "10g, 8g, 9g",
     "teilnahme": "Ja",
     "prioritaet": 4,
-    "prioritaetText": "4 – Regulär"
+    "prioritaetText": "4 – Regulär",
+    "datumBis": "2027-02-28"
   },
   {
     "datum": "2027-02-25",
@@ -2351,7 +2458,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK II",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-02-27"
   },
   {
     "datum": "2027-02-26",
@@ -2362,7 +2470,8 @@ const SLZB_TERMINE = [
     "klasse": "3. Kl., 5. Kl.",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-02-28"
   },
   {
     "datum": "2027-02-26",
@@ -2373,7 +2482,8 @@ const SLZB_TERMINE = [
     "klasse": "8g",
     "teilnahme": "Ja",
     "prioritaet": 4,
-    "prioritaetText": "4 – Regulär"
+    "prioritaetText": "4 – Regulär",
+    "datumBis": "2027-02-28"
   },
   {
     "datum": "2027-02-26",
@@ -2384,7 +2494,8 @@ const SLZB_TERMINE = [
     "klasse": "U18",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-02-28"
   },
   {
     "datum": "2027-02-27",
@@ -2439,7 +2550,8 @@ const SLZB_TERMINE = [
     "klasse": "Kl. 5+6",
     "teilnahme": "Ja",
     "prioritaet": 3,
-    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager"
+    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager",
+    "datumBis": "2027-03-04"
   },
   {
     "datum": "2027-03-01",
@@ -2472,7 +2584,8 @@ const SLZB_TERMINE = [
     "klasse": "8.+ Kl.",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-03-07"
   },
   {
     "datum": "2027-03-04",
@@ -2483,7 +2596,8 @@ const SLZB_TERMINE = [
     "klasse": "7. Klasse",
     "teilnahme": "Vorläufig",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-03-07"
   },
   {
     "datum": "2027-03-04",
@@ -2494,7 +2608,8 @@ const SLZB_TERMINE = [
     "klasse": "10g, 8g, 9g",
     "teilnahme": "Ja",
     "prioritaet": 4,
-    "prioritaetText": "4 – Regulär"
+    "prioritaetText": "4 – Regulär",
+    "datumBis": "2027-03-07"
   },
   {
     "datum": "2027-03-05",
@@ -2505,7 +2620,8 @@ const SLZB_TERMINE = [
     "klasse": "Jun/Sen",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-03-07"
   },
   {
     "datum": "2027-03-06",
@@ -2527,7 +2643,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK I/II",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-03-10"
   },
   {
     "datum": "2027-03-06",
@@ -2549,7 +2666,8 @@ const SLZB_TERMINE = [
     "klasse": "U21",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-03-07"
   },
   {
     "datum": "2027-03-10",
@@ -2560,7 +2678,8 @@ const SLZB_TERMINE = [
     "klasse": "12. Klasse, 7. Klasse",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-03-14"
   },
   {
     "datum": "2027-03-11",
@@ -2571,7 +2690,8 @@ const SLZB_TERMINE = [
     "klasse": "7.+ Kl.",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-03-13"
   },
   {
     "datum": "2027-03-11",
@@ -2582,7 +2702,8 @@ const SLZB_TERMINE = [
     "klasse": "3. Kl., 5. Kl., 6. Kl.",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-03-13"
   },
   {
     "datum": "2027-03-11",
@@ -2593,7 +2714,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK I/II",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-03-14"
   },
   {
     "datum": "2027-03-11",
@@ -2604,7 +2726,8 @@ const SLZB_TERMINE = [
     "klasse": "10g, 8g, 9g",
     "teilnahme": "Ja",
     "prioritaet": 4,
-    "prioritaetText": "4 – Regulär"
+    "prioritaetText": "4 – Regulär",
+    "datumBis": "2027-03-14"
   },
   {
     "datum": "2027-03-12",
@@ -2615,7 +2738,8 @@ const SLZB_TERMINE = [
     "klasse": "alle",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-03-14"
   },
   {
     "datum": "2027-03-13",
@@ -2637,7 +2761,8 @@ const SLZB_TERMINE = [
     "klasse": "U17",
     "teilnahme": "Ja",
     "prioritaet": 4,
-    "prioritaetText": "4 – Regulär"
+    "prioritaetText": "4 – Regulär",
+    "datumBis": "2027-03-14"
   },
   {
     "datum": "2027-03-13",
@@ -2670,7 +2795,8 @@ const SLZB_TERMINE = [
     "klasse": "U15/U18/U21",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-03-14"
   },
   {
     "datum": "2027-03-14",
@@ -2692,7 +2818,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK II",
     "teilnahme": "Ja",
     "prioritaet": 3,
-    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager"
+    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager",
+    "datumBis": "2027-03-20"
   },
   {
     "datum": "2027-03-18",
@@ -2703,7 +2830,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK I/II",
     "teilnahme": "Ja",
     "prioritaet": 3,
-    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager"
+    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager",
+    "datumBis": "2027-03-21"
   },
   {
     "datum": "2027-03-19",
@@ -2714,7 +2842,8 @@ const SLZB_TERMINE = [
     "klasse": "Klasse 7+8, Klasse 9+10 / Abitur",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-03-21"
   },
   {
     "datum": "2027-03-19",
@@ -2725,7 +2854,8 @@ const SLZB_TERMINE = [
     "klasse": "8. Klasse",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-03-21"
   },
   {
     "datum": "2027-03-19",
@@ -2736,7 +2866,8 @@ const SLZB_TERMINE = [
     "klasse": "4. Kl.",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-03-21"
   },
   {
     "datum": "2027-03-19",
@@ -2747,7 +2878,8 @@ const SLZB_TERMINE = [
     "klasse": "Sen.",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-03-21"
   },
   {
     "datum": "2027-03-19",
@@ -2758,7 +2890,8 @@ const SLZB_TERMINE = [
     "klasse": "U18/U21",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-03-25"
   },
   {
     "datum": "2027-03-19",
@@ -2769,7 +2902,8 @@ const SLZB_TERMINE = [
     "klasse": "U18/U21",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-03-25"
   },
   {
     "datum": "2027-03-20",
@@ -2791,7 +2925,8 @@ const SLZB_TERMINE = [
     "klasse": "U18",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-03-31"
   },
   {
     "datum": "2027-03-26",
@@ -2802,7 +2937,8 @@ const SLZB_TERMINE = [
     "klasse": "U15",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-03-28"
   },
   {
     "datum": "2027-03-27",
@@ -2824,7 +2960,8 @@ const SLZB_TERMINE = [
     "klasse": "7.+ Kl.",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-04-04"
   },
   {
     "datum": "2027-03-30",
@@ -2835,7 +2972,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK II",
     "teilnahme": "Vorläufig",
     "prioritaet": 3,
-    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager"
+    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager",
+    "datumBis": "2027-04-05"
   },
   {
     "datum": "2027-04-01",
@@ -2868,7 +3006,8 @@ const SLZB_TERMINE = [
     "klasse": "Klasse 5+6, Klasse 7+8, Klasse 9+10 / Abitur",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-04-03"
   },
   {
     "datum": "2027-04-02",
@@ -2879,7 +3018,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK I/II",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-04-05"
   },
   {
     "datum": "2027-04-03",
@@ -2912,7 +3052,8 @@ const SLZB_TERMINE = [
     "klasse": "U21",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-04-14"
   },
   {
     "datum": "2027-04-09",
@@ -2923,7 +3064,8 @@ const SLZB_TERMINE = [
     "klasse": "U16",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-04-11"
   },
   {
     "datum": "2027-04-09",
@@ -2934,7 +3076,8 @@ const SLZB_TERMINE = [
     "klasse": "U16",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-04-11"
   },
   {
     "datum": "2027-04-10",
@@ -2967,7 +3110,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK II",
     "teilnahme": "Ja",
     "prioritaet": 3,
-    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager"
+    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager",
+    "datumBis": "2027-04-16"
   },
   {
     "datum": "2027-04-12",
@@ -2978,7 +3122,8 @@ const SLZB_TERMINE = [
     "klasse": "Kl. 7+8",
     "teilnahme": "Ja",
     "prioritaet": 3,
-    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager"
+    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager",
+    "datumBis": "2027-04-15"
   },
   {
     "datum": "2027-04-13",
@@ -2989,7 +3134,8 @@ const SLZB_TERMINE = [
     "klasse": "Kl. 10h, Kl. 7h, Kl. 9h",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-04-17"
   },
   {
     "datum": "2027-04-16",
@@ -3000,7 +3146,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK I/II",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-04-19"
   },
   {
     "datum": "2027-04-17",
@@ -3055,7 +3202,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK I/II",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-04-30"
   },
   {
     "datum": "2027-04-21",
@@ -3066,7 +3214,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK I/II",
     "teilnahme": "Ja",
     "prioritaet": 3,
-    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager"
+    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager",
+    "datumBis": "2027-04-24"
   },
   {
     "datum": "2027-04-22",
@@ -3077,7 +3226,8 @@ const SLZB_TERMINE = [
     "klasse": "Kl. 8h",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-04-25"
   },
   {
     "datum": "2027-04-24",
@@ -3110,7 +3260,8 @@ const SLZB_TERMINE = [
     "klasse": "U18",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-04-28"
   },
   {
     "datum": "2027-05-01",
@@ -3165,7 +3316,8 @@ const SLZB_TERMINE = [
     "klasse": "Kl. 8h",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-05-08"
   },
   {
     "datum": "2027-05-07",
@@ -3176,7 +3328,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK I/II",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-05-08"
   },
   {
     "datum": "2027-05-08",
@@ -3220,7 +3373,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK II",
     "teilnahme": "Ja",
     "prioritaet": 3,
-    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager"
+    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager",
+    "datumBis": "2027-05-16"
   },
   {
     "datum": "2027-05-15",
@@ -3231,7 +3385,8 @@ const SLZB_TERMINE = [
     "klasse": "Klasse 7+8, Klasse 9+10 / Abitur",
     "teilnahme": "Ja",
     "prioritaet": 4,
-    "prioritaetText": "4 – Regulär"
+    "prioritaetText": "4 – Regulär",
+    "datumBis": "2027-05-16"
   },
   {
     "datum": "2027-05-15",
@@ -3242,7 +3397,8 @@ const SLZB_TERMINE = [
     "klasse": "U18",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-05-19"
   },
   {
     "datum": "2027-05-15",
@@ -3253,7 +3409,8 @@ const SLZB_TERMINE = [
     "klasse": "U21",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-05-19"
   },
   {
     "datum": "2027-05-17",
@@ -3264,7 +3421,8 @@ const SLZB_TERMINE = [
     "klasse": "Klasse 7+8, Klasse 9+10 / Abitur",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-05-23"
   },
   {
     "datum": "2027-05-19",
@@ -3308,7 +3466,8 @@ const SLZB_TERMINE = [
     "klasse": "U18",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-05-30"
   },
   {
     "datum": "2027-05-28",
@@ -3319,7 +3478,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK I/II",
     "teilnahme": "Ja",
     "prioritaet": 4,
-    "prioritaetText": "4 – Regulär"
+    "prioritaetText": "4 – Regulär",
+    "datumBis": "2027-05-30"
   },
   {
     "datum": "2027-05-29",
@@ -3352,7 +3512,8 @@ const SLZB_TERMINE = [
     "klasse": "Kl. 9+10",
     "teilnahme": "Ja",
     "prioritaet": 3,
-    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager"
+    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager",
+    "datumBis": "2027-06-03"
   },
   {
     "datum": "2027-06-01",
@@ -3363,7 +3524,8 @@ const SLZB_TERMINE = [
     "klasse": "Kl. 10h, Kl. 11., Kl. 12.",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-06-05"
   },
   {
     "datum": "2027-06-03",
@@ -3374,7 +3536,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK II",
     "teilnahme": "Vorläufig",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-06-05"
   },
   {
     "datum": "2027-06-04",
@@ -3385,7 +3548,8 @@ const SLZB_TERMINE = [
     "klasse": "Klasse 9+10 / Abitur",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-06-06"
   },
   {
     "datum": "2027-06-04",
@@ -3396,7 +3560,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK I/II",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-06-06"
   },
   {
     "datum": "2027-06-05",
@@ -3418,7 +3583,8 @@ const SLZB_TERMINE = [
     "klasse": "U18",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-06-12"
   },
   {
     "datum": "2027-06-11",
@@ -3429,7 +3595,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK I/II",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-06-12"
   },
   {
     "datum": "2027-06-12",
@@ -3473,7 +3640,8 @@ const SLZB_TERMINE = [
     "klasse": "U18",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-06-14"
   },
   {
     "datum": "2027-06-17",
@@ -3484,7 +3652,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK II",
     "teilnahme": "Vorläufig",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-06-20"
   },
   {
     "datum": "2027-06-19",
@@ -3506,7 +3675,8 @@ const SLZB_TERMINE = [
     "klasse": "U18",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-06-24"
   },
   {
     "datum": "2027-06-24",
@@ -3517,7 +3687,8 @@ const SLZB_TERMINE = [
     "klasse": "U18",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-06-27"
   },
   {
     "datum": "2027-06-25",
@@ -3528,7 +3699,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK I/II",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-06-27"
   },
   {
     "datum": "2027-06-26",
@@ -3561,7 +3733,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK II",
     "teilnahme": "Vorläufig",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-07-04"
   },
   {
     "datum": "2027-07-03",
@@ -3572,7 +3745,8 @@ const SLZB_TERMINE = [
     "klasse": "Klasse 7+8, Klasse 9+10 / Abitur",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-07-05"
   },
   {
     "datum": "2027-07-03",
@@ -3583,7 +3757,8 @@ const SLZB_TERMINE = [
     "klasse": "U18",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-07-07"
   },
   {
     "datum": "2027-07-26",
@@ -3594,7 +3769,8 @@ const SLZB_TERMINE = [
     "klasse": "Klasse 9+10 / Abitur",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-08-01"
   },
   {
     "datum": "2027-07-29",
@@ -3605,7 +3781,8 @@ const SLZB_TERMINE = [
     "klasse": "Klasse 7+8, Klasse 9+10 / Abitur",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-08-01"
   },
   {
     "datum": "2027-07-29",
@@ -3616,7 +3793,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK I/II",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-08-01"
   },
   {
     "datum": "2027-08-08",
@@ -3627,7 +3805,8 @@ const SLZB_TERMINE = [
     "klasse": "Abitur",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-08-13"
   },
   {
     "datum": "2027-08-20",
@@ -3638,7 +3817,8 @@ const SLZB_TERMINE = [
     "klasse": "Klasse 7+8, Klasse 9+10 / Abitur",
     "teilnahme": "Ja",
     "prioritaet": 4,
-    "prioritaetText": "4 – Regulär"
+    "prioritaetText": "4 – Regulär",
+    "datumBis": "2027-08-21"
   },
   {
     "datum": "2027-08-22",
@@ -3671,7 +3851,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK I/II",
     "teilnahme": "Ja",
     "prioritaet": 3,
-    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager"
+    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager",
+    "datumBis": "2027-09-06"
   },
   {
     "datum": "2027-09-08",
@@ -3682,7 +3863,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK I/II",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-09-12"
   },
   {
     "datum": "2027-09-09",
@@ -3693,7 +3875,8 @@ const SLZB_TERMINE = [
     "klasse": "Klasse 9+10 / Abitur",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-09-12"
   },
   {
     "datum": "2027-10-01",
@@ -3704,7 +3887,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK I/II",
     "teilnahme": "Ja",
     "prioritaet": 1,
-    "prioritaetText": "1 – Meisterschaft / Olympia / Finale"
+    "prioritaetText": "1 – Meisterschaft / Olympia / Finale",
+    "datumBis": "2027-10-08"
   },
   {
     "datum": "2027-10-15",
@@ -3715,7 +3899,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK I/II",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-10-17"
   },
   {
     "datum": "2027-10-22",
@@ -3726,7 +3911,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK I/II",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-10-23"
   },
   {
     "datum": "2027-11-05",
@@ -3737,7 +3923,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK I/II",
     "teilnahme": "Ja",
     "prioritaet": 3,
-    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager"
+    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager",
+    "datumBis": "2027-11-08"
   },
   {
     "datum": "2027-11-12",
@@ -3748,7 +3935,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK I/II",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-11-14"
   },
   {
     "datum": "2027-11-15",
@@ -3759,7 +3947,8 @@ const SLZB_TERMINE = [
     "klasse": "SEK I/II",
     "teilnahme": "Ja",
     "prioritaet": 3,
-    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager"
+    "prioritaetText": "3 – Lehrgang / Sichtung / Trainingslager",
+    "datumBis": "2027-11-19"
   },
   {
     "datum": "2027-11-19",
@@ -3770,6 +3959,7 @@ const SLZB_TERMINE = [
     "klasse": "SEK I/II",
     "teilnahme": "Ja",
     "prioritaet": 2,
-    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste"
+    "prioritaetText": "2 – Wettkampf / Qualifikation / Rangliste",
+    "datumBis": "2027-11-21"
   }
 ];
