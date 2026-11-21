@@ -24,6 +24,32 @@ const SLZB_COLORS = {
 // Gradient: schwarz oben → dunkelrot unten (wie HTML-Vorlage)
 // ══════════════════════════════════════════════════════════════
 
+
+// ── Datum/Zeitraum formatieren ────────────────────────────────
+// Gibt "15.11.2026" oder "15.–20.11.2026" zurück
+function formatDatumZeitraum(datumVon, datumBis, lang=false) {
+  if (!datumVon) return '';
+  const opts = lang
+    ? {day:'2-digit', month:'long', year:'numeric'}
+    : {day:'2-digit', month:'2-digit', year:'numeric'};
+  const von = new Date(datumVon);
+  if (!datumBis || datumBis === datumVon) {
+    return von.toLocaleDateString('de-DE', opts);
+  }
+  const bis = new Date(datumBis);
+  // Gleiches Jahr + Monat: "15.–20.11.2026"
+  if (von.getFullYear() === bis.getFullYear() && von.getMonth() === bis.getMonth()) {
+    return `${von.getDate().toString().padStart(2,'0')}.–${bis.toLocaleDateString('de-DE', opts)}`;
+  }
+  // Gleiches Jahr, verschiedene Monate: "28.11.–03.12.2026"
+  if (von.getFullYear() === bis.getFullYear()) {
+    const vonStr = von.toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit'});
+    return `${vonStr}–${bis.toLocaleDateString('de-DE', opts)}`;
+  }
+  // Verschiedene Jahre: "28.12.2026–03.01.2027"
+  return `${von.toLocaleDateString('de-DE', opts)}–${bis.toLocaleDateString('de-DE', opts)}`;
+}
+
 function zeichneSlzbHintergrund(ctx, W, H, bild, akzent='rot') {
   ctx.fillStyle = '#000'; ctx.fillRect(0,0,W,H);
   if (bild) {
@@ -562,7 +588,7 @@ async function zeichnePosterLandscape(ctx, e, bild, meta) {
   const platz = e.platzierung || '';
   const medaille = e.medaille && e.medaille!=='keine' ? e.medaille : '';
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
-  const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  const datum = formatDatumZeitraum(e.datum, e.datumBis);
   zeichneSlzbHintergrundMitFallback(ctx, W, H, bild, 'rot', sportart);
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
@@ -595,7 +621,7 @@ async function zeichnePosterPortrait(ctx, e, bild, meta) {
   const platz = e.platzierung || '';
   const medaille = e.medaille && e.medaille!=='keine' ? e.medaille : '';
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
-  const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  const datum = formatDatumZeitraum(e.datum, e.datumBis);
   zeichneSlzbHintergrundMitFallback(ctx, W, H, bild, 'rot', sportart);
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, sportart, datum);
@@ -628,7 +654,7 @@ async function zeichnePosterKeinBild(ctx, e) {
   const platz = e.platzierung || '';
   const medaille = e.medaille && e.medaille!=='keine' ? e.medaille : '';
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
-  const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  const datum = formatDatumZeitraum(e.datum, e.datumBis);
 
   zeichneSlzbHintergrundMitFallback(ctx, W, H, null, 'rot', sportart); // kein Bild → Ersatzbild
   zeichneSlzbDeko(ctx, W, H);
@@ -728,7 +754,7 @@ function zeichneTextbereich(ctx, e, W, H, startY, mColor, sportart, platz, medai
   }
 
   // Datum + Ort
-  const datumStr = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  const datumStr = formatDatumZeitraum(e.datum, e.datumBis);
   const ortStr = [datumStr, e.ort, e.ebene].filter(Boolean).join(' · ');
   if (ortStr) {
     ctx.fillStyle='rgba(201,204,210,0.8)'; ctx.font='16px Montserrat, Arial, sans-serif';
@@ -898,7 +924,7 @@ function zeichneA3Header(ctx, W, e, transparent=false) {
   const HEADER_H = 120;
   const MARGIN = 60; // Sicherheitsabstand für Einspannrahmen (~15mm bei A3)
   const sportart = e.sportartText || SLZB_DB.getSportart(e.sportartId)?.name || '';
-  const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'}) : '';
+  const datum = formatDatumZeitraum(e.datum, e.datumBis, true);
 
   // Druckerrand berücksichtigen: Header-Balken beginnt nach dem Rand
   const RAND_OB_H = 40; // muss mit zeichneA3DruckerrandFinal übereinstimmen
@@ -1078,7 +1104,7 @@ async function zeichneA3Landscape(canvas, e, bild, meta) {
   }
 
   // Datum
-  const _datumL2 = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'}) : '';
+  const _datumL2 = formatDatumZeitraum(e.datum, e.datumBis, true);
   if (_datumL2 && y < textEndY - 16) {
     ctx.fillStyle='#666'; ctx.font='13px Montserrat, Arial, sans-serif';
     ctx.textAlign='center'; ctx.textBaseline='top'; ctx.fillText(_datumL2, W/2, y);
@@ -1158,7 +1184,7 @@ async function zeichneA3Portrait(canvas, e, bild, meta) {
     ctx.fillText(_athP.toUpperCase(), tx, y, tw); y+=34;
   }
   // Datum
-  const _datumP = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'}) : '';
+  const _datumP = formatDatumZeitraum(e.datum, e.datumBis, true);
   if (_datumP) {
     ctx.fillStyle='#666'; ctx.font='14px Montserrat, Arial, sans-serif';
     ctx.textAlign='left'; ctx.fillText(_datumP, tx, y); y+=22;
@@ -1241,7 +1267,7 @@ async function zeichneA3KeinBild(canvas, e) {
     ctx.fillText(_athK.toUpperCase(), W/2, _yK, W-120);
   }
   // Datum
-  const _datumK = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'}) : '';
+  const _datumK = formatDatumZeitraum(e.datum, e.datumBis, true);
   if (_datumK) {
     const _yDK = y + (platz ? 80 : 20) + (_athK ? 44 : 0);
     ctx.fillStyle='#666'; ctx.font='16px Montserrat, Arial, sans-serif';
@@ -1308,7 +1334,7 @@ async function zeichneSocialBeitragLandscape(ctx, e, bild, meta, W, H) {
   const platz = e.platzierung || '';
   const medaille = e.medaille && e.medaille!=='keine' ? e.medaille : '';
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
-  const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  const datum = formatDatumZeitraum(e.datum, e.datumBis);
   // Athletenname: aus beteiligte oder Titel
   const _athletS = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet'&&n.trim()!=='').join(', ');
   const teile = _athletS ? _athletS.trim().split(' ') : [];
@@ -1345,7 +1371,7 @@ async function zeichneSlzbBildschirmFormat(canvasId, e) {
   const platz = e.platzierung || '';
   const medaille = e.medaille && e.medaille!=='keine' ? e.medaille : '';
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
-  const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  const datum = formatDatumZeitraum(e.datum, e.datumBis);
   const _athletS = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet'&&n.trim()!=='').join(', ');
   const teile = _athletS ? _athletS.trim().split(' ') : [];
   const vorname = teile.length>1 ? teile.slice(0,-1).join(' ') : '';
@@ -1375,7 +1401,7 @@ async function zeichneSocialBeitragPortrait(ctx, e, bild, meta, W, H) {
   const platz = e.platzierung || '';
   const medaille = e.medaille && e.medaille!=='keine' ? e.medaille : '';
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
-  const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  const datum = formatDatumZeitraum(e.datum, e.datumBis);
   // Athletenname: aus beteiligte oder Titel
   const _athletS = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet'&&n.trim()!=='').join(', ');
   const teile = _athletS ? _athletS.trim().split(' ') : [];
@@ -1403,7 +1429,7 @@ async function zeichneSocialBeitragKeinBild(ctx, e, W, H) {
   const platz = e.platzierung || '';
   const medaille = e.medaille && e.medaille!=='keine' ? e.medaille : '';
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
-  const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  const datum = formatDatumZeitraum(e.datum, e.datumBis);
   // Athletenname aus beteiligte (nicht Titel!)
   const _athKS = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet'&&n.trim()!=='').join(', ');
   const teileKS = _athKS ? _athKS.trim().split(' ') : [];
@@ -1431,7 +1457,7 @@ async function zeichneSocialStory(ctx, e, bild, meta, W, H) {
   const platz = e.platzierung || '';
   const medaille = e.medaille && e.medaille!=='keine' ? e.medaille : '';
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
-  const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  const datum = formatDatumZeitraum(e.datum, e.datumBis);
   // Athletenname: aus beteiligte oder Titel
   const _athletS = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet'&&n.trim()!=='').join(', ');
   const teile = _athletS ? _athletS.trim().split(' ') : [];
@@ -1469,7 +1495,7 @@ async function zeichneA3Split(canvasId, e) {
   const medaille = e.medaille && e.medaille!=='keine' ? e.medaille : '';
   const mColor = medailleColor(medaille);
   const titel = (e.titel||'').replace('[SYNTHETISCH] ','').replace('[Aus Artikel] ','');
-  const datum = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  const datum = formatDatumZeitraum(e.datum, e.datumBis);
 
   // Hintergrund (Basis-Funktion mit Fallback)
   zeichneSlzbHintergrundMitFallback(ctx, W, H, bild, 'rot', sportart);
@@ -1604,7 +1630,7 @@ async function zeichneA3Vollbild(canvasId, e) {
 
   // Athletenname + Datum vorbereiten
   const _athV = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(n=>n&&n!=='–'&&n!=='Athlet'&&n.trim()!=='').join(', ');
-  const _datumV = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'}) : '';
+  const _datumV = formatDatumZeitraum(e.datum, e.datumBis, true);
 
   // Kartenhöhe dynamisch berechnen
   const woerter = titel.toUpperCase().split(' ');
@@ -1996,7 +2022,7 @@ async function zeichneBildschirmQuerformat(canvasId, e) {
 
   // ── Kopfzeile (oben links, über dem Bild bei Bild-links-Layout) ──
   // Im Querformat: Kopfzeile in die Textspalte integrieren (oben)
-  const _datumQF = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  const _datumQF = formatDatumZeitraum(e.datum, e.datumBis);
   ctx.fillStyle=SLZB_COLORS.white;
   ctx.font='bold 15px Montserrat, Arial, sans-serif';
   ctx.textAlign='left'; ctx.textBaseline='top';
@@ -2103,7 +2129,7 @@ async function zeichneTabellenLayout(canvasId, e) {
   let y = 80;
 
   // Sportart + Datum + Trennlinie
-  const _datumTL = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  const _datumTL = formatDatumZeitraum(e.datum, e.datumBis);
   ctx.fillStyle=SLZB_COLORS.red; ctx.font='bold 20px Montserrat, Arial, sans-serif';
   ctx.textAlign='left'; ctx.textBaseline='top';
   ctx.fillText(sportart.toUpperCase(), TX, y); y+=28;
@@ -2230,7 +2256,7 @@ async function zeichneMultiErfolgLayout(canvasId, e) {
   ctx.textAlign='left'; ctx.textBaseline='top';
   ctx.fillText((e.wettbewerbText||'').toUpperCase(), 206, 40);
   ctx.fillStyle=SLZB_COLORS.red; ctx.font='bold 11px Montserrat, Arial, sans-serif';
-  const _datumML = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  const _datumML = formatDatumZeitraum(e.datum, e.datumBis);
   ctx.fillText([sportart, _datumML].filter(Boolean).join(' · ').toUpperCase(), 206, 64);
 
   // Haupttitel
@@ -2339,7 +2365,7 @@ async function zeichneInfografikLayout(canvasId, e) {
   ctx.textAlign='left'; ctx.textBaseline='top';
   ctx.fillText((e.wettbewerbText||'JAHRESRÜCKBLICK').toUpperCase(), 194, 34);
   ctx.fillStyle=SLZB_COLORS.red; ctx.font='bold 11px Montserrat, Arial, sans-serif';
-  const _datumIL = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  const _datumIL = formatDatumZeitraum(e.datum, e.datumBis);
   ctx.fillText([sportart||'SLZB BERLIN', _datumIL].filter(Boolean).join(' · ').toUpperCase(), 194, 58);
 
   // Haupttitel
@@ -2472,7 +2498,7 @@ async function zeichnePortraitLayout(canvasId, e) {
   // Kopfzeile über dem Foto
   drawLogo(ctx, 40, 28, 55);
   ctx.fillStyle=SLZB_COLORS.red; ctx.fillRect(170, 36, 3, 44);
-  const _datumPL = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  const _datumPL = formatDatumZeitraum(e.datum, e.datumBis);
   ctx.fillStyle=SLZB_COLORS.white; ctx.font='bold 15px Montserrat, Arial, sans-serif';
   ctx.textAlign='left'; ctx.textBaseline='top';
   ctx.fillText(wettbewerb.toUpperCase()||sportart.toUpperCase(), 182, 32);
@@ -2576,7 +2602,7 @@ async function zeichneHighlightKarte(canvasId, e, nr, gesamt) {
   ctx.fillText(`${nr} / ${gesamt}`, W-53, 34);
 
   // Sportart + Datum
-  const _datumHL = e.datum ? new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  const _datumHL = formatDatumZeitraum(e.datum, e.datumBis);
   ctx.fillStyle=SLZB_COLORS.red; ctx.font='bold 18px Montserrat, Arial, sans-serif';
   ctx.textAlign='center'; ctx.textBaseline='top';
   ctx.fillText([sportart, _datumHL].filter(Boolean).join(' · ').toUpperCase(), W/2, 620);
@@ -3329,6 +3355,32 @@ function _zeichneSilhouette(ctx, W, H, silhouette, farbe, alpha) {
 // Integration in zeichneSlzbHintergrund: Ersatzbild wenn kein Foto
 const _origZeichneSlzbHintergrund = zeichneSlzbHintergrund;
 // Überschreibe nicht – stattdessen neue Funktion für Poster-Layouts
+
+// ── Datum/Zeitraum formatieren ────────────────────────────────
+// Gibt "15.11.2026" oder "15.–20.11.2026" zurück
+function formatDatumZeitraum(datumVon, datumBis, lang=false) {
+  if (!datumVon) return '';
+  const opts = lang
+    ? {day:'2-digit', month:'long', year:'numeric'}
+    : {day:'2-digit', month:'2-digit', year:'numeric'};
+  const von = new Date(datumVon);
+  if (!datumBis || datumBis === datumVon) {
+    return von.toLocaleDateString('de-DE', opts);
+  }
+  const bis = new Date(datumBis);
+  // Gleiches Jahr + Monat: "15.–20.11.2026"
+  if (von.getFullYear() === bis.getFullYear() && von.getMonth() === bis.getMonth()) {
+    return `${von.getDate().toString().padStart(2,'0')}.–${bis.toLocaleDateString('de-DE', opts)}`;
+  }
+  // Gleiches Jahr, verschiedene Monate: "28.11.–03.12.2026"
+  if (von.getFullYear() === bis.getFullYear()) {
+    const vonStr = von.toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit'});
+    return `${vonStr}–${bis.toLocaleDateString('de-DE', opts)}`;
+  }
+  // Verschiedene Jahre: "28.12.2026–03.01.2027"
+  return `${von.toLocaleDateString('de-DE', opts)}–${bis.toLocaleDateString('de-DE', opts)}`;
+}
+
 function zeichneSlzbHintergrundMitFallback(ctx, W, H, bild, akzent, sportartName) {
   if (bild) {
     zeichneSlzbHintergrund(ctx, W, H, bild, akzent);

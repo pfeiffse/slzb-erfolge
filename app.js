@@ -1899,6 +1899,7 @@ function leseDatenAusFormular(meldungsart) {
     wettbewerbId:    wb?.id||null,
     wettbewerbText,
     datum:           document.getElementById('f-datum')?.value||null,
+    datumBis:        document.getElementById('f-datum-bis')?.value||null,
     ort:             document.getElementById('f-ort')?.value||'',
     ebene:           document.getElementById('f-ebene')?.value||'',
     platzierung:     document.getElementById('f-platzierung')?.value?Number(document.getElementById('f-platzierung').value):null,
