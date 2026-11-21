@@ -1929,10 +1929,48 @@ async function diaShowMitFilter() {
 
   if (!gefiltert.length) { toast('Keine Erfolge für diese Filter', 'warning'); return; }
 
-  // Bilder vorladen
+  // Beteiligte + Bilder für alle Erfolge nachladen
   toast(`⏳ Lade ${gefiltert.length} Erfolge...`, 'info');
   const bildCache = {};
-  await Promise.all(gefiltert.slice(0,20).map(async e => {
+
+  // Beteiligte laden (batch)
+  try {
+    const ids = gefiltert.map(e => e.id);
+    const { data: betData } = await Backend.client
+      .from('achievement_participants')
+      .select('achievement_id, participant_role')
+      .in('achievement_id', ids);
+    const betMap = {};
+    (betData||[]).forEach(b => {
+      if (!betMap[b.achievement_id]) betMap[b.achievement_id] = [];
+      if (b.participant_role) betMap[b.achievement_id].push({ anzeigename: b.participant_role });
+    });
+    gefiltert.forEach(e => { if (betMap[e.id]) e.beteiligte = betMap[e.id]; });
+  } catch(_) {}
+
+  // Bilder laden (batch)
+  try {
+    const ids = gefiltert.map(e => e.id);
+    const { data: medData } = await Backend.client
+      .from('achievement_media')
+      .select('achievement_id, storage_path')
+      .in('achievement_id', ids)
+      .limit(ids.length);
+    const medMap = {};
+    for (const m of (medData||[])) {
+      if (!medMap[m.achievement_id] && m.storage_path) {
+        const { data: sd } = await Backend.client.storage
+          .from('achievement-media').createSignedUrl(m.storage_path, 3600);
+        if (sd?.signedUrl) medMap[m.achievement_id] = sd.signedUrl;
+      }
+    }
+    gefiltert.forEach(e => {
+      if (medMap[e.id]) e.bilder = [{ signedUrl: medMap[e.id] }];
+    });
+  } catch(_) {}
+
+  // Erste 10 Bilder vorladen
+  await Promise.all(gefiltert.slice(0,10).map(async e => {
     const url = e.bilder?.[0]?.signedUrl;
     if (url) {
       try {
