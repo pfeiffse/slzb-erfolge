@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SLZB Sportnews Widget – Demo</title>
+<style>
+  body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 40px 20px; background: #f8f9fa; }
+  h1 { color: #003366; margin-bottom: 8px; }
+  .subtitle { color: #6b7280; margin-bottom: 32px; }
+  .code-box { background: #1B1C1F; color: #C9CCD2; padding: 20px; border-radius: 8px; font-family: monospace; font-size: .9rem; margin: 24px 0; overflow-x: auto; }
+  .code-box .comment { color: #8A9BB0; }
+  .code-box .tag { color: #7eb3ff; }
+  .code-box .attr { color: #C9A227; }
+  .code-box .val { color: #00c853; }
+</style>
+</head>
+<body>
+<h1>🏅 SLZB Sportnews Widget</h1>
+<p class="subtitle">Einbindung auf jeder Website – kein Login erforderlich</p>
+
+<h2>Einbindung (Standard)</h2>
+<div class="code-box">
+<span class="comment">&lt;!-- 1. Widget-Script einbinden --&gt;</span><br>
+<span class="tag">&lt;script</span> <span class="attr">src</span>=<span class="val">"https://pfeiffse.github.io/slzb-erfolge/slzb-v3/widget.js"</span><span class="tag">&gt;&lt;/script&gt;</span><br><br>
+<span class="comment">&lt;!-- 2. Container platzieren --&gt;</span><br>
+<span class="tag">&lt;div</span> <span class="attr">id</span>=<span class="val">"slzb-sportnews"</span><span class="tag">&gt;&lt;/div&gt;</span>
+</div>
+
+<h2>Optionen</h2>
+<div class="code-box">
+<span class="tag">&lt;div</span> <span class="attr">id</span>=<span class="val">"slzb-sportnews"</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp; <span class="attr">data-limit</span>=<span class="val">"6"</span> <span class="comment">&lt;!-- Anzahl Meldungen (Standard: 6) --&gt;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp; <span class="attr">data-theme</span>=<span class="val">"light"</span> <span class="comment">&lt;!-- "light" oder "dark" --&gt;</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp; <span class="attr">data-sportart</span>=<span class="val">""</span> <span class="comment">&lt;!-- Sportart-ID filtern (leer = alle) --&gt;</span><br>
+<span class="tag">&gt;&lt;/div&gt;</span>
+</div>
+
+<h2>Live-Vorschau (Light Theme)</h2>
+<div id="slzb-sportnews" data-limit="6" data-theme="light"></div>
+
+<h2 style="margin-top:48px">Live-Vorschau (Dark Theme)</h2>
+<div style="background:#111;padding:24px;border-radius:12px;margin-top:12px">
+  <div class="slzb-sportnews" data-limit="3" data-theme="dark"></div>
+</div>
+
+<script src="widget.js"></script>
+</body>
+</html>
