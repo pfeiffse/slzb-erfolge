@@ -1557,14 +1557,28 @@ async function renderJahreschronik() {
   const aktuellesSchuljahr=schuljahre[0]||'';
   return`<div class="page">
     <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
-      <div><h1>📅 Jahreschronik</h1></div>
-      <button class="btn btn-outline btn-sm" onclick="exportiereChronikCSVAktuell()" style="white-space:nowrap">
-        ⬇️ CSV exportieren
-      </button>
-      <button class="btn btn-primary btn-sm" onclick="exportiereChronikPPTX()" style="white-space:nowrap">
-        📊 PowerPoint exportieren
-      </button>
+      <div><h1>📅 Chronik</h1></div>
+      <div class="flex gap-2" style="flex-wrap:wrap">
+        <button class="btn btn-outline btn-sm" onclick="exportiereChronikCSVAktuell()" style="white-space:nowrap">⬇️ CSV</button>
+        <button class="btn btn-primary btn-sm" onclick="exportiereChronikPPTX()" style="white-space:nowrap">📊 PowerPoint</button>
+      </div>
     </div>
+
+    <!-- Zeitraum-Schnellauswahl -->
+    <div class="card mb-3" style="background:rgba(0,51,102,0.06);border-color:rgba(0,51,102,0.2)">
+      <div class="card-body" style="padding:12px">
+        <div style="font-size:.78rem;color:#888;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Zeitraum</div>
+        <div class="flex gap-2" style="flex-wrap:wrap">
+          <button id="chr-btn-monat" class="btn btn-ghost btn-sm" onclick="setChronikZeitraum('monat')">📅 Dieser Monat</button>
+          <button id="chr-btn-quartal" class="btn btn-ghost btn-sm" onclick="setChronikZeitraum('quartal')">📆 Dieses Quartal</button>
+          <button id="chr-btn-semester" class="btn btn-ghost btn-sm" onclick="setChronikZeitraum('semester')">🗓️ Dieses Semester</button>
+          <button id="chr-btn-schuljahr" class="btn btn-primary btn-sm" onclick="setChronikZeitraum('schuljahr')">📚 Schuljahr</button>
+          <button id="chr-btn-alle" class="btn btn-ghost btn-sm" onclick="setChronikZeitraum('alle')">🔍 Alle</button>
+        </div>
+        <div id="chr-zeitraum-label" style="font-size:.75rem;color:#888;margin-top:6px"></div>
+      </div>
+    </div>
+
     <div class="card mb-3"><div class="card-body">
       <div class="form-row cols-4">
         <div class="form-group"><label>Schuljahr</label>
@@ -1582,14 +1596,14 @@ async function renderJahreschronik() {
             <option value="">Alle</option>
             ${['Schulebene','Bezirk','Landesebene','Bundesebene','International'].map(e=>`<option>${e}</option>`).join('')}
           </select></div>
-        <div class="form-group"><label>Typ</label>
-          <select id="chr-typ" onchange="aktualisiereChronik()">
-            <option value="">Alle</option>
-            <option value="Einzelerfolg">Einzelerfolge</option>
-            <option value="Teamerfolg">Teamerfolge</option>
+        <div class="form-group"><label>Ansicht</label>
+          <select id="chr-ansicht" onchange="aktualisiereChronik()">
+            <option value="tabelle">Tabelle</option>
+            <option value="karten">Karten mit Bildern</option>
+            <option value="timeline">Timeline</option>
           </select></div>
       </div>
-      <div class="flex gap-2 mt-2">
+      <div class="flex gap-2 mt-2" style="flex-wrap:wrap">
         <button class="btn btn-outline btn-sm" onclick="druckeChronik()">🖨️ Drucken</button>
         <button class="btn btn-outline btn-sm" onclick="exportiereChronikCSV()">⬇️ CSV-Export</button>
       </div>
@@ -1598,12 +1612,16 @@ async function renderJahreschronik() {
   </div>`;
 }
 
-function renderChronikInhalt(alle,schuljahr,sportartId,ebene,typ) {
+function renderChronikInhalt(alle,schuljahr,sportartId,ebene,typ,ansicht='tabelle') {
   let gefiltert=alle.filter(e=>['Freigegeben','Veröffentlicht','Archiviert'].includes(e.status));
   if(schuljahr) gefiltert=gefiltert.filter(e=>SLZB_DB.getSchuljahr(e.datum)===schuljahr);
   if(sportartId) gefiltert=gefiltert.filter(e=>e.sportartId===sportartId);
   if(ebene) gefiltert=gefiltert.filter(e=>e.ebene===ebene);
   if(typ) gefiltert=gefiltert.filter(e=>e.meldungsart===typ);
+  // Zeitraum-Filter
+  const zr = window._chrZeitraum || {};
+  if(zr.von) gefiltert=gefiltert.filter(e=>e.datum && new Date(e.datum) >= zr.von);
+  if(zr.bis) gefiltert=gefiltert.filter(e=>e.datum && new Date(e.datum) <= zr.bis);
   gefiltert.sort((a,b)=>new Date(b.datum)-new Date(a.datum));
   if(!gefiltert.length) return`<div class="alert alert-info"><span class="alert-icon">ℹ️</span><span>Keine freigegebenen Erfolge für die gewählten Filter.</span></div>`;
   const goldCount=gefiltert.filter(e=>e.medaille==='Gold').length;
@@ -1612,16 +1630,63 @@ function renderChronikInhalt(alle,schuljahr,sportartId,ebene,typ) {
   const gruppen={};
   gefiltert.forEach(e=>{const key=SLZB_DB.getSportart(e.sportartId)?.name||'Sonstige';if(!gruppen[key])gruppen[key]=[];gruppen[key].push(e);});
   const mi={Gold:'🥇',Silber:'🥈',Bronze:'🥉'};
-  return`
-    <div class="grid grid-4 mb-4">
-      <div class="stat-card"><div class="stat-icon blue">🏆</div><div><div class="stat-value">${gefiltert.length}</div><div class="stat-label">Erfolge gesamt</div></div></div>
-      <div class="stat-card"><div class="stat-icon gold">🥇</div><div><div class="stat-value">${goldCount}</div><div class="stat-label">Gold</div></div></div>
-      <div class="stat-card"><div class="stat-icon" style="background:#F1F5F9;color:#475569">🥈</div><div><div class="stat-value">${silberCount}</div><div class="stat-label">Silber</div></div></div>
-      <div class="stat-card"><div class="stat-icon orange">🥉</div><div><div class="stat-value">${bronzeCount}</div><div class="stat-label">Bronze</div></div></div>
-    </div>
+
+  // Karten-Ansicht mit Bildern
+  const renderKarten = () => `
+    ${Object.entries(gruppen).map(([sportart,erfolge])=>`
+      <div class="card mb-3">
+        <div class="card-header" style="background:var(--slzb-light)">
+          <h2>🏅 ${esc(sportart)}</h2>
+          <span class="badge badge-info">${erfolge.length}</span>
+        </div>
+        <div class="card-body">
+          <div class="grid grid-3" style="gap:12px">
+            ${erfolge.map(e=>{
+              const bild = e.bilder?.[0]?.signedUrl || null;
+              const athlet = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(Boolean).join(', ');
+              return `<div class="card" style="cursor:pointer;overflow:hidden;border:1.5px solid var(--slzb-border)" onclick="navigateTo('erfolg-detail',{currentErfolgId:'${e.id}'})">
+                ${bild ? `<div style="height:120px;overflow:hidden;background:#111">
+                  <img src="${esc(bild)}" style="width:100%;height:100%;object-fit:cover" loading="lazy"
+                    onerror="this.parentNode.innerHTML='<div style=\'display:flex;align-items:center;justify-content:center;height:100%;font-size:2rem;color:#666\'>🏅</div>'">
+                </div>` : `<div style="height:80px;background:linear-gradient(135deg,#003366,#E2001A);display:flex;align-items:center;justify-content:center;font-size:2rem">🏅</div>`}
+                <div class="card-body" style="padding:10px">
+                  <div class="text-xs text-muted mb-1">${fmt(e.datum)}</div>
+                  <div class="text-sm font-bold" style="line-height:1.3;margin-bottom:4px">${esc(e.titel)}</div>
+                  ${athlet ? `<div class="text-xs text-muted">👤 ${esc(athlet)}</div>` : ''}
+                  ${e.platzierung ? `<div class="text-xs mt-1">${mi[e.medaille]||''} ${e.platzierung}. Platz</div>` : ''}
+                </div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+      </div>`).join('')}`;
+
+  // Timeline-Ansicht
+  const renderTimeline = () => `
+    <div style="position:relative;padding-left:32px">
+      <div style="position:absolute;left:12px;top:0;bottom:0;width:2px;background:var(--slzb-border)"></div>
+      ${gefiltert.map(e=>{
+        const athlet = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(Boolean).join(', ');
+        const farbe = e.medaille==='Gold'?'#C9A227':e.medaille==='Silber'?'#8A9BB0':e.medaille==='Bronze'?'#C2783A':'#003366';
+        return `<div style="position:relative;margin-bottom:16px;cursor:pointer" onclick="navigateTo('erfolg-detail',{currentErfolgId:'${e.id}'})">
+          <div style="position:absolute;left:-26px;top:8px;width:12px;height:12px;border-radius:50%;background:${farbe};border:2px solid #fff;box-shadow:0 0 0 2px ${farbe}"></div>
+          <div class="card" style="border-left:3px solid ${farbe}">
+            <div class="card-body" style="padding:10px 14px">
+              <div class="text-xs text-muted mb-1">${fmt(e.datum)} · ${esc(e.sportartText||'–')}</div>
+              <div class="font-bold">${esc(e.titel)}</div>
+              ${athlet ? `<div class="text-xs text-muted mt-1">👤 ${esc(athlet)}</div>` : ''}
+              ${e.platzierung ? `<span class="badge" style="background:${farbe};color:#fff;margin-top:4px">${mi[e.medaille]||''} ${e.platzierung}. Platz</span>` : ''}
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  // Tabellen-Ansicht (Standard)
+  const renderTabelle = () => `
     <div id="chronik-druck">
       <div style="display:none" class="chronik-druckkopf">
-        <h2 style="color:#003366">SLZB Berlin – Jahreschronik ${schuljahr||'Alle Jahre'}</h2>
+        <h2 style="color:#003366">SLZB Berlin – Chronik ${schuljahr||'Alle Jahre'}</h2>
         <p style="color:#6B7A99;font-size:.85rem">Erstellt am ${new Date().toLocaleDateString('de-DE')}</p>
         <hr style="margin:12px 0">
       </div>
@@ -1632,29 +1697,93 @@ function renderChronikInhalt(alle,schuljahr,sportartId,ebene,typ) {
             <span class="badge badge-info">${erfolge.length}</span>
           </div>
           <div class="table-wrap"><table>
-            <thead><tr><th>Datum</th><th>Titel</th><th>Disziplin</th><th>Ebene</th><th>Platz</th><th>Medaille</th><th>Ergebnis</th></tr></thead>
-            <tbody>${erfolge.map(e=>`<tr style="cursor:pointer" onclick="navigateTo('erfolg-detail',{currentErfolgId:'${e.id}'})">
-              <td class="text-sm">${fmt(e.datum)}</td>
-              <td><strong>${esc(e.titel)}</strong></td>
-              <td class="text-sm">${esc(e.disziplin||'–')}</td>
-              <td>${ebeneBadge(e.ebene)}</td>
-              <td class="text-sm font-bold">${e.platzierung?e.platzierung+'.':'–'}</td>
-              <td>${e.medaille&&e.medaille!=='keine'?mi[e.medaille]+' '+e.medaille:'–'}</td>
-              <td class="text-sm">${e.ergebnisWert?e.ergebnisWert+' '+esc(e.ergebnisEinheit||''):esc(e.ergebnisText||'–')}</td>
-            </tr>`).join('')}</tbody>
+            <thead><tr><th>Datum</th><th>Titel</th><th>Athlet</th><th>Ebene</th><th>Platz</th><th>Medaille</th></tr></thead>
+            <tbody>${erfolge.map(e=>{
+              const athlet=(e.beteiligte||[]).map(b=>b.anzeigename||'').filter(Boolean).join(', ');
+              return `<tr style="cursor:pointer" onclick="navigateTo('erfolg-detail',{currentErfolgId:'${e.id}'})">
+                <td class="text-sm">${fmt(e.datum)}</td>
+                <td><strong>${esc(e.titel)}</strong></td>
+                <td class="text-sm">${esc(athlet||'–')}</td>
+                <td>${ebeneBadge(e.ebene)}</td>
+                <td class="text-sm font-bold">${e.platzierung?e.platzierung+'.':'–'}</td>
+                <td>${e.medaille&&e.medaille!=='keine'?mi[e.medaille]+' '+e.medaille:'–'}</td>
+              </tr>`;
+            }).join('')}</tbody>
           </table></div>
         </div>`).join('')}
     </div>`;
+
+  return`
+    <div class="grid grid-4 mb-4">
+      <div class="stat-card"><div class="stat-icon blue">🏆</div><div><div class="stat-value">${gefiltert.length}</div><div class="stat-label">Erfolge gesamt</div></div></div>
+      <div class="stat-card"><div class="stat-icon gold">🥇</div><div><div class="stat-value">${goldCount}</div><div class="stat-label">Gold</div></div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#F1F5F9;color:#475569">🥈</div><div><div class="stat-value">${silberCount}</div><div class="stat-label">Silber</div></div></div>
+      <div class="stat-card"><div class="stat-icon orange">🥉</div><div><div class="stat-value">${bronzeCount}</div><div class="stat-label">Bronze</div></div></div>
+    </div>
+    ${ansicht==='karten' ? renderKarten() : ansicht==='timeline' ? renderTimeline() : renderTabelle()}`;
+}
+
+// ── Chronik Zeitraum-Schnellauswahl ──────────────────────────
+window._chrZeitraum = { von: null, bis: null, modus: 'schuljahr' };
+
+function setChronikZeitraum(modus) {
+  const jetzt = new Date();
+  const m = jetzt.getMonth(); // 0-11
+  const j = jetzt.getFullYear();
+  let von = null, bis = null, label = '';
+
+  if (modus === 'monat') {
+    von = new Date(j, m, 1);
+    bis = new Date(j, m + 1, 0);
+    label = jetzt.toLocaleDateString('de-DE', {month:'long', year:'numeric'});
+  } else if (modus === 'quartal') {
+    const q = Math.floor(m / 3);
+    von = new Date(j, q * 3, 1);
+    bis = new Date(j, q * 3 + 3, 0);
+    label = `Q${q+1} ${j} (${von.toLocaleDateString('de-DE',{month:'short'})}–${bis.toLocaleDateString('de-DE',{month:'short',year:'numeric'})})`;
+  } else if (modus === 'semester') {
+    // Schuljahr: Semester 1 = Aug–Jan, Semester 2 = Feb–Jul
+    if (m >= 7) { // Aug–Dez → 1. Semester
+      von = new Date(j, 7, 1); bis = new Date(j+1, 0, 31);
+      label = `1. Semester ${j}/${j+1} (Aug–Jan)`;
+    } else { // Jan–Jul → 2. Semester
+      von = new Date(j, 1, 1); bis = new Date(j, 6, 31);
+      label = `2. Semester ${j-1}/${j} (Feb–Jul)`;
+    }
+  } else if (modus === 'schuljahr') {
+    von = null; bis = null;
+    label = 'Aktuelles Schuljahr';
+    // Schuljahr-Select auf aktuelles setzen
+    const sj = document.getElementById('chr-schuljahr');
+    if (sj && sj.options.length > 1) sj.selectedIndex = 1;
+  } else {
+    von = null; bis = null; label = 'Alle Zeiträume';
+    const sj = document.getElementById('chr-schuljahr');
+    if (sj) sj.value = '';
+  }
+
+  window._chrZeitraum = { von, bis, modus };
+
+  // Buttons aktualisieren
+  ['monat','quartal','semester','schuljahr','alle'].forEach(m2 => {
+    const btn = document.getElementById(`chr-btn-${m2}`);
+    if (btn) btn.className = m2 === modus ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm';
+  });
+
+  const lbl = document.getElementById('chr-zeitraum-label');
+  if (lbl) lbl.textContent = label;
+
+  aktualisiereChronik();
 }
 
 async function aktualisiereChronik() {
   const schuljahr=document.getElementById('chr-schuljahr')?.value||'';
   const sportartId=document.getElementById('chr-sportart')?.value||'';
   const ebene=document.getElementById('chr-ebene')?.value||'';
-  const typ=document.getElementById('chr-typ')?.value||'';
+  const ansicht=document.getElementById('chr-ansicht')?.value||'tabelle';
   const alle=await ladeErfolge();
   const inhalt=document.getElementById('chronik-inhalt');
-  if(inhalt) inhalt.innerHTML=renderChronikInhalt(alle,schuljahr,sportartId,ebene,typ);
+  if(inhalt) inhalt.innerHTML=renderChronikInhalt(alle,schuljahr,sportartId,ebene,'',ansicht);
 }
 
 function druckeChronik() {
