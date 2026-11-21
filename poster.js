@@ -2842,7 +2842,7 @@ async function zeichneCountdownPoster(canvasId, opts) {
   }
   const vorbei = eventDatum && eventDatum <= jetzt;
   const sportart = opts.sportart || '';
-  const datumStr = eventDatum ? eventDatum.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  const datumStr = formatDatumZeitraum(opts.datum || (eventDatum ? eventDatum.toISOString().slice(0,10) : null), opts.datumBis || null);
 
   // 1. Hintergrund: mit Fallback-Silhouette wenn kein Foto
   const bild = opts.hintergrundbild ? await ladeBild(opts.hintergrundbild) : null;
