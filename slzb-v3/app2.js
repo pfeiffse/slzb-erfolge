@@ -1569,7 +1569,21 @@ async function renderJahreschronik() {
       <div class="card-body" style="padding:12px">
         <div style="font-size:.78rem;color:#888;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Zeitraum</div>
         <div class="flex gap-2" style="flex-wrap:wrap">
-          <button id="chr-btn-monat" class="btn btn-ghost btn-sm" onclick="setChronikZeitraum('monat')">📅 Dieser Monat</button>
+          <select id="chr-monat-select" onchange="setChronikMonat(this.value)"
+            style="background:var(--slzb-bg-secondary);color:var(--slzb-text);border:1px solid var(--slzb-border);border-radius:6px;padding:5px 10px;font-size:.82rem;cursor:pointer">
+            <option value="">📅 Monat wählen...</option>
+            ${(()=>{
+              const opts=[];
+              const jetzt=new Date();
+              for(let i=0;i<12;i++){
+                const d=new Date(jetzt.getFullYear(),jetzt.getMonth()-i,1);
+                const val=d.toISOString().slice(0,7);
+                const lbl=d.toLocaleDateString('de-DE',{month:'long',year:'numeric'});
+                opts.push(`<option value="${val}">${lbl}</option>`);
+              }
+              return opts.join('');
+            })()}
+          </select>
           <button id="chr-btn-quartal" class="btn btn-ghost btn-sm" onclick="setChronikZeitraum('quartal')">📆 Dieses Quartal</button>
           <button id="chr-btn-semester" class="btn btn-ghost btn-sm" onclick="setChronikZeitraum('semester')">🗓️ Dieses Semester</button>
           <button id="chr-btn-schuljahr" class="btn btn-primary btn-sm" onclick="setChronikZeitraum('schuljahr')">📚 Schuljahr</button>
@@ -1729,6 +1743,22 @@ function renderChronikInhalt(alle,schuljahr,sportartId,ebene,typ,ansicht='tabell
 // ── Chronik Zeitraum-Schnellauswahl ──────────────────────────
 window._chrZeitraum = { von: null, bis: null, modus: 'schuljahr' };
 
+function setChronikMonat(val) {
+  if (!val) return;
+  const [j, m] = val.split('-').map(Number);
+  const von = new Date(j, m-1, 1);
+  const bis = new Date(j, m, 0);
+  window._chrZeitraum = { von, bis, modus: 'monat' };
+  // Alle Schnellauswahl-Buttons deaktivieren
+  ['monat','quartal','semester','schuljahr','alle'].forEach(m2 => {
+    const btn = document.getElementById(`chr-btn-${m2}`);
+    if (btn) btn.className = 'btn btn-ghost btn-sm';
+  });
+  const lbl = document.getElementById('chr-zeitraum-label');
+  if (lbl) lbl.textContent = von.toLocaleDateString('de-DE',{month:'long',year:'numeric'});
+  aktualisiereChronik();
+}
+
 function setChronikZeitraum(modus) {
   const jetzt = new Date();
   const m = jetzt.getMonth(); // 0-11
@@ -1791,163 +1821,213 @@ async function aktualisiereChronik() {
 
 // ── Chronik-Diashow (Mensa / Gesamtkonferenz) ────────────────
 async function starteChronikDiashow() {
-  const alle = await ladeErfolge();
-  const schuljahr = document.getElementById('chr-schuljahr')?.value || '';
-  const sportartId = document.getElementById('chr-sportart')?.value || '';
-  const ebene = document.getElementById('chr-ebene')?.value || '';
-  const zr = window._chrZeitraum || {};
+  // Filter-Modal zuerst zeigen
+  const overlay2 = document.createElement('div');
+  overlay2.className = 'modal-overlay';
+  const modal2 = document.createElement('div');
+  modal2.className = 'modal';
+  modal2.style.maxWidth = '480px';
 
+  const jetzt = new Date();
+  const monatOptionen = [];
+  for (let i = 0; i < 24; i++) {
+    const d = new Date(jetzt.getFullYear(), jetzt.getMonth() - i, 1);
+    monatOptionen.push(`<option value="${d.toISOString().slice(0,7)}">${d.toLocaleDateString('de-DE',{month:'long',year:'numeric'})}</option>`);
+  }
+
+  modal2.innerHTML = `
+    <div class="modal-header">
+      <h3>▶️ Diashow starten</h3>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group mb-3">
+        <label style="font-weight:600">Sportart</label>
+        <select id="ds-sportart" style="width:100%">
+          <option value="">Alle Sportarten</option>
+          ${SLZB_DB.sportarten.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group mb-3">
+        <label style="font-weight:600">Zeitraum</label>
+        <select id="ds-zeitraum" style="width:100%" onchange="document.getElementById('ds-custom').style.display=this.value==='custom'?'grid':'none'">
+          <option value="alle">Alle Zeiten</option>
+          <option value="schuljahr" selected>Aktuelles Schuljahr</option>
+          <option value="semester">Aktuelles Semester</option>
+          <option value="quartal">Aktuelles Quartal</option>
+          <option value="monat">Dieser Monat</option>
+          <option value="custom">Eigener Zeitraum...</option>
+        </select>
+      </div>
+      <div id="ds-custom" style="display:none;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+        <div class="form-group">
+          <label style="font-size:.8rem">Von</label>
+          <input type="date" id="ds-von" style="width:100%">
+        </div>
+        <div class="form-group">
+          <label style="font-size:.8rem">Bis</label>
+          <input type="date" id="ds-bis" style="width:100%">
+        </div>
+      </div>
+      <div class="form-group mb-3">
+        <label style="font-weight:600">Geschwindigkeit</label>
+        <select id="ds-speed" style="width:100%">
+          <option value="3000">3 Sekunden pro Folie</option>
+          <option value="5000" selected>5 Sekunden pro Folie</option>
+          <option value="8000">8 Sekunden pro Folie</option>
+          <option value="12000">12 Sekunden pro Folie</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="diaShowMitFilter()">▶️ Diashow starten</button>
+    </div>`;
+
+  overlay2.appendChild(modal2);
+  overlay2.addEventListener('click', ev => { if(ev.target===overlay2) overlay2.remove(); });
+  document.body.appendChild(overlay2);
+}
+
+async function diaShowMitFilter() {
+  const sportartId = document.getElementById('ds-sportart')?.value || '';
+  const zeitraumModus = document.getElementById('ds-zeitraum')?.value || 'alle';
+  const speed = parseInt(document.getElementById('ds-speed')?.value || '5000');
+  const dsVon = document.getElementById('ds-von')?.value;
+  const dsBis = document.getElementById('ds-bis')?.value;
+
+  // Zeitraum berechnen
+  const jetzt = new Date();
+  const m = jetzt.getMonth();
+  const j = jetzt.getFullYear();
+  let von = null, bis = null;
+
+  if (zeitraumModus === 'monat') { von = new Date(j,m,1); bis = new Date(j,m+1,0); }
+  else if (zeitraumModus === 'quartal') { const q=Math.floor(m/3); von=new Date(j,q*3,1); bis=new Date(j,q*3+3,0); }
+  else if (zeitraumModus === 'semester') {
+    if (m>=7) { von=new Date(j,7,1); bis=new Date(j+1,0,31); }
+    else { von=new Date(j,1,1); bis=new Date(j,6,31); }
+  } else if (zeitraumModus === 'schuljahr') {
+    const sj = m>=7 ? `${j}/${j+1}` : `${j-1}/${j}`;
+    // Schuljahr Aug–Jul
+    von = m>=7 ? new Date(j,7,1) : new Date(j-1,7,1);
+    bis = m>=7 ? new Date(j+1,6,31) : new Date(j,6,31);
+  } else if (zeitraumModus === 'custom' && dsVon) {
+    von = new Date(dsVon); bis = dsBis ? new Date(dsBis) : null;
+  }
+
+  // Daten laden
+  const alle = await ladeErfolge();
   let gefiltert = alle.filter(e => ['Freigegeben','Veröffentlicht','Archiviert'].includes(e.status));
-  if (schuljahr) gefiltert = gefiltert.filter(e => SLZB_DB.getSchuljahr(e.datum) === schuljahr);
   if (sportartId) gefiltert = gefiltert.filter(e => e.sportartId === sportartId);
-  if (ebene) gefiltert = gefiltert.filter(e => e.ebene === ebene);
-  if (zr.von) gefiltert = gefiltert.filter(e => e.datum && new Date(e.datum) >= zr.von);
-  if (zr.bis) gefiltert = gefiltert.filter(e => e.datum && new Date(e.datum) <= zr.bis);
+  if (von) gefiltert = gefiltert.filter(e => e.datum && new Date(e.datum) >= von);
+  if (bis) gefiltert = gefiltert.filter(e => e.datum && new Date(e.datum) <= bis);
   gefiltert.sort((a,b) => new Date(b.datum) - new Date(a.datum));
 
-  if (!gefiltert.length) { toast('Keine Erfolge für die Diashow', 'warning'); return; }
+  // Filter-Modal schließen
+  document.querySelector('.modal-overlay')?.remove();
 
-  // Diashow-Overlay erstellen
+  if (!gefiltert.length) { toast('Keine Erfolge für diese Filter', 'warning'); return; }
+
+  // Bilder vorladen
+  toast(`⏳ Lade ${gefiltert.length} Erfolge...`, 'info');
+  const bildCache = {};
+  await Promise.all(gefiltert.slice(0,20).map(async e => {
+    const url = e.bilder?.[0]?.signedUrl;
+    if (url) {
+      try {
+        const img = await ladeBild(url);
+        if (img) bildCache[e.id] = img;
+      } catch(_) {}
+    }
+  }));
+
+  // Diashow-Overlay
   const overlay = document.createElement('div');
   overlay.id = 'diashow-overlay';
-  overlay.style.cssText = `
-    position:fixed;inset:0;background:#000;z-index:99999;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
-    font-family:Montserrat,sans-serif;cursor:none;
-  `;
+  overlay.style.cssText = 'position:fixed;inset:0;background:#000;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Montserrat,sans-serif;';
 
   let aktuell = 0;
-  let timer = null;
-  let intervall = 5000; // 5 Sekunden pro Folie
-
+  let intervall = speed;
   const mi = {Gold:'🥇',Silber:'🥈',Bronze:'🥉'};
 
   function renderFolie(idx) {
     const e = gefiltert[idx];
     const athlet = (e.beteiligte||[]).map(b=>b.anzeigename||'').filter(Boolean).join(', ');
-    const bild = e.bilder?.[0]?.signedUrl || null;
+    const bildImg = bildCache[e.id];
+    const bildUrl = e.bilder?.[0]?.signedUrl;
     const sportart = e.sportartText || SLZB_DB.getSportart(e.sportartId)?.name || '';
     const medailleStr = e.medaille && e.medaille !== 'keine' ? `${mi[e.medaille]||''} ${e.medaille}` : '';
     const platzStr = e.platzierung ? `${e.platzierung}. Platz` : '';
 
     overlay.innerHTML = `
-      <!-- Hintergrund -->
       <div style="position:absolute;inset:0;background:linear-gradient(135deg,#0a0c1a 0%,#1B1C1F 100%)"></div>
-      ${bild ? `<div style="position:absolute;inset:0;background:url('${esc(bild)}') center/cover no-repeat;opacity:0.25"></div>` : ''}
-      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0.3) 0%,rgba(0,51,102,0.7) 100%)"></div>
+      ${bildUrl ? `<div style="position:absolute;inset:0;background:url('${esc(bildUrl)}') center/cover no-repeat;opacity:0.2"></div>` : ''}
+      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0.2) 0%,rgba(0,51,102,0.75) 100%)"></div>
 
-      <!-- Inhalt -->
-      <div style="position:relative;z-index:1;text-align:center;padding:40px;max-width:1200px;width:100%">
-        <!-- Sportart -->
-        <div style="color:#E2001A;font-size:1.2rem;font-weight:800;letter-spacing:4px;text-transform:uppercase;margin-bottom:16px">
-          ${esc(sportart)}
-        </div>
+      <div style="position:relative;z-index:1;text-align:center;padding:40px;max-width:1100px;width:100%">
+        <div style="color:#E2001A;font-size:1.1rem;font-weight:800;letter-spacing:4px;text-transform:uppercase;margin-bottom:20px">${esc(sportart)}</div>
 
-        <!-- Bild -->
-        ${bild ? `<div style="width:280px;height:280px;border-radius:50%;overflow:hidden;margin:0 auto 32px;border:4px solid #E2001A;box-shadow:0 0 40px rgba(226,0,26,0.4)">
-          <img src="${esc(bild)}" style="width:100%;height:100%;object-fit:cover">
-        </div>` : `<div style="width:200px;height:200px;border-radius:50%;background:rgba(226,0,26,0.2);border:4px solid #E2001A;margin:0 auto 32px;display:flex;align-items:center;justify-content:center;font-size:5rem">🏅</div>`}
+        ${bildUrl ? `<div style="width:260px;height:260px;border-radius:50%;overflow:hidden;margin:0 auto 28px;border:4px solid #E2001A;box-shadow:0 0 50px rgba(226,0,26,0.5)">
+          <img src="${esc(bildUrl)}" style="width:100%;height:100%;object-fit:cover"
+            onerror="this.parentNode.innerHTML='<div style=\'display:flex;align-items:center;justify-content:center;height:100%;font-size:4rem\'>🏅</div>'">
+        </div>` : `<div style="width:180px;height:180px;border-radius:50%;background:rgba(226,0,26,0.15);border:4px solid #E2001A;margin:0 auto 28px;display:flex;align-items:center;justify-content:center;font-size:4rem">🏅</div>`}
 
-        <!-- Titel -->
-        <div style="color:#fff;font-size:clamp(1.5rem,4vw,3rem);font-weight:800;font-style:italic;line-height:1.1;margin-bottom:16px;text-shadow:0 2px 8px rgba(0,0,0,0.5)">
-          ${esc(e.titel)}
-        </div>
+        <div style="color:#fff;font-size:clamp(1.4rem,3.5vw,2.8rem);font-weight:800;font-style:italic;line-height:1.15;margin-bottom:16px;text-shadow:0 2px 12px rgba(0,0,0,0.6)">${esc(e.titel)}</div>
 
-        <!-- Athlet -->
-        ${athlet ? `<div style="color:rgba(255,255,255,0.8);font-size:1.4rem;font-weight:600;margin-bottom:12px">👤 ${esc(athlet)}</div>` : ''}
+        ${athlet ? `<div style="color:rgba(255,255,255,0.85);font-size:1.3rem;font-weight:600;margin-bottom:14px;text-shadow:0 1px 4px rgba(0,0,0,0.5)">👤 ${esc(athlet)}</div>` : ''}
 
-        <!-- Platz + Medaille -->
-        ${(platzStr || medailleStr) ? `<div style="display:inline-flex;align-items:center;gap:12px;background:rgba(226,0,26,0.2);border:2px solid #E2001A;border-radius:40px;padding:10px 28px;margin-bottom:16px">
-          <span style="color:#fff;font-size:1.6rem;font-weight:800">${platzStr}</span>
-          ${medailleStr ? `<span style="font-size:1.4rem">${medailleStr}</span>` : ''}
+        ${(platzStr || medailleStr) ? `<div style="display:inline-flex;align-items:center;gap:12px;background:rgba(226,0,26,0.25);border:2px solid #E2001A;border-radius:40px;padding:10px 28px;margin-bottom:14px">
+          <span style="color:#fff;font-size:1.5rem;font-weight:800">${platzStr}</span>
+          ${medailleStr ? `<span style="font-size:1.3rem">${medailleStr}</span>` : ''}
         </div>` : ''}
 
-        <!-- Datum + Wettbewerb -->
-        <div style="color:rgba(255,255,255,0.6);font-size:1rem;margin-top:8px">
-          ${fmt(e.datum)}${e.wettbewerbText ? ' · ' + esc(e.wettbewerbText) : ''}
+        <div style="color:rgba(255,255,255,0.55);font-size:.95rem;margin-top:6px">
+          ${fmt(e.datum)}${e.wettbewerbText ? ' · ' + esc(e.wettbewerbText) : ''}${e.ebene ? ' · ' + esc(e.ebene) : ''}
         </div>
       </div>
 
-      <!-- Navigation -->
-      <div style="position:absolute;bottom:24px;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:16px;z-index:2">
-        <button onclick="diaShowVorige()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:1.2rem;cursor:pointer">◀</button>
-        <div style="color:rgba(255,255,255,0.5);font-size:.85rem">${idx+1} / ${gefiltert.length}</div>
-        <button onclick="diaShowNaechste()" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:1.2rem;cursor:pointer">▶</button>
-        <button onclick="diaShowPause()" id="diashow-pause-btn" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:44px;height:44px;border-radius:50%;font-size:1.2rem;cursor:pointer">⏸</button>
-        <select id="diashow-speed" onchange="diaShowSpeed(this.value)" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:20px;padding:6px 12px;font-size:.8rem">
-          <option value="3000">3 Sek.</option>
-          <option value="5000" selected>5 Sek.</option>
-          <option value="8000">8 Sek.</option>
-          <option value="12000">12 Sek.</option>
-        </select>
-        <button onclick="document.getElementById('diashow-overlay').remove();clearInterval(window._diashowTimer)" style="background:rgba(226,0,26,0.4);border:1px solid #E2001A;color:#fff;border-radius:20px;padding:8px 16px;font-size:.85rem;cursor:pointer">✕ Beenden</button>
+      <div style="position:absolute;bottom:20px;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:12px;z-index:2">
+        <button onclick="window._dsVorige()" style="background:rgba(255,255,255,0.12);border:none;color:#fff;width:40px;height:40px;border-radius:50%;font-size:1.1rem;cursor:pointer">◀</button>
+        <span style="color:rgba(255,255,255,0.4);font-size:.8rem">${idx+1} / ${gefiltert.length}</span>
+        <button onclick="window._dsNaechste()" style="background:rgba(255,255,255,0.12);border:none;color:#fff;width:40px;height:40px;border-radius:50%;font-size:1.1rem;cursor:pointer">▶</button>
+        <button onclick="window._dsPause()" id="ds-pause-btn" style="background:rgba(255,255,255,0.12);border:none;color:#fff;width:40px;height:40px;border-radius:50%;font-size:1.1rem;cursor:pointer">⏸</button>
+        <button onclick="document.getElementById('diashow-overlay').remove();clearInterval(window._dsTimer)" style="background:rgba(226,0,26,0.35);border:1px solid #E2001A;color:#fff;border-radius:20px;padding:7px 16px;font-size:.82rem;cursor:pointer">✕ Beenden</button>
       </div>
 
-      <!-- Fortschrittsbalken -->
-      <div style="position:absolute;bottom:0;left:0;height:3px;background:#E2001A;transition:width linear;z-index:3" id="diashow-progress"></div>
-
-      <!-- SLZB Branding -->
-      <div style="position:absolute;top:20px;right:24px;color:rgba(255,255,255,0.4);font-size:.75rem;font-weight:700;letter-spacing:2px">#SLZBerlin</div>
+      <div style="position:absolute;bottom:0;left:0;height:3px;background:#E2001A;z-index:3" id="ds-progress"></div>
+      <div style="position:absolute;top:16px;right:20px;color:rgba(255,255,255,0.3);font-size:.7rem;font-weight:700;letter-spacing:2px">#SLZBerlin</div>
     `;
 
-    // Fortschrittsbalken animieren
-    const prog = document.getElementById('diashow-progress');
+    // Fortschrittsbalken
+    const prog = document.getElementById('ds-progress');
     if (prog) {
-      prog.style.width = '0%';
-      prog.style.transition = 'none';
-      setTimeout(() => {
-        prog.style.transition = `width ${intervall}ms linear`;
-        prog.style.width = '100%';
-      }, 50);
+      prog.style.width = '0%'; prog.style.transition = 'none';
+      setTimeout(() => { prog.style.transition = `width ${intervall}ms linear`; prog.style.width = '100%'; }, 50);
+    }
+
+    // Nächste Bilder vorladen
+    const nextIdx = (idx + 1) % gefiltert.length;
+    const nextE = gefiltert[nextIdx];
+    if (nextE && !bildCache[nextE.id] && nextE.bilder?.[0]?.signedUrl) {
+      ladeBild(nextE.bilder[0].signedUrl).then(img => { if(img) bildCache[nextE.id] = img; }).catch(()=>{});
     }
   }
 
-  // Globale Funktionen für Buttons
-  window.diaShowNaechste = () => {
-    aktuell = (aktuell + 1) % gefiltert.length;
-    renderFolie(aktuell);
-    clearInterval(window._diashowTimer);
-    window._diashowTimer = setInterval(window.diaShowNaechste, intervall);
-  };
-  window.diaShowVorige = () => {
-    aktuell = (aktuell - 1 + gefiltert.length) % gefiltert.length;
-    renderFolie(aktuell);
-    clearInterval(window._diashowTimer);
-    window._diashowTimer = setInterval(window.diaShowNaechste, intervall);
-  };
-  window.diaShowPause = () => {
-    const btn = document.getElementById('diashow-pause-btn');
-    if (window._diashowTimer) {
-      clearInterval(window._diashowTimer);
-      window._diashowTimer = null;
-      if (btn) btn.textContent = '▶';
-    } else {
-      window._diashowTimer = setInterval(window.diaShowNaechste, intervall);
-      if (btn) btn.textContent = '⏸';
-    }
-  };
-  window.diaShowSpeed = (ms) => {
-    intervall = parseInt(ms);
-    clearInterval(window._diashowTimer);
-    window._diashowTimer = setInterval(window.diaShowNaechste, intervall);
-  };
+  window._dsNaechste = () => { aktuell=(aktuell+1)%gefiltert.length; renderFolie(aktuell); clearInterval(window._dsTimer); window._dsTimer=setInterval(window._dsNaechste,intervall); };
+  window._dsVorige  = () => { aktuell=(aktuell-1+gefiltert.length)%gefiltert.length; renderFolie(aktuell); clearInterval(window._dsTimer); window._dsTimer=setInterval(window._dsNaechste,intervall); };
+  window._dsPause   = () => { const btn=document.getElementById('ds-pause-btn'); if(window._dsTimer){clearInterval(window._dsTimer);window._dsTimer=null;if(btn)btn.textContent='▶';}else{window._dsTimer=setInterval(window._dsNaechste,intervall);if(btn)btn.textContent='⏸';} };
 
-  // Tastatursteuerung
-  overlay.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowRight' || e.key === ' ') window.diaShowNaechste();
-    if (e.key === 'ArrowLeft') window.diaShowVorige();
-    if (e.key === 'Escape') { overlay.remove(); clearInterval(window._diashowTimer); }
+  overlay.addEventListener('keydown', ev => {
+    if(ev.key==='ArrowRight'||ev.key===' ') window._dsNaechste();
+    if(ev.key==='ArrowLeft') window._dsVorige();
+    if(ev.key==='Escape'){overlay.remove();clearInterval(window._dsTimer);}
   });
-  overlay.setAttribute('tabindex', '0');
-
+  overlay.setAttribute('tabindex','0');
   document.body.appendChild(overlay);
   overlay.focus();
   renderFolie(0);
-
-  // Auto-Advance starten
-  window._diashowTimer = setInterval(window.diaShowNaechste, intervall);
-
-  // Vollbild versuchen
+  window._dsTimer = setInterval(window._dsNaechste, intervall);
   try { overlay.requestFullscreen?.(); } catch(_) {}
 }
 
