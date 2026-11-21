@@ -1922,7 +1922,7 @@ async function diaShowMitFilter() {
   if (sportartId) gefiltert = gefiltert.filter(e => e.sportartId === sportartId);
   if (von) gefiltert = gefiltert.filter(e => e.datum && new Date(e.datum) >= von);
   if (bis) gefiltert = gefiltert.filter(e => e.datum && new Date(e.datum) <= bis);
-  gefiltert.sort((a,b) => new Date(b.datum) - new Date(a.datum));
+  gefiltert.sort((a,b) => new Date(a.datum) - new Date(b.datum)); // alt → neu
 
   // Filter-Modal schließen
   document.querySelector('.modal-overlay')?.remove();
