@@ -158,6 +158,9 @@
     const sportart = container.dataset.sportart || '';
     const theme = container.dataset.theme || 'light';
     const appUrl = container.dataset.appUrl || 'https://pfeiffse.github.io/slzb-erfolge/slzb-v3/';
+    // data-img-position: top=20%, center=50%, bottom=80%
+    const imgPosMap = { top: '20%', center: '50%', bottom: '80%' };
+    const imgPos = imgPosMap[container.dataset.imgPosition] || '20%';
 
     injectStyles(theme);
 
@@ -188,7 +191,7 @@
           <div class="slzb-card">
             ${bild
               ? `<img class="slzb-card-img" src="${esc(bild)}" alt="${esc(e.title)}" loading="lazy"
-                  style="object-position: center 20%"
+                  style="object-position: center ${imgPos}"
                   onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
               : ''}
             <div class="slzb-card-img-placeholder" style="${bild ? 'display:none' : ''};background:${getSportartFarbe(e.sport_id)}">
