@@ -28,7 +28,7 @@
   }
 
   async function ladeBild(erfolgId) {
-    const url = `${SUPABASE_URL}/rest/v1/achievement_media?achievement_id=eq.${erfolgId}&select=storage_path&limit=1`;
+    const url = `${SUPABASE_URL}/rest/v1/achievement_media?achievement_id=eq.${erfolgId}&select=storage_path,alt_text&limit=1`;
     const res = await fetch(url, {
       headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
     });
@@ -130,7 +130,8 @@
         cursor: pointer;
       }
       .slzb-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,${dark ? '0.4' : '0.15'}); }
-      .slzb-card-img { width: 100%; height: 200px; object-fit: cover; display: block; background: ${dark ? '#2A2C31' : '#f3f4f6'}; }
+      .slzb-card-img { width: 100%; height: 200px; object-fit: cover; object-position: center 20%; display: block; background: ${dark ? '#2A2C31' : '#f3f4f6'}; transition: object-position .3s; }
+      .slzb-card-img:hover { object-position: center 40%; }
       .slzb-card-img-placeholder { width: 100%; height: 200px; background: linear-gradient(135deg, #003366, #E2001A); display: flex; align-items: center; justify-content: center; font-size: 3rem; }
       .slzb-card-body { padding: 16px; }
       .slzb-card-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
@@ -186,7 +187,9 @@
         return `
           <div class="slzb-card">
             ${bild
-              ? `<img class="slzb-card-img" src="${esc(bild)}" alt="${esc(e.title)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+              ? `<img class="slzb-card-img" src="${esc(bild)}" alt="${esc(e.title)}" loading="lazy"
+                  style="object-position: center 20%"
+                  onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
               : ''}
             <div class="slzb-card-img-placeholder" style="${bild ? 'display:none' : ''};background:${getSportartFarbe(e.sport_id)}">
             <span style="font-size:2.5rem">${getSportartEmoji(e.sport_id)}</span>
