@@ -28,7 +28,7 @@
   }
 
   async function ladeBild(erfolgId) {
-    const url = `${SUPABASE_URL}/rest/v1/achievement_media?achievement_id=eq.${erfolgId}&select=storage_path,alt_text&limit=1`;
+    const url = `${SUPABASE_URL}/rest/v1/achievement_media?achievement_id=eq.${erfolgId}&select=storage_path,alt_text,creator,caption&limit=1`;
     const res = await fetch(url, {
       headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
     });
@@ -40,7 +40,7 @@
     const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/achievement-media/${data[0].storage_path}`;
     try {
       const check = await fetch(publicUrl, { method: 'HEAD' });
-      if (check.ok) return publicUrl;
+      if (check.ok) return { url: publicUrl, creator: data[0].creator||'', caption: data[0].caption||'' };
     } catch(_) {}
 
     // Fallback: Signed URL (für privaten Bucket)
@@ -59,7 +59,8 @@
       const signData = await signRes.json();
       const path = signData?.signedURL || signData?.signedUrl || signData?.data?.signedUrl;
       if (!path) return null;
-      return path.startsWith('http') ? path : `${SUPABASE_URL}/storage/v1${path}`;
+      const signedUrl = path.startsWith('http') ? path : `${SUPABASE_URL}/storage/v1${path}`;
+      return { url: signedUrl, creator: data[0].creator||'', caption: data[0].caption||'' };
     } catch(_) { return null; }
   }
 
@@ -218,7 +219,7 @@
         return `
           <div class="slzb-card">
             ${bild
-              ? `<img class="slzb-card-img" src="${esc(bild)}" alt="${esc(e.title)}" loading="lazy"
+              ? `<img class="slzb-card-img" src="${esc(bild.url||bild)}" alt="${esc(e.title)}" loading="lazy"
                   style="object-position: center ${imgPos}"
                   onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
               : ''}
@@ -261,7 +262,7 @@
           lb.innerHTML = `
             <div class="slzb-lightbox-inner">
               <button class="slzb-lightbox-close" onclick="this.closest('.slzb-lightbox').remove()">✕</button>
-              ${bild ? `<img class="slzb-lightbox-img" src="${esc(bild)}" alt="${esc(e.title)}">` : ''}
+              ${bild ? `<img class="slzb-lightbox-img" src="${esc(bild.url||bild)}" alt="${esc(e.title)}">` : ''}
               <div class="slzb-lightbox-body">
                 <div class="slzb-lightbox-meta">
                   ${medStr ? `<span style="margin-right:8px">${medStr}</span>` : ''}
@@ -270,7 +271,14 @@
                   ${athlet ? `<span style="margin-left:8px">👤 ${esc(athlet)}</span>` : ''}
                 </div>
                 <div class="slzb-lightbox-title">${esc(e.title)}</div>
-                ${text ? `<div class="slzb-lightbox-text">${esc(text)}</div>` : ''}
+                ${text ? `<div class="slzb-lightbox-text" style="margin-bottom:10px">${esc(text)}</div>` : ''}
+                <div style="border-top:1px solid rgba(255,255,255,.1);padding-top:10px;margin-top:4px;display:flex;flex-wrap:wrap;gap:8px">
+                  ${e.level ? `<span style="color:rgba(255,255,255,.4);font-size:.75rem">📍 ${esc(e.level)}</span>` : ''}
+                  ${(bild && (bild.creator||bild.caption)) ? `
+                    ${bild.caption ? `<span style="color:rgba(255,255,255,.4);font-size:.75rem">💬 ${esc(bild.caption)}</span>` : ''}
+                    ${bild.creator ? `<span style="color:rgba(255,255,255,.35);font-size:.72rem">📸 ${esc(bild.creator)}</span>` : ''}
+                  ` : ''}
+                </div>
               </div>
             </div>`;
           lb.addEventListener('click', ev => { if (ev.target === lb) lb.remove(); });
