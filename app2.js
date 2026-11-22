@@ -7021,7 +7021,232 @@ async function erstelleAthletenVorstellung() {
   if (!athleten.length) { toast('Keine gültigen Athleten', 'warning'); return; }
 
   document.querySelector('.modal-overlay')?.remove();
-  toast(`⏳ Erstelle ${format === 'carousel' ? athleten.length + 2 : athleten.length} Poster...`, 'info');
+
+  // Bearbeitungsmodus: Vorschau-Modal öffnen
+  await zeigeAthletenVorschau(athleten, opts_base, format);
+}
+
+async function zeigeAthletenVorschau(athleten, opts_base, format) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal modal-xl';
+  modal.style.maxWidth = '900px';
+
+  // Aktuell bearbeiteter Athlet
+  let aktuellerIdx = 0;
+  // Pro Athlet: eigener Offset + Zoom
+  const bildSettings = athleten.map(() => ({ x: 0.5, y: 0.5, zoom: 1.0 }));
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>🖼️ Vorschau & Bearbeitung</h3>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <div class="modal-body" style="background:#111;padding:16px">
+      <!-- Athleten-Tabs -->
+      <div id="av-tabs" class="tabs mb-3" style="flex-wrap:wrap;gap:4px;display:flex">
+        ${athleten.map((a,i) => `<button class="tab-btn ${i===0?'active':''}" onclick="avWechsleAthlet(${i})">${a.vorname||a.name}</button>`).join('')}
+      </div>
+      <!-- Vorschau-Canvas -->
+      <div style="text-align:center;margin-bottom:12px">
+        <canvas id="av-preview-canvas" width="540" height="675"
+          style="max-width:100%;max-height:55vh;display:block;margin:0 auto;border-radius:8px;background:#000"></canvas>
+      </div>
+      <!-- Bildausschnitt-Editor -->
+      <div id="av-editor" style="background:rgba(255,255,255,.06);border-radius:8px;padding:12px">
+        <div style="font-size:.78rem;color:#888;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Bildausschnitt</div>
+        <div style="margin-bottom:10px">
+          <label style="font-weight:600;display:flex;justify-content:space-between;margin-bottom:4px;font-size:.82rem">
+            <span>🔍 Zoom</span><span id="av-zoom-lbl" style="color:#E2001A">100%</span>
+          </label>
+          <input type="range" id="av-zoom" min="100" max="300" step="5" value="100"
+            style="width:100%;accent-color:#E2001A" oninput="avAktualisiere()">
+        </div>
+        <div style="margin-bottom:10px">
+          <label style="font-weight:600;display:flex;justify-content:space-between;margin-bottom:4px;font-size:.82rem">
+            <span>↔ Horizontal</span><span id="av-ox-lbl" style="color:#888">50%</span>
+          </label>
+          <input type="range" id="av-ox" min="0" max="100" value="50"
+            style="width:100%;accent-color:#003366" oninput="avAktualisiere()">
+        </div>
+        <div style="margin-bottom:10px">
+          <label style="font-weight:600;display:flex;justify-content:space-between;margin-bottom:4px;font-size:.82rem">
+            <span>↕ Vertikal</span><span id="av-oy-lbl" style="color:#888">50%</span>
+          </label>
+          <input type="range" id="av-oy" min="0" max="100" value="50"
+            style="width:100%;accent-color:#003366" oninput="avAktualisiere()">
+        </div>
+        <div class="flex gap-2" style="flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="avPreset(50,20,100)">↑ Gesicht oben</button>
+          <button class="btn btn-ghost btn-sm" onclick="avPreset(50,50,100)">⊙ Zentrieren</button>
+          <button class="btn btn-ghost btn-sm" onclick="avPreset(50,30,150)">🔍 Zoom Gesicht</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="avStarteDownload()">📥 Alle herunterladen</button>
+    </div>`;
+
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+
+  // Globale Variablen für den Editor
+  window._avAthleten = athleten;
+  window._avOptsBase = opts_base;
+  window._avFormat = format;
+  window._avBildSettings = bildSettings;
+  window._avAktuellerIdx = 0;
+
+  // Erste Vorschau rendern
+  await avRenderVorschau(0);
+
+  window.avWechsleAthlet = async (idx) => {
+    // Aktuelle Einstellungen speichern
+    window._avBildSettings[window._avAktuellerIdx] = {
+      x: parseInt(document.getElementById('av-ox')?.value||50)/100,
+      y: parseInt(document.getElementById('av-oy')?.value||50)/100,
+      zoom: parseInt(document.getElementById('av-zoom')?.value||100)/100,
+    };
+    window._avAktuellerIdx = idx;
+    // Tabs aktualisieren
+    document.querySelectorAll('#av-tabs .tab-btn').forEach((b,i) => b.classList.toggle('active', i===idx));
+    // Regler auf gespeicherte Werte setzen
+    const s = window._avBildSettings[idx];
+    document.getElementById('av-ox').value = Math.round(s.x*100);
+    document.getElementById('av-oy').value = Math.round(s.y*100);
+    document.getElementById('av-zoom').value = Math.round(s.zoom*100);
+    document.getElementById('av-zoom-lbl').textContent = Math.round(s.zoom*100)+'%';
+    document.getElementById('av-ox-lbl').textContent = Math.round(s.x*100)+'%';
+    document.getElementById('av-oy-lbl').textContent = Math.round(s.y*100)+'%';
+    await avRenderVorschau(idx);
+  };
+
+  window.avAktualisiere = async () => {
+    const x = parseInt(document.getElementById('av-ox')?.value||50)/100;
+    const y = parseInt(document.getElementById('av-oy')?.value||50)/100;
+    const zoom = parseInt(document.getElementById('av-zoom')?.value||100)/100;
+    document.getElementById('av-zoom-lbl').textContent = Math.round(zoom*100)+'%';
+    document.getElementById('av-ox-lbl').textContent = Math.round(x*100)+'%';
+    document.getElementById('av-oy-lbl').textContent = Math.round(y*100)+'%';
+    window._avBildSettings[window._avAktuellerIdx] = { x, y, zoom };
+    await avRenderVorschau(window._avAktuellerIdx);
+  };
+
+  window.avPreset = async (ox, oy, zoom) => {
+    document.getElementById('av-ox').value = ox;
+    document.getElementById('av-oy').value = oy;
+    document.getElementById('av-zoom').value = zoom;
+    await window.avAktualisiere();
+  };
+
+  window.avStarteDownload = async () => {
+    // Letzte Einstellungen speichern
+    window._avBildSettings[window._avAktuellerIdx] = {
+      x: parseInt(document.getElementById('av-ox')?.value||50)/100,
+      y: parseInt(document.getElementById('av-oy')?.value||50)/100,
+      zoom: parseInt(document.getElementById('av-zoom')?.value||100)/100,
+    };
+    document.querySelector('.modal-overlay')?.remove();
+    toast(`⏳ Erstelle Poster...`, 'info');
+    await avDownloadAlle(window._avAthleten, window._avOptsBase, window._avFormat, window._avBildSettings);
+  };
+}
+
+async function avRenderVorschau(idx) {
+  const canvas = document.getElementById('av-preview-canvas');
+  if (!canvas) return;
+  const athlet = window._avAthleten?.[idx];
+  if (!athlet) return;
+  const s = window._avBildSettings?.[idx] || { x:0.5, y:0.5, zoom:1.0 };
+
+  // Globale Offset/Zoom für drawCover setzen
+  window._bildOffset = { x: s.x, y: s.y };
+  window._bildZoom = s.zoom;
+
+  const W = canvas.width, H = canvas.height;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  await zeichneAthletQuadrat(ctx, W, H, { ...window._avOptsBase, ...athlet });
+}
+
+async function avDownloadAlle(athleten, opts_base, format, bildSettings) {
+  async function downloadCanvas(canvas, dateiname) {
+    return new Promise(resolve => {
+      canvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = dateiname;
+        document.body.appendChild(a); a.click();
+        setTimeout(() => { URL.revokeObjectURL(url); a.remove(); resolve(); }, 300);
+      }, 'image/png');
+    });
+  }
+
+  let W = 1080, H = 1350;
+  if (format === 'quadrat') H = 1080;
+  else if (format === 'story') H = 1920;
+  else if (format === 'twitter') { W = 1500; H = 500; }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  let posterCount = 0;
+
+  if (format === 'carousel') {
+    const gesamt = athleten.length + 2;
+    // Deckblatt
+    const ctx = canvas.getContext('2d');
+    window._bildOffset = { x:0.5, y:0.5 }; window._bildZoom = 1.0;
+    await zeichneCarouselDeckblatt(ctx, W, H, { ...opts_base, gesamt });
+    await downloadCanvas(canvas, `01_Deckblatt.png`);
+    posterCount++;
+
+    for (let i = 0; i < athleten.length; i++) {
+      const s = bildSettings[i] || { x:0.5, y:0.5, zoom:1.0 };
+      window._bildOffset = { x: s.x, y: s.y };
+      window._bildZoom = s.zoom;
+      ctx.clearRect(0,0,W,H);
+      await zeichneAthletQuadrat(ctx, W, H, { ...opts_base, ...athleten[i], nr: i+2, gesamt });
+      const nr = String(i+2).padStart(2,'0');
+      await downloadCanvas(canvas, `${nr}_${athleten[i].name.replace(/\s/g,'_')}.png`);
+      posterCount++;
+      await new Promise(r => setTimeout(r, 200));
+    }
+
+    ctx.clearRect(0,0,W,H);
+    window._bildOffset = { x:0.5, y:0.5 }; window._bildZoom = 1.0;
+    await zeichneCarouselAbschluss(ctx, W, H, { ...opts_base, gesamt });
+    await downloadCanvas(canvas, `${String(gesamt).padStart(2,'0')}_Abschluss.png`);
+    posterCount++;
+
+  } else {
+    const ctx = canvas.getContext('2d');
+    for (let i = 0; i < athleten.length; i++) {
+      const s = bildSettings[i] || { x:0.5, y:0.5, zoom:1.0 };
+      window._bildOffset = { x: s.x, y: s.y };
+      window._bildZoom = s.zoom;
+      ctx.clearRect(0,0,W,H);
+      if (format === 'twitter') {
+        await zeichneTwitterBanner(ctx, W, H, { ...opts_base, ...athleten[i], athleten: athleten.map(a=>a.name) });
+      } else {
+        await zeichneAthletQuadrat(ctx, W, H, { ...opts_base, ...athleten[i] });
+      }
+      const nr = String(i+1).padStart(2,'0');
+      await downloadCanvas(canvas, `${nr}_${athleten[i].name.replace(/\s/g,'_')}.png`);
+      posterCount++;
+      await new Promise(r => setTimeout(r, 200));
+    }
+  }
+
+  // Offset zurücksetzen
+  window._bildOffset = { x:0.5, y:0.5 }; window._bildZoom = 1.0;
+  toast(`✅ ${posterCount} Poster heruntergeladen!`, 'success');
+}
+
+async function _avDownloadPlaceholder() {
+  toast(`⏳ Erstelle Poster...`, 'info');
 
   const opts_base = { veranstaltung, sportart, akzent: 'blau' };
 
