@@ -36,24 +36,31 @@
     const data = await res.json();
     if (!data?.[0]?.storage_path) return null;
 
-    // Signed URL generieren (korrekter Endpunkt)
-    // Pfad-Segmente einzeln kodieren (Slashes erhalten)
-    const encodedPath = data[0].storage_path.split('/').map(encodeURIComponent).join('/');
-    const signRes = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/achievement-media/${encodedPath}`, {
-      method: 'POST',
-      headers: {
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ expiresIn: 3600 })
-    });
-    if (!signRes.ok) return null;
-    const signData = await signRes.json();
-    // Supabase gibt signedURL oder signedUrl zurück
-    const path = signData?.signedURL || signData?.signedUrl || signData?.data?.signedUrl;
-    if (!path) return null;
-    return path.startsWith('http') ? path : `${SUPABASE_URL}/storage/v1${path}`;
+    // Versuche zuerst Public URL (wenn Bucket öffentlich)
+    const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/achievement-media/${data[0].storage_path}`;
+    try {
+      const check = await fetch(publicUrl, { method: 'HEAD' });
+      if (check.ok) return publicUrl;
+    } catch(_) {}
+
+    // Fallback: Signed URL (für privaten Bucket)
+    try {
+      const encodedPath = data[0].storage_path.split('/').map(encodeURIComponent).join('/');
+      const signRes = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/achievement-media/${encodedPath}`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ expiresIn: 3600 })
+      });
+      if (!signRes.ok) return null;
+      const signData = await signRes.json();
+      const path = signData?.signedURL || signData?.signedUrl || signData?.data?.signedUrl;
+      if (!path) return null;
+      return path.startsWith('http') ? path : `${SUPABASE_URL}/storage/v1${path}`;
+    } catch(_) { return null; }
   }
 
   async function ladeAthlet(erfolgId) {
