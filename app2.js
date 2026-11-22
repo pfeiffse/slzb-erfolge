@@ -6749,15 +6749,14 @@ async function bearbeiteVotingKampagne(kampagneId) {
   const { data: kandidatenRaw } = await Backend.client.from('voting_candidates')
     .select('*').eq('campaign_id', kampagneId).order('reihenfolge');
 
-  // Signed URLs erneuern (achievement-media ist privat)
+  // Public URLs (Bucket ist öffentlich)
   const kandidaten = await Promise.all((kandidatenRaw||[]).map(async k2 => {
     const bucket = k2.storage_bucket || 'achievement-media';
     if (k2.storage_path && bucket === 'achievement-media') {
-      const { data: sd } = await Backend.client.storage
-        .from('achievement-media').createSignedUrl(k2.storage_path, 3600);
-      return { ...k2, bild_url: sd?.signedUrl || k2.bild_url };
+      const { data: pubData } = Backend.client.storage
+        .from('achievement-media').getPublicUrl(k2.storage_path);
+      return { ...k2, bild_url: pubData?.publicUrl || k2.bild_url };
     }
-    // poster-exports ist öffentlich → bild_url direkt verwenden
     return k2;
   }));
 
@@ -7483,7 +7482,7 @@ async function zeigeVotingAushang(kampagneId) {
   const { data: kandidatenRaw } = await Backend.client.from('voting_candidates')
     .select('*').eq('campaign_id', kampagneId).order('reihenfolge');
 
-  // Bilder für Kandidaten laden: Signed URL aus storage_path oder achievement_media
+  // Bilder für Kandidaten laden: Public URL (Bucket ist öffentlich)
   const kandidaten = await Promise.all((kandidatenRaw||[]).map(async k2 => {
     // 1. storage_path aus bild_url extrahieren
     let storagePath = k2.storage_path;
@@ -7491,19 +7490,23 @@ async function zeigeVotingAushang(kampagneId) {
       const m = k2.bild_url.match(/\/object\/(?:sign|public)\/achievement-media\/([^?]+)/);
       storagePath = m?.[1] || null;
     }
-    // 2. Neue Signed URL generieren
+    // 2. Public URL (Bucket ist öffentlich – kein Ablaufdatum)
     if (storagePath) {
-      const { data: sd } = await Backend.client.storage.from('achievement-media').createSignedUrl(storagePath, 3600);
-      if (sd?.signedUrl) return { ...k2, bild_url: sd.signedUrl };
+      const { data: pubData } = Backend.client.storage.from('achievement-media').getPublicUrl(storagePath);
+      if (pubData?.publicUrl) return { ...k2, bild_url: pubData.publicUrl };
     }
     // 3. Fallback: Bild aus achievement_media über achievement_id
     if (!storagePath && k2.achievement_id) {
       const { data: media } = await Backend.client.from('achievement_media')
         .select('storage_path').eq('achievement_id', k2.achievement_id).limit(1).single();
       if (media?.storage_path) {
-        const { data: sd } = await Backend.client.storage.from('achievement-media').createSignedUrl(media.storage_path, 3600);
-        if (sd?.signedUrl) return { ...k2, bild_url: sd.signedUrl };
+        const { data: pubData } = Backend.client.storage.from('achievement-media').getPublicUrl(media.storage_path);
+        if (pubData?.publicUrl) return { ...k2, bild_url: pubData.publicUrl };
       }
+    }
+    // 4. poster-exports Bucket (öffentlich) – bild_url direkt verwenden
+    if (k2.bild_url && k2.bild_url.includes('poster-exports')) {
+      return k2; // bereits öffentliche URL
     }
     return k2;
   }));
