@@ -144,6 +144,34 @@
       .slzb-card-athlet { color: ${dark ? '#C9CCD2' : '#374151'}; font-size: .85rem; margin-bottom: 6px; }
       .slzb-card-text { color: ${dark ? '#8A9BB0' : '#6b7280'}; font-size: .82rem; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
       .slzb-footer { text-align: center; margin-top: 20px; }
+      .slzb-card { cursor: pointer; }
+      .slzb-lightbox {
+        position: fixed; inset: 0; background: rgba(0,0,0,0.92);
+        z-index: 99999; display: flex; align-items: center; justify-content: center;
+        padding: 20px; animation: slzb-fadein .2s ease;
+      }
+      @keyframes slzb-fadein { from { opacity:0 } to { opacity:1 } }
+      .slzb-lightbox-inner {
+        position: relative; max-width: 900px; width: 100%;
+        background: #1B1C1F; border-radius: 16px; overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0,0,0,.6);
+      }
+      .slzb-lightbox-img {
+        width: 100%; max-height: 70vh; object-fit: contain;
+        display: block; background: #000;
+      }
+      .slzb-lightbox-body { padding: 16px 20px; }
+      .slzb-lightbox-title { color: #fff; font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; }
+      .slzb-lightbox-meta { color: rgba(255,255,255,0.5); font-size: .82rem; margin-bottom: 8px; }
+      .slzb-lightbox-text { color: rgba(255,255,255,0.7); font-size: .85rem; line-height: 1.5; }
+      .slzb-lightbox-close {
+        position: absolute; top: 12px; right: 12px;
+        background: rgba(0,0,0,0.6); border: none; color: #fff;
+        width: 36px; height: 36px; border-radius: 50%; font-size: 1.1rem;
+        cursor: pointer; display: flex; align-items: center; justify-content: center;
+        z-index: 1;
+      }
+      .slzb-lightbox-close:hover { background: rgba(226,0,26,0.8); }
       .slzb-footer a { color: #E2001A; font-size: .8rem; text-decoration: none; font-weight: 600; }
       .slzb-loading { text-align: center; padding: 40px; color: ${dark ? '#8A9BB0' : '#6b7280'}; }
       .slzb-spinner { width: 32px; height: 32px; border: 3px solid ${dark ? '#2A2C31' : '#e5e7eb'}; border-top-color: #E2001A; border-radius: 50%; animation: slzb-spin .8s linear infinite; margin: 0 auto 12px; }
@@ -216,6 +244,39 @@
             <a href="${esc(appUrl)}" target="_blank">Alle Sportnews auf SLZB-Erfolge →</a>
           </div>
         </div>`;
+
+      // Lightbox: Klick auf Karte öffnet Vollbild
+      container.querySelectorAll('.slzb-card').forEach((card, i) => {
+        card.addEventListener('click', () => {
+          const e = erfolge[i];
+          const bild = bilder[i];
+          const athlet = athleten[i];
+          const text = e.article_text || e.result_text || e.short_info || '';
+          const medaille = e.medal && e.medal !== 'keine' ? e.medal : null;
+          const platzStr = e.placement ? `${e.placement}. Platz` : '';
+          const medStr = medaille ? `${MI[medaille]||''} ${medaille}` : '';
+
+          const lb = document.createElement('div');
+          lb.className = 'slzb-lightbox';
+          lb.innerHTML = `
+            <div class="slzb-lightbox-inner">
+              <button class="slzb-lightbox-close" onclick="this.closest('.slzb-lightbox').remove()">✕</button>
+              ${bild ? `<img class="slzb-lightbox-img" src="${esc(bild)}" alt="${esc(e.title)}">` : ''}
+              <div class="slzb-lightbox-body">
+                <div class="slzb-lightbox-meta">
+                  ${medStr ? `<span style="margin-right:8px">${medStr}</span>` : ''}
+                  ${platzStr ? `<span style="margin-right:8px">${platzStr}</span>` : ''}
+                  <span>📅 ${formatDatum(e.event_date)}</span>
+                  ${athlet ? `<span style="margin-left:8px">👤 ${esc(athlet)}</span>` : ''}
+                </div>
+                <div class="slzb-lightbox-title">${esc(e.title)}</div>
+                ${text ? `<div class="slzb-lightbox-text">${esc(text)}</div>` : ''}
+              </div>
+            </div>`;
+          lb.addEventListener('click', ev => { if (ev.target === lb) lb.remove(); });
+          document.body.appendChild(lb);
+        });
+      });
     } catch(err) {
       container.innerHTML = `<div class="slzb-widget"><p style="color:#E2001A;text-align:center">Fehler beim Laden: ${esc(err.message)}</p></div>`;
     }
