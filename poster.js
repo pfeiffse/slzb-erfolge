@@ -482,13 +482,13 @@ async function ladeBild(url) {
 
   const anonKey = window.SLZB_CONFIG?.supabaseAnonKey || '';
   const istSupabaseStorage = url.includes('.supabase.co/storage/');
-  // Signed URLs enthalten bereits einen Token – keine Auth-Header nötig
-  const istSignedUrl = url.includes('/object/sign/') || url.includes('token=');
+  // Public URLs und Signed URLs brauchen KEINE Auth-Header
+  const istOeffentlich = url.includes('/object/public/') || url.includes('/object/sign/') || url.includes('token=');
 
   try {
     const headers = {};
-    if (istSupabaseStorage && !istSignedUrl && anonKey) {
-      // Nur für nicht-signierte URLs Auth-Header setzen
+    if (istSupabaseStorage && !istOeffentlich && anonKey) {
+      // Nur für private (nicht-öffentliche) URLs Auth-Header setzen
       let session = null;
       try { session = await Backend.session(); } catch(_) {}
       const accessToken = session?.access_token || '';
