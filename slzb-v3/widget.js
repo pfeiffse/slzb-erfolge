@@ -37,7 +37,9 @@
     if (!data?.[0]?.storage_path) return null;
 
     // Signed URL generieren (korrekter Endpunkt)
-    const signRes = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/achievement-media/${encodeURIComponent(data[0].storage_path)}`, {
+    // Pfad-Segmente einzeln kodieren (Slashes erhalten)
+    const encodedPath = data[0].storage_path.split('/').map(encodeURIComponent).join('/');
+    const signRes = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/achievement-media/${encodedPath}`, {
       method: 'POST',
       headers: {
         'apikey': SUPABASE_ANON_KEY,
@@ -146,7 +148,7 @@
         const platzBadge = e.placement ? `<span class="slzb-badge">${e.placement}. Platz</span>` : '';
 
         return `
-          <div class="slzb-card" onclick="window.open('${esc(appUrl)}','_blank')">
+          <div class="slzb-card">
             ${bild
               ? `<img class="slzb-card-img" src="${esc(bild)}" alt="${esc(e.title)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
               : ''}
