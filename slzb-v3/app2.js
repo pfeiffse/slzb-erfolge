@@ -7023,6 +7023,7 @@ async function erstelleAthletenVorstellung() {
   document.querySelector('.modal-overlay')?.remove();
 
   // Bearbeitungsmodus: Vorschau-Modal öffnen
+  const opts_base = { veranstaltung, sportart, akzent: 'blau' };
   await zeigeAthletenVorschau(athleten, opts_base, format);
 }
 
