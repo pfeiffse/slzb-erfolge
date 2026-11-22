@@ -6921,6 +6921,13 @@ async function zeigeAthletenVorstellung() {
       <div style="font-weight:600;margin-bottom:8px">Athleten:</div>
       <div id="av-athleten-liste"></div>
       <button class="btn btn-ghost btn-sm mt-2" onclick="avAthletHinzu()">+ Athlet hinzufügen</button>
+
+      <div style=\"margin-top:16px;border-top:1px solid var(--slzb-border);padding-top:12px\">
+        <div style=\"font-weight:600;margin-bottom:8px\">📸 Teamfoto (optional – für Deck- und Abschlussfolie):</div>
+        <input type=\"file\" id=\"av-teamfoto\" accept=\"image/jpeg,image/png,image/webp\"
+          style=\"width:100%;font-size:.85rem;margin-bottom:6px\">
+        <div style=\"font-size:.75rem;color:#888\">Erscheint als Hintergrundbild auf Deckblatt und Abschluss-Slide.</div>
+      </div>
     </div>
     <div class="modal-footer">
       <div class="form-group" style="flex:1;min-width:180px;margin:0">
@@ -7023,7 +7030,17 @@ async function erstelleAthletenVorstellung() {
   document.querySelector('.modal-overlay')?.remove();
 
   // Bearbeitungsmodus: Vorschau-Modal öffnen
-  const opts_base = { veranstaltung, sportart, akzent: 'blau' };
+  // Teamfoto laden
+  let teamfoto = null;
+  const teamfotoInput = document.getElementById('av-teamfoto');
+  if (teamfotoInput?.files?.[0]) {
+    const url = URL.createObjectURL(teamfotoInput.files[0]);
+    teamfoto = await new Promise(res => {
+      const img = new Image(); img.onload = () => res(img); img.onerror = () => res(null); img.src = url;
+    });
+  }
+
+  const opts_base = { veranstaltung, sportart, akzent: 'blau', teamfoto };
   await zeigeAthletenVorschau(athleten, opts_base, format);
 }
 
@@ -7200,7 +7217,7 @@ async function avDownloadAlle(athleten, opts_base, format, bildSettings) {
     // Deckblatt
     const ctx = canvas.getContext('2d');
     window._bildOffset = { x:0.5, y:0.5 }; window._bildZoom = 1.0;
-    await zeichneCarouselDeckblatt(ctx, W, H, { ...opts_base, gesamt });
+    await zeichneCarouselDeckblatt(ctx, W, H, { ...opts_base, gesamt, bild: opts_base.teamfoto || null });
     await downloadCanvas(canvas, `01_Deckblatt.png`);
     posterCount++;
 
@@ -7218,7 +7235,7 @@ async function avDownloadAlle(athleten, opts_base, format, bildSettings) {
 
     ctx.clearRect(0,0,W,H);
     window._bildOffset = { x:0.5, y:0.5 }; window._bildZoom = 1.0;
-    await zeichneCarouselAbschluss(ctx, W, H, { ...opts_base, gesamt });
+    await zeichneCarouselAbschluss(ctx, W, H, { ...opts_base, gesamt, bild: opts_base.teamfoto || null });
     await downloadCanvas(canvas, `${String(gesamt).padStart(2,'0')}_Abschluss.png`);
     posterCount++;
 
