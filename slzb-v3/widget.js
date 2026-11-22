@@ -68,6 +68,35 @@
 
   const MI = { Gold: '🥇', Silber: '🥈', Bronze: '🥉' };
 
+  const SPORTART_FARBEN = {
+    'SP01':'linear-gradient(135deg,#1a3a6b,#E2001A)', // Basketball
+    'SP02':'linear-gradient(135deg,#0a4a2a,#f5a623)', // Beachvolleyball
+    'SP03':'linear-gradient(135deg,#1a3a6b,#2ecc71)', // Bogenschießen
+    'SP04':'linear-gradient(135deg,#7b0000,#E2001A)', // Boxen
+    'SP05':'linear-gradient(135deg,#003366,#0099cc)', // Eishockey
+    'SP06':'linear-gradient(135deg,#003366,#9b59b6)', // Eiskunstlauf
+    'SP07':'linear-gradient(135deg,#003366,#1abc9c)', // Eisschnelllauf
+    'SP08':'linear-gradient(135deg,#2c3e50,#e74c3c)', // Gewichtheben
+    'SP09':'linear-gradient(135deg,#1a3a6b,#e67e22)', // Handball
+    'SP10':'linear-gradient(135deg,#1a0a2e,#e74c3c)', // Judo
+    'SP11':'linear-gradient(135deg,#1a3a6b,#27ae60)', // Leichtathletik
+    'SP12':'linear-gradient(135deg,#003366,#0099ff)', // Para-Schwimmen
+    'SP13':'linear-gradient(135deg,#1a2a1a,#f39c12)', // Radsport
+    'SP14':'linear-gradient(135deg,#003366,#0099ff)', // Schwimmen
+    'SP15':'linear-gradient(135deg,#1a0a2e,#e74c3c)', // Turnen
+    'SP16':'linear-gradient(135deg,#0a4a2a,#f5a623)', // Volleyball
+    'SP17':'linear-gradient(135deg,#003366,#0099ff)', // Wasserspringen
+    'SP18':'linear-gradient(135deg,#1a3a6b,#27ae60)', // Fußball
+  };
+  const SPORTART_EMOJIS = {
+    'SP01':'🏀','SP02':'🏐','SP03':'🏹','SP04':'🥊','SP05':'🏒',
+    'SP06':'⛸️','SP07':'⛸️','SP08':'🏋️','SP09':'🤾','SP10':'🥋',
+    'SP11':'🏃','SP12':'🏊','SP13':'🚴','SP14':'🏊','SP15':'🤸',
+    'SP16':'🏐','SP17':'🤽','SP18':'⚽',
+  };
+  function getSportartFarbe(id) { return SPORTART_FARBEN[id] || 'linear-gradient(135deg,#003366,#E2001A)'; }
+  function getSportartEmoji(id) { return SPORTART_EMOJIS[id] || '🏅'; }
+
   function formatDatum(d) {
     if (!d) return '';
     return new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -152,7 +181,9 @@
             ${bild
               ? `<img class="slzb-card-img" src="${esc(bild)}" alt="${esc(e.title)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
               : ''}
-            <div class="slzb-card-img-placeholder" style="${bild ? 'display:none' : ''}">🏅</div>
+            <div class="slzb-card-img-placeholder" style="${bild ? 'display:none' : ''};background:${getSportartFarbe(e.sport_id)}">
+            <span style="font-size:2.5rem">${getSportartEmoji(e.sport_id)}</span>
+          </div>
             <div class="slzb-card-body">
               <div class="slzb-card-meta">
                 ${medBadge}${platzBadge}
