@@ -290,6 +290,180 @@
     }
   }
 
+
+  // ── Abstimmungs-Widget (Sportler des Monats) ─────────────────
+  async function ladeAktiveAbstimmung() {
+    const url = `${SUPABASE_URL}/rest/v1/voting_campaigns?select=id,titel,monat,end_at,status&status=eq.aktiv&order=erstellt_am.desc&limit=1`;
+    const res = await fetch(url, {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.[0] || null;
+  }
+
+  async function ladeKandidaten(kampagneId) {
+    const url = `${SUPABASE_URL}/rest/v1/voting_candidates?campaign_id=eq.${kampagneId}&select=id,name,sportart,erfolg,bild_url,klasse&order=reihenfolge`;
+    const res = await fetch(url, {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+    });
+    if (!res.ok) return [];
+    return res.json();
+  }
+
+  async function ladeStimmen(kampagneId) {
+    const url = `${SUPABASE_URL}/rest/v1/voting_votes?campaign_id=eq.${kampagneId}&select=candidate_id`;
+    const res = await fetch(url, {
+      headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
+    });
+    if (!res.ok) return {};
+    const data = await res.json();
+    const map = {};
+    (data||[]).forEach(v => { map[v.candidate_id] = (map[v.candidate_id]||0) + 1; });
+    return map;
+  }
+
+  async function renderVoting(container) {
+    const theme = container.dataset.theme || 'light';
+    const voteUrl = container.dataset.voteUrl || '';
+    const dark = theme === 'dark';
+
+    injectStyles(theme);
+    // Voting-spezifische Styles
+    if (!document.getElementById('slzb-voting-styles')) {
+      const s = document.createElement('style');
+      s.id = 'slzb-voting-styles';
+      s.textContent = `
+        .slzb-voting { font-family: 'Segoe UI', Arial, sans-serif; }
+        .slzb-voting-header { margin-bottom: 16px; }
+        .slzb-voting-title { font-size: 1.2rem; font-weight: 800; color: ${dark?'#fff':'#003366'}; margin-bottom: 4px; }
+        .slzb-voting-subtitle { font-size: .82rem; color: ${dark?'#8A9BB0':'#6b7280'}; }
+        .slzb-voting-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+        .slzb-kandidat {
+          background: ${dark?'#1B1C1F':'#fff'};
+          border: 2px solid ${dark?'#2A2C31':'#e5e7eb'};
+          border-radius: 12px; overflow: hidden; cursor: pointer;
+          transition: transform .2s, box-shadow .2s, border-color .2s;
+        }
+        .slzb-kandidat:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,.15); border-color: #E2001A; }
+        .slzb-kandidat-img { width: 100%; height: 180px; object-fit: cover; object-position: center 20%; display: block; background: ${dark?'#2A2C31':'#f3f4f6'}; }
+        .slzb-kandidat-placeholder { width: 100%; height: 180px; display: flex; align-items: center; justify-content: center; font-size: 3rem; background: linear-gradient(135deg,#003366,#E2001A); }
+        .slzb-kandidat-body { padding: 12px; }
+        .slzb-kandidat-name { font-weight: 800; font-size: .95rem; color: ${dark?'#fff':'#111'}; margin-bottom: 3px; }
+        .slzb-kandidat-sport { color: #E2001A; font-size: .75rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; margin-bottom: 6px; }
+        .slzb-kandidat-erfolg { color: ${dark?'#C9CCD2':'#374151'}; font-size: .8rem; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .slzb-vote-btn {
+          display: block; width: 100%; margin-top: 10px;
+          background: #E2001A; color: #fff; border: none; border-radius: 8px;
+          padding: 8px; font-size: .82rem; font-weight: 700; cursor: pointer;
+          text-align: center; text-decoration: none; transition: background .15s;
+        }
+        .slzb-vote-btn:hover { background: #c0001a; }
+        .slzb-voting-footer { text-align: center; margin-top: 16px; }
+        .slzb-voting-footer a { color: #E2001A; font-size: .8rem; text-decoration: none; font-weight: 600; }
+        .slzb-deadline { color: #E2001A; font-size: .78rem; font-weight: 600; margin-top: 4px; }
+        /* Lightbox für Kandidaten */
+        .slzb-kandidat-lb { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 20px; animation: slzb-fadein .2s ease; }
+        .slzb-kandidat-lb-inner { position: relative; max-width: 600px; width: 100%; background: #1B1C1F; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+        .slzb-kandidat-lb-img { width: 100%; max-height: 60vh; object-fit: contain; display: block; background: #000; }
+        .slzb-kandidat-lb-body { padding: 16px 20px; }
+        .slzb-kandidat-lb-name { color: #fff; font-size: 1.2rem; font-weight: 800; margin-bottom: 4px; }
+        .slzb-kandidat-lb-sport { color: #E2001A; font-size: .82rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; }
+        .slzb-kandidat-lb-erfolg { color: rgba(255,255,255,.75); font-size: .88rem; line-height: 1.5; margin-bottom: 12px; }
+        .slzb-kandidat-lb-close { position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,.6); border: none; color: #fff; width: 36px; height: 36px; border-radius: 50%; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .slzb-kandidat-lb-close:hover { background: rgba(226,0,26,.8); }
+      `;
+      document.head.appendChild(s);
+    }
+
+    container.innerHTML = `<div class="slzb-voting"><div class="slzb-loading"><div class="slzb-spinner"></div>Lade Abstimmung...</div></div>`;
+
+    try {
+      const kampagne = await ladeAktiveAbstimmung();
+      if (!kampagne) {
+        container.innerHTML = `<div class="slzb-voting"><p style="color:${dark?'#8A9BB0':'#6b7280'};text-align:center">Aktuell läuft keine Abstimmung.</p></div>`;
+        return;
+      }
+
+      const [kandidaten, stimmen] = await Promise.all([
+        ladeKandidaten(kampagne.id),
+        ladeStimmen(kampagne.id)
+      ]);
+
+      const gesamt = Object.values(stimmen).reduce((a,b)=>a+b,0);
+      const endDatum = kampagne.end_at ? new Date(kampagne.end_at).toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'}) : '';
+      const finalVoteUrl = voteUrl || `https://pfeiffse.github.io/slzb-erfolge/slzb-v3/vote.html`;
+
+      const karten = kandidaten.map(k => {
+        const bildUrl = k.bild_url || null;
+        const anzStimmen = stimmen[k.id] || 0;
+        const prozent = gesamt > 0 ? Math.round(anzStimmen/gesamt*100) : 0;
+        return `
+          <div class="slzb-kandidat" data-id="${esc(k.id)}" data-bild="${esc(bildUrl||'')}" data-name="${esc(k.name)}" data-sport="${esc(k.sportart||'')}" data-erfolg="${esc(k.erfolg||'')}" data-klasse="${esc(k.klasse||'')}">
+            ${bildUrl
+              ? `<img class="slzb-kandidat-img" src="${esc(bildUrl)}" alt="${esc(k.name)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+              : ''}
+            <div class="slzb-kandidat-placeholder" style="${bildUrl?'display:none':''}">🏃</div>
+            <div class="slzb-kandidat-body">
+              <div class="slzb-kandidat-name">${esc(k.name)}</div>
+              ${k.sportart ? `<div class="slzb-kandidat-sport">${esc(k.sportart)}</div>` : ''}
+              ${k.erfolg ? `<div class="slzb-kandidat-erfolg">${esc(k.erfolg)}</div>` : ''}
+              ${gesamt > 0 ? `<div style="margin-top:8px">
+                <div style="background:${dark?'#2A2C31':'#f3f4f6'};border-radius:4px;height:6px;overflow:hidden">
+                  <div style="background:#E2001A;height:100%;width:${prozent}%;transition:width .5s"></div>
+                </div>
+                <div style="font-size:.72rem;color:${dark?'#8A9BB0':'#6b7280'};margin-top:3px">${anzStimmen} Stimme${anzStimmen!==1?'n':''} (${prozent}%)</div>
+              </div>` : ''}
+              <a class="slzb-vote-btn" href="${esc(finalVoteUrl)}" target="_blank">👍 Jetzt abstimmen</a>
+            </div>
+          </div>`;
+      }).join('');
+
+      container.innerHTML = `
+        <div class="slzb-voting">
+          <div class="slzb-voting-header">
+            <div class="slzb-voting-title">🏆 ${esc(kampagne.titel)}</div>
+            ${endDatum ? `<div class="slzb-deadline">⏰ Abstimmung endet: ${endDatum}</div>` : ''}
+          </div>
+          <div class="slzb-voting-grid">${karten}</div>
+          <div class="slzb-voting-footer">
+            <a href="${esc(finalVoteUrl)}" target="_blank">Zur vollständigen Abstimmung →</a>
+          </div>
+        </div>`;
+
+      // Lightbox: Klick auf Kandidat
+      container.querySelectorAll('.slzb-kandidat').forEach(card => {
+        card.addEventListener('click', (ev) => {
+          if (ev.target.classList.contains('slzb-vote-btn')) return;
+          const bild = card.dataset.bild;
+          const name = card.dataset.name;
+          const sport = card.dataset.sport;
+          const erfolg = card.dataset.erfolg;
+          const klasse = card.dataset.klasse;
+
+          const lb = document.createElement('div');
+          lb.className = 'slzb-kandidat-lb';
+          lb.innerHTML = `
+            <div class="slzb-kandidat-lb-inner">
+              <button class="slzb-kandidat-lb-close" onclick="this.closest('.slzb-kandidat-lb').remove()">✕</button>
+              ${bild ? `<img class="slzb-kandidat-lb-img" src="${esc(bild)}" alt="${esc(name)}">` : ''}
+              <div class="slzb-kandidat-lb-body">
+                <div class="slzb-kandidat-lb-name">${esc(name)}</div>
+                ${sport ? `<div class="slzb-kandidat-lb-sport">${esc(sport)}${klasse?' · '+esc(klasse):''}</div>` : ''}
+                ${erfolg ? `<div class="slzb-kandidat-lb-erfolg">${esc(erfolg)}</div>` : ''}
+                <a class="slzb-vote-btn" href="${esc(finalVoteUrl)}" target="_blank">👍 Für ${esc(name.split(' ')[0])} abstimmen</a>
+              </div>
+            </div>`;
+          lb.addEventListener('click', ev => { if (ev.target === lb) lb.remove(); });
+          document.body.appendChild(lb);
+        });
+      });
+
+    } catch(err) {
+      container.innerHTML = `<div class="slzb-voting"><p style="color:#E2001A;text-align:center">Fehler: ${esc(err.message)}</p></div>`;
+    }
+  }
+
   // Auto-Init: alle Container mit id="slzb-sportnews" oder class="slzb-sportnews"
   function init() {
     const containers = [
@@ -297,6 +471,13 @@
       ...document.querySelectorAll('.slzb-sportnews')
     ];
     containers.forEach(c => render(c));
+
+    // Abstimmungs-Widget
+    const votingContainers = [
+      ...document.querySelectorAll('#slzb-abstimmung'),
+      ...document.querySelectorAll('.slzb-abstimmung')
+    ];
+    votingContainers.forEach(c => renderVoting(c));
   }
 
   if (document.readyState === 'loading') {
@@ -306,5 +487,5 @@
   }
 
   // Globale API für manuelle Nutzung
-  window.SLZBWidget = { render };
+  window.SLZBWidget = { render, renderVoting };
 })();
