@@ -7103,6 +7103,7 @@ async function zeigeAthletenVorschau(athleten, opts_base, format) {
       </div>
     </div>
     <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove();zeigeAthletenVorstellung()">← Zurück</button>
       <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
       <button class="btn btn-primary" onclick="avStarteDownload()">📥 Alle herunterladen</button>
     </div>`;

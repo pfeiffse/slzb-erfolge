@@ -3492,18 +3492,38 @@ function zeichneCarouselBadge(ctx, W, H, aktuell, gesamt) {
 
 // ── Carousel Deckblatt (1080×1350) ───────────────────────────
 async function zeichneCarouselDeckblatt(ctx, W, H, opts) {
-  // opts: { veranstaltung, sportart, datum, gesamt, bild, akzent }
   const akzent = opts.akzent || 'blau';
   await ladeMontserrat(); await ladeLogo();
 
   if (opts.bild) {
-    zeichneSlzbHintergrund(ctx, W, H, opts.bild, akzent);
+    // Teamfoto: vollflächig mit Abdunkelung
+    ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H); ctx.clip();
+    drawCover(ctx, opts.bild, 0, 0, W, H); ctx.restore();
+    // Abdunkelung: oben leicht, unten stark (für Lesbarkeit)
+    const _abd = ctx.createLinearGradient(0,0,0,H);
+    _abd.addColorStop(0,'rgba(0,0,0,0.35)'); _abd.addColorStop(0.4,'rgba(0,0,0,0.25)');
+    _abd.addColorStop(0.7,'rgba(0,20,70,0.65)'); _abd.addColorStop(1,'rgba(0,30,100,0.90)');
+    ctx.fillStyle=_abd; ctx.fillRect(0,0,W,H);
   } else {
+    // Fallback: ansprechender Gradient mit Sportart-Silhouette
+    const _bg = ctx.createLinearGradient(0,0,W,H);
+    _bg.addColorStop(0,'#001a4d'); _bg.addColorStop(0.5,'#003366'); _bg.addColorStop(1,'#001a4d');
+    ctx.fillStyle=_bg; ctx.fillRect(0,0,W,H);
+    // Großes SLZB-Logo als Wasserzeichen
+    if (_slzbLogo) {
+      ctx.save(); ctx.globalAlpha=0.06;
+      const lw=Math.round(W*0.7), lh=Math.round(lw*(_slzbLogo.height/_slzbLogo.width));
+      ctx.drawImage(_slzbLogo, (W-lw)/2, (H-lh)/2, lw, lh);
+      ctx.restore();
+    }
+    // Sportart-Silhouette
     zeichneErsatzbild(ctx, W, H, opts.sportart || '');
     const _g = ctx.createLinearGradient(0,0,0,H);
-    _g.addColorStop(0,'rgba(0,0,0,0.15)'); _g.addColorStop(0.35,'rgba(0,0,0,0.20)');
-    _g.addColorStop(0.65,'rgba(0,30,90,0.55)'); _g.addColorStop(1,'rgba(0,51,153,0.92)');
+    _g.addColorStop(0,'rgba(0,0,0,0.1)'); _g.addColorStop(0.4,'rgba(0,0,0,0.15)');
+    _g.addColorStop(0.7,'rgba(0,30,90,0.60)'); _g.addColorStop(1,'rgba(0,51,153,0.92)');
     ctx.fillStyle=_g; ctx.fillRect(0,0,W,H);
+    // Dekorative Akzentlinie
+    ctx.fillStyle='#E2001A'; ctx.fillRect(0, Math.round(H*0.42), W, 3);
   }
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, opts.sportart||'SLZB', opts.datum||'', akzent);
@@ -3521,11 +3541,32 @@ async function zeichneCarouselAbschluss(ctx, W, H, opts) {
   const akzent = opts.akzent || 'blau';
   await ladeMontserrat(); await ladeLogo();
 
-  zeichneErsatzbild(ctx, W, H, opts.sportart || '');
-  const _g = ctx.createLinearGradient(0,0,0,H);
-  _g.addColorStop(0,'rgba(0,0,0,0.15)'); _g.addColorStop(0.35,'rgba(0,0,0,0.20)');
-  _g.addColorStop(0.65,'rgba(0,30,90,0.55)'); _g.addColorStop(1,'rgba(0,51,153,0.92)');
-  ctx.fillStyle=_g; ctx.fillRect(0,0,W,H);
+  if (opts.bild) {
+    ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H); ctx.clip();
+    drawCover(ctx, opts.bild, 0, 0, W, H); ctx.restore();
+    const _abd = ctx.createLinearGradient(0,0,0,H);
+    _abd.addColorStop(0,'rgba(0,0,0,0.35)'); _abd.addColorStop(0.4,'rgba(0,0,0,0.25)');
+    _abd.addColorStop(0.7,'rgba(0,20,70,0.65)'); _abd.addColorStop(1,'rgba(0,30,100,0.90)');
+    ctx.fillStyle=_abd; ctx.fillRect(0,0,W,H);
+  } else {
+    // Fallback: dunklerer Gradient als Deckblatt (Abschluss-Stimmung)
+    const _bg = ctx.createLinearGradient(0,0,W,H);
+    _bg.addColorStop(0,'#0a0c1a'); _bg.addColorStop(0.5,'#001a4d'); _bg.addColorStop(1,'#0a0c1a');
+    ctx.fillStyle=_bg; ctx.fillRect(0,0,W,H);
+    if (_slzbLogo) {
+      ctx.save(); ctx.globalAlpha=0.08;
+      const lw=Math.round(W*0.65), lh=Math.round(lw*(_slzbLogo.height/_slzbLogo.width));
+      ctx.drawImage(_slzbLogo, (W-lw)/2, (H-lh)/2, lw, lh);
+      ctx.restore();
+    }
+    zeichneErsatzbild(ctx, W, H, opts.sportart || '');
+    const _g = ctx.createLinearGradient(0,0,0,H);
+    _g.addColorStop(0,'rgba(0,0,0,0.1)'); _g.addColorStop(0.4,'rgba(0,0,0,0.15)');
+    _g.addColorStop(0.7,'rgba(0,30,90,0.60)'); _g.addColorStop(1,'rgba(0,51,153,0.92)');
+    ctx.fillStyle=_g; ctx.fillRect(0,0,W,H);
+    // Goldene Akzentlinie (Abschluss = Erfolg)
+    ctx.fillStyle='#C9A227'; ctx.fillRect(0, Math.round(H*0.42), W, 3);
+  }
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, opts.sportart||'SLZB', '', akzent);
   zeichneSlzbKarte(ctx, W, H, {
