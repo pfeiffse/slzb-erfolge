@@ -479,21 +479,36 @@ function drawLogo(ctx, x, y, maxH) {
 
 async function ladeBild(url) {
   if (!url) return null;
-  // Einfacher Image-Loader: direkt als <img> laden
-  // Funktioniert für Public URLs ohne Auth-Header
-  return new Promise(resolve => {
+  // Methode 1: Mit crossOrigin (für Canvas-Nutzung nötig)
+  const tryLoad = (withCors) => new Promise(resolve => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    if (withCors) img.crossOrigin = 'anonymous';
     img.onload = () => resolve(img);
-    img.onerror = () => {
-      // Fallback: ohne crossOrigin
+    img.onerror = () => resolve(null);
+    img.src = url + (withCors ? '' : (url.includes('?') ? '&_nc=1' : '?_nc=1'));
+  });
+
+  // Versuche zuerst mit CORS
+  let img = await tryLoad(true);
+  if (img) return img;
+
+  // Fallback: Bild über fetch als Blob laden (umgeht CORS-Restriktionen)
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const blob = await res.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    return new Promise(resolve => {
       const img2 = new Image();
       img2.onload = () => resolve(img2);
       img2.onerror = () => resolve(null);
-      img2.src = url;
-    };
-    img.src = url;
-  });
+      img2.src = blobUrl;
+    });
+  } catch(e) {
+    console.warn('[ladeBild] Fehler:', e.message, url.substring(0,60));
+    // Letzter Fallback: ohne CORS (kann nicht in Canvas gezeichnet werden)
+    return tryLoad(false);
+  }
 }
 
 async function ladeMontserrat() {
