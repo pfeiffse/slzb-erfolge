@@ -479,44 +479,21 @@ function drawLogo(ctx, x, y, maxH) {
 
 async function ladeBild(url) {
   if (!url) return null;
-
-  const anonKey = window.SLZB_CONFIG?.supabaseAnonKey || '';
-  const istSupabaseStorage = url.includes('.supabase.co/storage/');
-  // Public URLs und Signed URLs brauchen KEINE Auth-Header
-  const istOeffentlich = url.includes('/object/public/') || url.includes('/object/sign/') || url.includes('token=');
-
-  try {
-    const headers = {};
-    if (istSupabaseStorage && !istOeffentlich && anonKey) {
-      // Nur für private (nicht-öffentliche) URLs Auth-Header setzen
-      let session = null;
-      try { session = await Backend.session(); } catch(_) {}
-      const accessToken = session?.access_token || '';
-      headers['apikey'] = anonKey;
-      if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
-    }
-
-    const response = await fetch(url, { headers });
-    if (!response.ok) throw new Error('HTTP ' + response.status);
-    const blob = await response.blob();
-    const objectUrl = URL.createObjectURL(blob);
-    return new Promise(resolve => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = () => resolve(null);
-      img.src = objectUrl;
-    });
-  } catch(e) {
-    console.warn('Bild laden fehlgeschlagen:', e.message, '| URL:', url.substring(0, 80));
-    // Fallback: direkt ohne Header
-    return new Promise(resolve => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => resolve(img);
-      img.onerror = () => resolve(null);
-      img.src = url;
-    });
-  }
+  // Einfacher Image-Loader: direkt als <img> laden
+  // Funktioniert für Public URLs ohne Auth-Header
+  return new Promise(resolve => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => {
+      // Fallback: ohne crossOrigin
+      const img2 = new Image();
+      img2.onload = () => resolve(img2);
+      img2.onerror = () => resolve(null);
+      img2.src = url;
+    };
+    img.src = url;
+  });
 }
 
 async function ladeMontserrat() {
