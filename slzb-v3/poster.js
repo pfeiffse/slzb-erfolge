@@ -3426,6 +3426,10 @@ async function zeichneAthletPortrait(ctx, W, H, opts) {
   zeichneSlzbHeader(ctx, W, H, opts.sportart||'SLZB', '', akzent);
 
   // Glasbox unten
+  const erfolgTextP = (opts.erfolge||[]).length > 0
+    ? (opts.erfolge||[]).join(' | ')
+    : null;
+
   zeichneSlzbKarte(ctx, W, H, {
     subtitle: opts.kader || opts.sportart || '',
     vorname: opts.vorname || '',
@@ -3433,6 +3437,7 @@ async function zeichneAthletPortrait(ctx, W, H, opts) {
     titel: (!opts.vorname && !opts.nachname) ? opts.name : null,
     zusatz: opts.klasse || null,
     wettbewerb: opts.ziel || null,
+    ergebnis: erfolgTextP,
   }, akzent);
 
   zeichneSlzbFooterNeu(ctx, W, H, akzent);
@@ -3546,6 +3551,11 @@ async function zeichneAthletQuadrat(ctx, W, H, opts) {
   }
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, opts.sportart||'SLZB', '', akzent);
+  // Erfolge als | -getrennte Liste
+  const erfolgText = (opts.erfolge||[]).length > 0
+    ? (opts.erfolge||[]).join(' | ')
+    : null;
+
   zeichneSlzbKarte(ctx, W, H, {
     subtitle: opts.kader || opts.sportart || '',
     vorname: opts.vorname || '',
@@ -3553,6 +3563,7 @@ async function zeichneAthletQuadrat(ctx, W, H, opts) {
     titel: (!opts.vorname && !opts.nachname) ? opts.name : null,
     zusatz: opts.klasse || null,
     wettbewerb: opts.ziel || null,
+    ergebnis: erfolgText,
   }, akzent);
   zeichneSlzbFooterNeu(ctx, W, H, akzent);
   if (opts.nr && opts.gesamt) zeichneCarouselBadge(ctx, W, H, opts.nr, opts.gesamt);
