@@ -3854,8 +3854,29 @@ async function zeigeWochenvorschau() {
 
 // Wochenvorschau als Poster exportieren (1080×1350)
 async function wochenvorschauPoster() {
-  const termine = window._wocheTermine || [];
-  const wocheLabel = window._wocheLabel || '';
+  // Eigene Einträge nachladen und mit window._wocheTermine zusammenführen
+  const _eigene = await ladeKalenderEintraege();
+  const _statisch = window._wocheTermine || [];
+  // Eigene Einträge die in dieser Woche liegen hinzufügen
+  const _wocheLabel = window._wocheLabel || '';
+  // Woche aus Label extrahieren oder neu berechnen
+  const jetzt2 = new Date(); jetzt2.setHours(0,0,0,0);
+  const tag2 = jetzt2.getDay();
+  const diffMo2 = tag2 === 0 ? -6 : 1 - tag2;
+  const montag2 = new Date(jetzt2); montag2.setDate(jetzt2.getDate() + diffMo2);
+  const sonntag2 = new Date(montag2); sonntag2.setDate(montag2.getDate() + 6);
+  const eigeneWoche = _eigene.filter(t => {
+    if (!t.datum) return false;
+    const parts = t.datum.split('-');
+    const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+    d.setHours(0,0,0,0);
+    return d >= montag2 && d <= sonntag2;
+  });
+  // Zusammenführen und Duplikate vermeiden
+  const vorhandeneIds = new Set(_statisch.map(t => t._id).filter(Boolean));
+  const neueEigene = eigeneWoche.filter(t => !vorhandeneIds.has(t._id));
+  const termine = [..._statisch, ...neueEigene].sort((a,b) => (a.datum||'').localeCompare(b.datum||''));
+  const wocheLabel = _wocheLabel;
   if (!termine.length) { toast('Keine Termine diese Woche','warning'); return; }
 
   // Canvas erstellen
@@ -3895,7 +3916,9 @@ async function wochenvorschauPoster() {
 
   // Termine-Liste
   let y = 240;
-  const ROW_H = 72;
+  // Dynamische Zeilenhöhe: bei vielen Terminen kleiner
+  const anzahlTermine = termine.length;
+  const ROW_H = anzahlTermine > 12 ? 52 : anzahlTermine > 8 ? 62 : 72;
   const PAD = 40;
   const prioFarbe = (p) => p===1?'#E2001A':p===2?'#E07000':p===3?'#0B63CE':'#555';
 
