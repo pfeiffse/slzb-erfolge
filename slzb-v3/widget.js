@@ -116,67 +116,41 @@
 
   function injectStyles(theme) {
     if (document.getElementById('slzb-widget-styles')) return;
-    const dark = theme === 'dark';
     const style = document.createElement('style');
     style.id = 'slzb-widget-styles';
     style.textContent = `
-      .slzb-widget { font-family: 'Segoe UI', Arial, sans-serif; }
-      .slzb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
-      .slzb-card {
-        background: ${dark ? '#1B1C1F' : '#fff'};
-        border: 1px solid ${dark ? '#2A2C31' : '#e5e7eb'};
-        border-radius: 12px; overflow: hidden;
-        box-shadow: 0 2px 8px rgba(0,0,0,${dark ? '0.3' : '0.08'});
-        transition: transform .2s, box-shadow .2s;
-        cursor: pointer;
-      }
-      .slzb-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,${dark ? '0.4' : '0.15'}); }
-      .slzb-card-img { width: 100%; height: 200px; object-fit: cover; object-position: center 20%; display: block; background: ${dark ? '#2A2C31' : '#f3f4f6'}; transition: object-position .3s; }
-      .slzb-card-img:hover { object-position: center 40%; }
-      .slzb-card-img-placeholder { width: 100%; height: 200px; background: linear-gradient(135deg, #003366, #E2001A); display: flex; align-items: center; justify-content: center; font-size: 3rem; }
-      .slzb-card-body { padding: 16px; }
-      .slzb-card-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
-      .slzb-badge { background: #E2001A; color: #fff; font-size: .7rem; font-weight: 700; padding: 2px 8px; border-radius: 12px; letter-spacing: .05em; }
-      .slzb-badge-gold { background: #C9A227; }
-      .slzb-badge-silber { background: #8A9BB0; }
-      .slzb-badge-bronze { background: #C2783A; }
-      .slzb-date { color: ${dark ? '#8A9BB0' : '#6b7280'}; font-size: .78rem; }
-      .slzb-card-title { font-size: 1rem; font-weight: 700; color: ${dark ? '#fff' : '#111'}; margin: 0 0 6px; line-height: 1.3; }
-      .slzb-card-athlet { color: ${dark ? '#C9CCD2' : '#374151'}; font-size: .85rem; margin-bottom: 6px; }
-      .slzb-card-text { color: ${dark ? '#8A9BB0' : '#6b7280'}; font-size: .82rem; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-      .slzb-footer { text-align: center; margin-top: 20px; }
-      .slzb-card { cursor: pointer; }
-      .slzb-lightbox {
-        position: fixed; inset: 0; background: rgba(0,0,0,0.92);
-        z-index: 99999; display: flex; align-items: center; justify-content: center;
-        padding: 20px; animation: slzb-fadein .2s ease;
-      }
-      @keyframes slzb-fadein { from { opacity:0 } to { opacity:1 } }
-      .slzb-lightbox-inner {
-        position: relative; max-width: 900px; width: 100%;
-        background: #1B1C1F; border-radius: 16px; overflow: hidden;
-        box-shadow: 0 20px 60px rgba(0,0,0,.6);
-      }
-      .slzb-lightbox-img {
-        width: 100%; max-height: 70vh; object-fit: contain;
-        display: block; background: #000;
-      }
-      .slzb-lightbox-body { padding: 16px 20px; }
-      .slzb-lightbox-title { color: #fff; font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; }
-      .slzb-lightbox-meta { color: rgba(255,255,255,0.5); font-size: .82rem; margin-bottom: 8px; }
-      .slzb-lightbox-text { color: rgba(255,255,255,0.7); font-size: .85rem; line-height: 1.5; }
-      .slzb-lightbox-close {
-        position: absolute; top: 12px; right: 12px;
-        background: rgba(0,0,0,0.6); border: none; color: #fff;
-        width: 36px; height: 36px; border-radius: 50%; font-size: 1.1rem;
-        cursor: pointer; display: flex; align-items: center; justify-content: center;
-        z-index: 1;
-      }
-      .slzb-lightbox-close:hover { background: rgba(226,0,26,0.8); }
-      .slzb-footer a { color: #E2001A; font-size: .8rem; text-decoration: none; font-weight: 600; }
-      .slzb-loading { text-align: center; padding: 40px; color: ${dark ? '#8A9BB0' : '#6b7280'}; }
-      .slzb-spinner { width: 32px; height: 32px; border: 3px solid ${dark ? '#2A2C31' : '#e5e7eb'}; border-top-color: #E2001A; border-radius: 50%; animation: slzb-spin .8s linear infinite; margin: 0 auto 12px; }
+      .slzb-widget { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; }
+      .slzb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; }
+      .slzb-card { background: #fff; border: none; border-radius: 0; box-shadow: none; overflow: hidden; transition: opacity .2s; }
+      .slzb-card:hover { opacity: 0.85; }
+      .slzb-card-img { width: 100%; height: 200px; object-fit: cover; object-position: center 20%; display: block; background: #f0f0f0; }
+      .slzb-card-img-placeholder { width: 100%; height: 200px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; background: #003366; color: #fff; }
+      .slzb-card-body { padding: 12px 0 16px; }
+      .slzb-card-meta { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+      .slzb-date { font-size: .78rem; color: #666; font-style: italic; }
+      .slzb-badge { background: #003366; color: #fff; font-size: .68rem; font-weight: 700; padding: 2px 7px; border-radius: 2px; letter-spacing: .03em; text-transform: uppercase; }
+      .slzb-badge-gold { background: #b8860b; }
+      .slzb-badge-silber { background: #708090; }
+      .slzb-badge-bronze { background: #8b4513; }
+      .slzb-card-title { font-size: 1rem; font-weight: 700; color: #003366; margin: 0 0 6px; line-height: 1.3; }
+      .slzb-card-athlet { color: #444; font-size: .85rem; margin-bottom: 5px; }
+      .slzb-card-text { color: #555; font-size: .82rem; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+      .slzb-footer { margin-top: 20px; padding-top: 12px; border-top: 1px solid #e0e0e0; }
+      .slzb-footer a { color: #003366; font-size: .82rem; text-decoration: none; font-weight: 600; }
+      .slzb-footer a:hover { text-decoration: underline; }
+      .slzb-loading { text-align: center; padding: 40px; color: #666; }
+      .slzb-spinner { width: 32px; height: 32px; border: 3px solid #e0e0e0; border-top-color: #003366; border-radius: 50%; animation: slzb-spin .8s linear infinite; margin: 0 auto 12px; }
       @keyframes slzb-spin { to { transform: rotate(360deg); } }
+      .slzb-lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 20px; animation: slzb-fadein .2s ease; }
+      @keyframes slzb-fadein { from { opacity:0 } to { opacity:1 } }
+      .slzb-lightbox-inner { position: relative; max-width: 800px; width: 100%; background: #fff; box-shadow: 0 20px 60px rgba(0,0,0,.4); overflow: hidden; }
+      .slzb-lightbox-img { width: 100%; max-height: 65vh; object-fit: contain; display: block; background: #f0f0f0; }
+      .slzb-lightbox-body { padding: 16px 20px; }
+      .slzb-lightbox-title { color: #003366; font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; }
+      .slzb-lightbox-meta { color: #666; font-size: .8rem; margin-bottom: 8px; font-style: italic; }
+      .slzb-lightbox-text { color: #444; font-size: .88rem; line-height: 1.6; }
+      .slzb-lightbox-close { position: absolute; top: 10px; right: 10px; background: #003366; border: none; color: #fff; width: 32px; height: 32px; font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+      .slzb-lightbox-close:hover { background: #E2001A; }
       @media (max-width: 600px) { .slzb-grid { grid-template-columns: 1fr; } }
     `;
     document.head.appendChild(style);
