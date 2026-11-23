@@ -6076,7 +6076,7 @@ async function zeigeVotingAbstimmung(kampagneId) {
               ${meineWahl ? '<div style="position:absolute;top:8px;left:8px;background:var(--slzb-primary);color:#fff;font-size:.7rem;padding:2px 8px;border-radius:10px">Deine Wahl</div>' : ''}
               <div style="height:180px;background:#f0f4f8;overflow:hidden">
                 ${k2.bild_url
-                  ? `<img src="${esc(k2.bild_url)}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentNode.innerHTML='<div style=\\'display:flex;align-items:center;justify-content:center;height:100%;font-size:3rem\\'>🏃</div>'">`
+                  ? `<img src="${esc(k2.bild_url)}" style="width:100%;height:100%;object-fit:contain;background:#f0f4f8" onerror="this.parentNode.innerHTML='<div style=\\'display:flex;align-items:center;justify-content:center;height:100%;font-size:3rem\\'>🏃</div>'">`
                   : '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:3rem">🏃</div>'}
               </div>
               <div class="card-body">
