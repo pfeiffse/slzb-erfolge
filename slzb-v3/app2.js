@@ -3755,7 +3755,8 @@ async function loescheVideoUrl(erfolgId) {
 // WOCHENVORSCHAU – Poster + Modal
 // ══════════════════════════════════════════════════════════════
 async function zeigeWochenvorschau() {
-  const alleTermine = (typeof SLZB_TERMINE !== 'undefined') ? SLZB_TERMINE : [];
+  const _eigene = await ladeKalenderEintraege();
+  const alleTermine = [...((typeof SLZB_TERMINE !== 'undefined') ? SLZB_TERMINE : []), ..._eigene];
   const jetzt = new Date(); jetzt.setHours(0,0,0,0);
 
   // Aktuelle Woche: Montag bis Sonntag
@@ -4570,8 +4571,9 @@ function zeigeTerminDetail(termin) {
 // ══════════════════════════════════════════════════════════════
 // iCAL EXPORT (Feature 6)
 // ══════════════════════════════════════════════════════════════
-function exportiereKalenderIcal() {
-  const alleTermine = (typeof SLZB_TERMINE !== 'undefined') ? SLZB_TERMINE : [];
+async function exportiereKalenderIcal() {
+  const _eigene = await ladeKalenderEintraege();
+  const alleTermine = [...((typeof SLZB_TERMINE !== 'undefined') ? SLZB_TERMINE : []), ..._eigene];
   const state = window._kalenderState || {};
 
   let gefiltert = alleTermine.filter(t => {
