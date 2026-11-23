@@ -785,8 +785,8 @@ async function wechsleBildschirmFormat(format) {
     if (info) info.textContent='1080×1350 px · Multi-Erfolg-Layout';
     await zeichneMultiErfolgLayout('screen-canvas', e);
   } else if (format==='slzb-screen') {
-    if (canvas) { canvas.width=1065; canvas.height=975; canvas.style.maxHeight='60vh'; }
-    if (info) info.textContent='1065×975 px · SLZB-Bildschirm (18,04×16,51 cm bei 150 DPI)';
+    if (canvas) { canvas.width=975; canvas.height=1065; canvas.style.maxHeight='60vh'; }
+    if (info) info.textContent='975×1065 px · SLZB-Bildschirm (16,51×18,04 cm bei 150 DPI)';
     await zeichneSlzbBildschirmFormat('screen-canvas', e);
   } else {
     if (canvas) { canvas.width=1080; canvas.height=1350; canvas.style.maxHeight='65vh'; }
