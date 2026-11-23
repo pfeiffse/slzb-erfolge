@@ -7671,13 +7671,30 @@ async function zeichneVotingAushang(format) {
     const imgH = Math.round(cardH*0.55);
     if (k2.bild_url) {
       try {
-        // Bild direkt als <img> laden (kein CORS-Problem)
-        const img = await new Promise(resolve => {
-          const i = new Image();
-          i.onload = () => resolve(i);
-          i.onerror = () => resolve(null);
-          i.src = k2.bild_url;
-        });
+        // Bild über fetch als Blob laden (CORS-kompatibel für Canvas)
+        const img = await (async () => {
+          try {
+            const res = await fetch(k2.bild_url);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const blob = await res.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            return new Promise(resolve => {
+              const i = new Image();
+              i.crossOrigin = 'anonymous';
+              i.onload = () => { resolve(i); }
+              i.onerror = () => resolve(null);
+              i.src = blobUrl;
+            });
+          } catch(e) {
+            // Fallback: direkt ohne CORS
+            return new Promise(resolve => {
+              const i = new Image();
+              i.onload = () => resolve(i);
+              i.onerror = () => resolve(null);
+              i.src = k2.bild_url;
+            });
+          }
+        })();
         if (img) {
           ctx.save();
           slzbRoundRect(ctx, cx, cardStartY, cardW, imgH, [16,16,0,0]); ctx.clip();
