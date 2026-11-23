@@ -6852,7 +6852,7 @@ async function speichereVotingBearbeitung(kampagneId, kandidatenIds) {
   if (kErr) { toast('Fehler: ' + kErr.message, 'danger'); return; }
 
   // Kandidaten aktualisieren
-  for (const kid of kandidatenIds) {
+  for (const kid of ids) {
     const name   = document.getElementById(`ve-name-${kid}`)?.value.trim();
     const sport  = document.getElementById(`ve-sport-${kid}`)?.value.trim();
     const erfolg = document.getElementById(`ve-erfolg-${kid}`)?.value.trim();
