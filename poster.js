@@ -1352,7 +1352,7 @@ async function zeichneSocialBeitragLandscape(ctx, e, bild, meta, W, H) {
 async function zeichneSlzbBildschirmFormat(canvasId, e) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
-  const W = 1080, H = 988;
+  const W = 1065, H = 975;
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
   await ladeMontserrat(); await ladeLogo();
