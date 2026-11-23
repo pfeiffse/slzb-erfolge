@@ -3169,7 +3169,7 @@ async function renderKalender() {
   const aktJahr = jetzt.getFullYear();
 
   // Termine aus SLZB_TERMINE (termine.js)
-  const alleTermine = [...((typeof SLZB_TERMINE !== 'undefined') ? SLZB_TERMINE : []), ...eigeneEintraege];
+  const alleTermine = [...((typeof SLZB_TERMINE !== 'undefined') ? SLZB_TERMINE : []), ...(typeof eigeneEintraege !== 'undefined' ? eigeneEintraege : [])];
 
   // Filter-State
   const state = window._kalenderState || {
