@@ -3023,7 +3023,7 @@ async function ladeKalenderEintraege() {
     return (data||[]).map(e => ({
       datum: e.datum,
       datumBis: e.datum_bis || null,
-      datumAnzeige: e.datum_anzeige || e.datum,
+      datumAnzeige: e.datum_anzeige || new Date(e.datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}),
       sportart: e.sportart,
       veranstaltung: e.veranstaltung,
       ort: e.ort || '',
