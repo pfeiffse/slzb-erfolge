@@ -3769,9 +3769,13 @@ async function zeigeWochenvorschau() {
   const tagNamen = ['So','Mo','Di','Mi','Do','Fr','Sa'];
 
   const wocheTermine = alleTermine.filter(t => {
-    const d = new Date(t.datum);
+    if (!t.datum) return false;
+    // Datum normalisieren: YYYY-MM-DD → Date ohne Zeitzone-Probleme
+    const parts = t.datum.split('-');
+    const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+    d.setHours(0,0,0,0);
     return d >= montag && d <= sonntag;
-  }).sort((a,b) => a.datum.localeCompare(b.datum));
+  }).sort((a,b) => (a.datum||'').localeCompare(b.datum||''));
 
   const prioFarbe = (p) => p===1?'#E2001A':p===2?'#E07000':p===3?'#0B63CE':'#666';
   const prioLabel = (p) => p===1?'🏆 Meisterschaft':p===2?'⚡ Wettkampf':p===3?'📋 Lehrgang':'📅 Regulär';
