@@ -3952,20 +3952,27 @@ async function wochenvorschauPoster() {
       // Prioritäts-Akzent
       ctx.fillStyle=prioFarbe(t.prioritaet);
       ctx.fillRect(PAD, y, 3, ROW_H-4);
+      // Schriftgrößen und Positionen relativ zu ROW_H
+      const sportSz = Math.max(9, Math.round(ROW_H * 0.18));
+      const veranstSz = Math.max(11, Math.round(ROW_H * 0.26));
+      const infoSz = Math.max(9, Math.round(ROW_H * 0.18));
+      const y1 = y + Math.round(ROW_H * 0.12);  // Sportart
+      const y2 = y + Math.round(ROW_H * 0.38);  // Veranstaltung
+      const y3 = y + Math.round(ROW_H * 0.68);  // Info
       // Sportart
-      ctx.fillStyle=prioFarbe(t.prioritaet); ctx.font='bold 12px Montserrat, Arial, sans-serif';
+      ctx.fillStyle=prioFarbe(t.prioritaet); ctx.font=`bold ${sportSz}px Montserrat, Arial, sans-serif`;
       ctx.textAlign='left'; ctx.textBaseline='top';
-      ctx.fillText(t.sportart.toUpperCase(), PAD+14, y+10);
+      ctx.fillText(t.sportart.toUpperCase(), PAD+14, y1);
       // Veranstaltung
-      ctx.fillStyle='#fff'; ctx.font='bold 16px Montserrat, Arial, sans-serif';
-      ctx.fillText(t.veranstaltung, PAD+14, y+28, W-2*PAD-80);
-      // Zeitraum (wenn mehrtägig) + Ort + Klasse
+      ctx.fillStyle='#fff'; ctx.font=`bold ${veranstSz}px Montserrat, Arial, sans-serif`;
+      ctx.fillText(t.veranstaltung, PAD+14, y2, W-2*PAD-80);
+      // Zeitraum + Ort + Klasse
       const zeitraum = t.datumBis && t.datumBis !== t.datum
         ? formatDatumZeitraum(t.datum, t.datumBis) : null;
       const info = [zeitraum, t.ort, t.klasse].filter(Boolean).join(' · ');
-      if (info) {
-        ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.font='12px Montserrat, Arial, sans-serif';
-        ctx.fillText(info, PAD+14, y+50, W-2*PAD-80);
+      if (info && ROW_H >= 60) {
+        ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.font=`${infoSz}px Montserrat, Arial, sans-serif`;
+        ctx.fillText(info, PAD+14, y3, W-2*PAD-80);
       }
       y += ROW_H;
     });
