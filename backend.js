@@ -344,7 +344,7 @@ const DB = {
       const betRows = beteiligte.map(b => ({
         achievement_id:   data.id,
         student_id:       b.schuelerId || null,
-        participant_role: b.rolle || 'Athlet',
+        participant_role: b.anzeigename || b.rolle || 'Athlet',
         consent_status:   b.einwilligungsstatus || 'Nicht geprüft',
       }));
       const { error: betError } = await Backend.client
