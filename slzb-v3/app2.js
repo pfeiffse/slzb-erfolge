@@ -3165,6 +3165,7 @@ async function loescheKalenderEintrag(id, name) {
 
 async function renderKalender() {
   const jetzt = new Date();
+  const eigeneEintraege = await ladeKalenderEintraege();
   const aktMonat = jetzt.getMonth();
   const aktJahr = jetzt.getFullYear();
 
