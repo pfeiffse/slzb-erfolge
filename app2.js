@@ -3008,13 +3008,168 @@ function snHerunterladen() {
 // ══════════════════════════════════════════════════════════════
 // KALENDER-ANSICHT
 // ══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+// KALENDER-VERWALTUNG
+// ══════════════════════════════════════════════════════════════
+
+// Benutzerdefinierte Kalender-Einträge aus Supabase laden
+async function ladeKalenderEintraege() {
+  try {
+    const { data, error } = await Backend.client
+      .from('kalender_eintraege')
+      .select('*')
+      .order('datum');
+    if (error) { console.warn('Kalender laden:', error.message); return []; }
+    return (data||[]).map(e => ({
+      datum: e.datum,
+      datumBis: e.datum_bis || null,
+      datumAnzeige: e.datum_anzeige || e.datum,
+      sportart: e.sportart,
+      veranstaltung: e.veranstaltung,
+      ort: e.ort || '',
+      klasse: e.klasse || '',
+      teilnahme: e.teilnahme || 'Ja',
+      prioritaet: e.prioritaet || 4,
+      prioritaetText: e.prioritaet_text || '4 – Regulär',
+      _id: e.id,
+      _eigener: e.erstellt_von === Auth.id(),
+    }));
+  } catch(e) { return []; }
+}
+
+// Neuen Kalender-Eintrag erstellen / bearbeiten
+function zeigeKalenderEintragModal(eintrag = null) {
+  const istNeu = !eintrag;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.maxWidth = '560px';
+
+  const sportartOptionen = SLZB_DB.sportarten.map(s =>
+    `<option value="${esc(s.name)}" ${eintrag?.sportart===s.name?'selected':''}>${esc(s.name)}</option>`
+  ).join('');
+
+  const prioOptionen = [
+    {v:1, t:'1 – Meisterschaft / Olympia / Finale'},
+    {v:2, t:'2 – Wettkampf / Qualifikation / Rangliste'},
+    {v:3, t:'3 – Lehrgang / Sichtung / Trainingslager'},
+    {v:4, t:'4 – Regulär'},
+  ].map(p => `<option value="${p.v}" ${eintrag?.prioritaet==p.v?'selected':''}>${p.t}</option>`).join('');
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>${istNeu ? '➕ Neuer Kalender-Eintrag' : '✏️ Eintrag bearbeiten'}</h3>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row cols-2">
+        <div class="form-group">
+          <label style="font-weight:600">Datum <span class="required">*</span></label>
+          <input type="date" id="ke-datum" value="${eintrag?.datum||''}" style="width:100%">
+        </div>
+        <div class="form-group">
+          <label style="font-weight:600">Datum bis <span class="text-muted text-xs">(optional)</span></label>
+          <input type="date" id="ke-datum-bis" value="${eintrag?.datumBis||''}" style="width:100%">
+        </div>
+        <div class="form-group">
+          <label style="font-weight:600">Sportart <span class="required">*</span></label>
+          <select id="ke-sportart" style="width:100%">
+            <option value="">– wählen –</option>
+            ${sportartOptionen}
+          </select>
+        </div>
+        <div class="form-group">
+          <label style="font-weight:600">Priorität</label>
+          <select id="ke-prio" style="width:100%">${prioOptionen}</select>
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label style="font-weight:600">Veranstaltungsname <span class="required">*</span></label>
+          <input type="text" id="ke-veranstaltung" value="${esc(eintrag?.veranstaltung||'')}" placeholder="z.B. Deutsche Meisterschaften" style="width:100%">
+        </div>
+        <div class="form-group">
+          <label style="font-weight:600">Ort</label>
+          <input type="text" id="ke-ort" value="${esc(eintrag?.ort||'')}" placeholder="z.B. Berlin" style="width:100%">
+        </div>
+        <div class="form-group">
+          <label style="font-weight:600">Klasse / Kader</label>
+          <input type="text" id="ke-klasse" value="${esc(eintrag?.klasse||'')}" placeholder="z.B. U20 Kader" style="width:100%">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="speichereKalenderEintrag('${eintrag?._id||''}')">💾 Speichern</button>
+    </div>`;
+
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+async function speichereKalenderEintrag(id) {
+  const datum = document.getElementById('ke-datum')?.value;
+  const datumBis = document.getElementById('ke-datum-bis')?.value || null;
+  const sportart = document.getElementById('ke-sportart')?.value;
+  const veranstaltung = document.getElementById('ke-veranstaltung')?.value.trim();
+  const ort = document.getElementById('ke-ort')?.value.trim();
+  const klasse = document.getElementById('ke-klasse')?.value.trim();
+  const prio = parseInt(document.getElementById('ke-prio')?.value || '4');
+
+  if (!datum || !sportart || !veranstaltung) {
+    toast('Datum, Sportart und Veranstaltungsname sind Pflichtfelder', 'warning'); return;
+  }
+
+  const prioTexte = {1:'1 – Meisterschaft / Olympia / Finale',2:'2 – Wettkampf / Qualifikation / Rangliste',3:'3 – Lehrgang / Sichtung / Trainingslager',4:'4 – Regulär'};
+
+  // Datum-Anzeige berechnen
+  let datumAnzeige = new Date(datum).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+  if (datumBis && datumBis !== datum) {
+    const bis = new Date(datumBis);
+    const von = new Date(datum);
+    if (von.getMonth() === bis.getMonth()) {
+      datumAnzeige = `${von.getDate().toString().padStart(2,'0')}.–${bis.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})}`;
+    } else {
+      datumAnzeige = `${von.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'})}.–${bis.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})}`;
+    }
+  }
+
+  const daten = {
+    datum, datum_bis: datumBis, datum_anzeige: datumAnzeige,
+    sportart, veranstaltung, ort, klasse,
+    prioritaet: prio, prioritaet_text: prioTexte[prio] || '4 – Regulär',
+    erstellt_von: Auth.id(), geaendert_am: new Date().toISOString(),
+  };
+
+  let error;
+  if (id) {
+    ({ error } = await Backend.client.from('kalender_eintraege').update(daten).eq('id', id));
+  } else {
+    ({ error } = await Backend.client.from('kalender_eintraege').insert([daten]));
+  }
+
+  if (error) { toast('Fehler: ' + error.message, 'danger'); return; }
+
+  document.querySelector('.modal-overlay')?.remove();
+  toast('✅ Eintrag gespeichert', 'success');
+  navigateTo('kalender');
+}
+
+async function loescheKalenderEintrag(id, name) {
+  if (!confirm(`Eintrag "${name}" wirklich löschen?`)) return;
+  const { error } = await Backend.client.from('kalender_eintraege').delete().eq('id', id);
+  if (error) { toast('Fehler: ' + error.message, 'danger'); return; }
+  toast('✅ Eintrag gelöscht', 'success');
+  navigateTo('kalender');
+}
+
 async function renderKalender() {
   const jetzt = new Date();
   const aktMonat = jetzt.getMonth();
   const aktJahr = jetzt.getFullYear();
 
   // Termine aus SLZB_TERMINE (termine.js)
-  const alleTermine = (typeof SLZB_TERMINE !== 'undefined') ? SLZB_TERMINE : [];
+  const alleTermine = [...((typeof SLZB_TERMINE !== 'undefined') ? SLZB_TERMINE : []), ...eigeneEintraege];
 
   // Filter-State
   const state = window._kalenderState || {
@@ -3065,6 +3220,7 @@ async function renderKalender() {
   return `<div class="page">
     <div class="page-header">
       <h1>📅 Veranstaltungskalender 2026/27</h1>
+      <button class=\"btn btn-primary btn-sm\" onclick=\"zeigeKalenderEintragModal()\">➕ Neuer Eintrag</button>
       <p>${alleTermine.length} Termine · ${sportarten.length} Sportarten</p>
     </div>
 
