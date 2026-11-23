@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="refresh" content="0;url=vote.html">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SLZB – Sportler/in des Monats</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #003366; color: #fff;
+    display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+  .box { text-align: center; padding: 40px; }
+  .spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,.3);
+    border-top-color: #E2001A; border-radius: 50%; animation: spin .8s linear infinite; margin: 0 auto 16px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="spinner"></div>
+  <p>Weiterleitung zur Abstimmung...</p>
+  <p style="font-size:.8rem;opacity:.6">Falls die Weiterleitung nicht funktioniert:
+    <a href="vote.html" style="color:#fff">Hier klicken</a></p>
+</div>
+<script>window.location.replace('vote.html');</script>
+</body>
+</html>
