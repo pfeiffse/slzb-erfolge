@@ -3963,13 +3963,16 @@ async function wochenvorschauPoster() {
       ctx.fillStyle=prioFarbe(t.prioritaet); ctx.font=`bold ${sportSz}px Montserrat, Arial, sans-serif`;
       ctx.textAlign='left'; ctx.textBaseline='top';
       ctx.fillText(t.sportart.toUpperCase(), PAD+14, y1);
-      // Veranstaltung
-      ctx.fillStyle='#fff'; ctx.font=`bold ${veranstSz}px Montserrat, Arial, sans-serif`;
-      ctx.fillText(t.veranstaltung, PAD+14, y2, W-2*PAD-80);
-      // Zeitraum + Ort + Klasse
+      // Veranstaltung (mit Zeitraum wenn mehrtägig)
       const zeitraum = t.datumBis && t.datumBis !== t.datum
         ? formatDatumZeitraum(t.datum, t.datumBis) : null;
-      const info = [zeitraum, t.ort, t.klasse].filter(Boolean).join(' · ');
+      const veranstText = zeitraum
+        ? `${t.veranstaltung} (${zeitraum})`
+        : t.veranstaltung;
+      ctx.fillStyle='#fff'; ctx.font=`bold ${veranstSz}px Montserrat, Arial, sans-serif`;
+      ctx.fillText(veranstText, PAD+14, y2, W-2*PAD-80);
+      // Ort + Klasse
+      const info = [t.ort, t.klasse].filter(Boolean).join(' · ');
       if (info && ROW_H >= 60) {
         ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.font=`${infoSz}px Montserrat, Arial, sans-serif`;
         ctx.fillText(info, PAD+14, y3, W-2*PAD-80);
@@ -4124,11 +4127,12 @@ async function wochenvorschauStories() {
 
         // Veranstaltung
         ctx.fillStyle='#fff'; ctx.font=`bold ${Math.min(22, Math.round(ROW_H*0.22))}px Montserrat, Arial, sans-serif`;
-        ctx.fillText(t.veranstaltung, 100, y+36, W-160);
+        ctx.fillText(veranstTextS || t.veranstaltung, 100, y+36, W-160);
 
         // Ort + Klasse
         const zeitraumS = t.datumBis && t.datumBis !== t.datum ? formatDatumZeitraum(t.datum, t.datumBis) : null;
-        const info = [zeitraumS, t.ort, t.klasse].filter(Boolean).join(' · ');
+        const info = [t.ort, t.klasse].filter(Boolean).join(' · ');
+        const veranstTextS = zeitraumS ? `${t.veranstaltung} (${zeitraumS})` : t.veranstaltung;
         if (info && ROW_H > 80) {
           ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.font='13px Montserrat, Arial, sans-serif';
           ctx.fillText(info, 100, y+64, W-160);
