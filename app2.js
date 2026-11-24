@@ -7246,9 +7246,11 @@ function zeigeVotingLink(kampagneId) {
 
 // ── Abstimmung bearbeiten ─────────────────────────────────────
 async function bearbeiteVotingKampagne(kampagneId) {
+  // Cache-Buster: Supabase-Client neu initialisieren um gecachte Daten zu vermeiden
   const { data: k } = await Backend.client.from('voting_campaigns').select('*').eq('id', kampagneId).single();
   const { data: kandidatenRaw } = await Backend.client.from('voting_candidates')
     .select('*').eq('campaign_id', kampagneId).order('reihenfolge');
+  console.log('[BE] Geladene Kandidaten:', kandidatenRaw?.map(k=>({id:k.id,name:k.name,erfolg:k.erfolg})));
 
   // Public URLs (Bucket ist öffentlich)
   const kandidaten = await Promise.all((kandidatenRaw||[]).map(async k2 => {
