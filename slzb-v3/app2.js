@@ -7251,13 +7251,26 @@ async function bearbeiteVotingKampagne(kampagneId) {
   const { data: kandidatenRaw } = await Backend.client.from('voting_candidates')
     .select('*').eq('campaign_id', kampagneId).order('reihenfolge');
 
-  // Public URLs (Bucket ist öffentlich)
+  // Bilder: Public URL aus storage_path oder aus bild_url extrahieren
   const kandidaten = await Promise.all((kandidatenRaw||[]).map(async k2 => {
     const bucket = k2.storage_bucket || 'achievement-media';
-    if (k2.storage_path && bucket === 'achievement-media') {
-      const { data: pubData } = Backend.client.storage
-        .from('achievement-media').getPublicUrl(k2.storage_path);
-      return { ...k2, bild_url: pubData?.publicUrl || k2.bild_url };
+    const sp = k2.storage_path;
+    if (sp) {
+      const { data: pubData } = Backend.client.storage.from(bucket).getPublicUrl(sp);
+      if (pubData?.publicUrl) return { ...k2, bild_url: pubData.publicUrl };
+    }
+    if (!sp && k2.bild_url) {
+      const parts = k2.bild_url.split('/object/');
+      if (parts.length > 1) {
+        const rest = parts[1].replace(/^(sign|public)\//, '');
+        const bucketEnd = rest.indexOf('/');
+        if (bucketEnd > 0) {
+          const exBucket = rest.slice(0, bucketEnd);
+          const exPath = rest.slice(bucketEnd+1).split('?')[0];
+          const { data: pubData } = Backend.client.storage.from(exBucket).getPublicUrl(exPath);
+          if (pubData?.publicUrl) return { ...k2, bild_url: pubData.publicUrl, storage_path: exPath, storage_bucket: exBucket };
+        }
+      }
     }
     return k2;
   }));
