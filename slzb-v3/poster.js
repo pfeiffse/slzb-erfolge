@@ -2655,12 +2655,9 @@ async function zeichneNachwuchswahlPoster(canvasId, opts) {
   grad.addColorStop(0,'#0a0c1a'); grad.addColorStop(0.5,'#0a1535'); grad.addColorStop(1,'#001a66');
   ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
 
-  // Blauer Header
-  ctx.fillStyle='rgba(0,51,102,0.95)'; ctx.fillRect(0,0,W,100);
-  drawLogo(ctx, 20, 14, 72);
-  ctx.fillStyle=SLZB_COLORS.white; ctx.font='bold 18px Montserrat, Arial, sans-serif';
-  ctx.textAlign='right'; ctx.textBaseline='middle';
-  ctx.fillText('SLZB BERLIN', W-24, 50);
+  // Standard-Header (wie Erfolgsmeldungen)
+  const nwSportart = (opts.kandidaten?.[0]?.sportart || 'Nachwuchs').toUpperCase();
+  zeichneSlzbHeader(ctx, W, H, nwSportart, monat, 'blau');
 
   // Titel
   let y = 130;
@@ -2758,13 +2755,8 @@ async function zeichneNachwuchswahlPoster(canvasId, opts) {
     ctx.fillText('🔗 ' + linkText, W/2, y+78, W-80);
   }
 
-  // Footer
-  ctx.fillStyle=SLZB_COLORS.white; ctx.font='bold 14px Montserrat, Arial, sans-serif';
-  ctx.textAlign='center'; ctx.textBaseline='bottom';
-  ctx.fillText('Schul- und Leistungssportzentrum Berlin', W/2, H-28);
-  ctx.fillStyle=SLZB_COLORS.red; ctx.fillRect((W-200)/2, H-22, 200, 2);
-  ctx.fillStyle=SLZB_COLORS.pinkLight; ctx.font='bold italic 18px Montserrat, Arial, sans-serif';
-  ctx.fillText('#SLZBerlin', W/2, H-4);
+  // Standard-Footer (wie Erfolgsmeldungen)
+  zeichneSlzbFooterNeu(ctx, W, H, 'blau');
 }
 
 // ══════════════════════════════════════════════════════════════
