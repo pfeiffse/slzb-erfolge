@@ -2468,19 +2468,31 @@ async function nwVorschau() {
     const monat = document.getElementById('nw-monat')?.value||'';
     const link = document.getElementById('nw-link')?.value||'';
     const kandidaten = [];
+    const kandidatenRaw = [];
     document.querySelectorAll('.nw-kandidat').forEach((div)=>{
       const id = div.querySelector('[id^="nw-name-"]')?.id?.replace('nw-name-','');
       if (!id) return;
       const erfolgeRaw = document.getElementById(`nw-erfolge-${id}`)?.value||'';
-      kandidaten.push({
+      const bildInput = document.getElementById(`nw-bild-${id}`);
+      kandidatenRaw.push({
         name: document.getElementById(`nw-name-${id}`)?.value||'',
         sportart: document.getElementById(`nw-sport-${id}`)?.value||'',
-        bildInput: document.getElementById(`nw-bild-${id}`),
+        bildInput,
         erfolge: erfolgeRaw.split('\n').map(s=>s.trim()).filter(Boolean),
       });
     });
+    // Bilder als Blob-URLs laden
+    const kandidatenMitBild = await Promise.all(kandidatenRaw.map(async k => {
+      let bild = null;
+      if (k.bildInput?.files?.[0]) {
+        bild = URL.createObjectURL(k.bildInput.files[0]);
+      } else if (k.bildInput?.dataset?.vorhandeneUrl) {
+        bild = k.bildInput.dataset.vorhandeneUrl;
+      }
+      return { ...k, bild };
+    }));
     const titel = modus==='jahr' ? `Nachwuchssportler/in des Jahres ${monat}` : null;
-    await zeichneNachwuchswahlPoster('nw-canvas', {monat, kandidaten, abstimmungslink: link, titelOverride: titel});
+    await zeichneNachwuchswahlPoster('nw-canvas', {monat, kandidaten: kandidatenMitBild, abstimmungslink: link, titelOverride: titel});
   }
 }
 
