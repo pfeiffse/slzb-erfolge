@@ -7337,7 +7337,10 @@ async function bearbeiteVotingKampagne(kampagneId) {
 
 async function speichereVotingBearbeitung(kampagneId) {
   const ids = Array.isArray(window._veKandidatenIds) ? window._veKandidatenIds : [];
-  const titel = document.getElementById('ve-titel')?.value.trim();
+  console.log('[VB] Start - kampagneId:', kampagneId, '| ids:', ids);
+  const titelEl = document.getElementById('ve-titel');
+  console.log('[VB] Titel-Element:', !!titelEl, '| Wert:', titelEl?.value);
+  const titel = titelEl?.value?.trim();
   if (!titel) { toast('Titel darf nicht leer sein', 'warning'); return; }
 
   // Kampagne aktualisieren
@@ -7377,12 +7380,15 @@ async function speichereVotingBearbeitung(kampagneId) {
       }
     }
 
+    console.log('[VB] Update kid:', kid, '| data:', JSON.stringify(updateData));
     const { error: updErr } = await Backend.client
       .from('voting_candidates').update(updateData).eq('id', kid);
     if (updErr) {
+      console.error('[VB] Update Fehler:', updErr);
       toast('Fehler bei Kandidat ' + name + ': ' + updErr.message, 'danger');
       return;
     }
+    console.log('[VB] Update OK für:', kid);
   }
 
   document.querySelector('.modal-overlay')?.remove();
