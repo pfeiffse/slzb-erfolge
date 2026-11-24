@@ -7372,19 +7372,26 @@ async function speichereVotingBearbeitung(kampagneId, kandidatenIds) {
       // Neues Bild hochladen
       const file = bildInput.files[0];
       const pfad = `voting/${kampagneId}_${kid}_${Date.now()}.${file.name.split('.').pop()}`;
+      console.log('[Voting] Upload Bild:', pfad, file.size, 'bytes');
       const { error: upErr } = await Backend.client.storage
         .from('poster-exports').upload(pfad, file, { contentType: file.type, upsert: true });
-      if (!upErr) {
+      if (upErr) {
+        console.warn('[Voting] Upload Fehler:', upErr.message);
+      } else {
         const { data: urlData } = Backend.client.storage.from('poster-exports').getPublicUrl(pfad);
         bildUrl = urlData?.publicUrl || null;
         storagePath = pfad;
+        console.log('[Voting] Upload OK:', bildUrl);
       }
+    } else {
+      console.log('[Voting] Kein neues Bild für kid:', kid, '| bildInput:', !!bildInput, '| files:', bildInput?.files?.length);
     }
 
     const updateData = { name, sportart: sport, erfolg, klasse };
     if (bildUrl) { updateData.bild_url = bildUrl; updateData.storage_path = storagePath; updateData.storage_bucket = 'poster-exports'; }
-
-    await Backend.client.from('voting_candidates').update(updateData).eq('id', kid);
+    console.log('[Voting] Update:', kid, updateData);
+    const { error: updErr } = await Backend.client.from('voting_candidates').update(updateData).eq('id', kid);
+    if (updErr) console.warn('[Voting] Update Fehler:', updErr.message);
   }
 
   document.querySelector('.modal-overlay')?.remove();
