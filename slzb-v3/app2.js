@@ -8513,30 +8513,89 @@ async function importiereDatenschutzExcel() {
       const s = String(v).trim().toLowerCase();
       return s === 'x' || s === '1' || s === 'ja' || s === 'yes' || s === 'true';
     };
+
+    // ── Automatische Spaltenerkennung ──────────────────────────
+    // Suche die Header-Zeile (enthält "Name" oder "Nachname")
+    // und erkenne ob eine Nummerierungsspalte vorhanden ist
+    let headerZeile = 0;
+    let colOffset = 0; // 0 = keine Nummerierungsspalte, 1 = Nummerierungsspalte vorhanden
+
+    for (let i = 0; i < Math.min(rows.length, 10); i++) {
+      const row = rows[i].map(c => String(c||'').trim().toLowerCase());
+      // Prüfe ob diese Zeile eine Header-Zeile ist
+      const hasName = row.some(c => c === 'name' || c === 'nachname' || c === 'familienname');
+      if (hasName) {
+        headerZeile = i;
+        // Prüfe ob erste Spalte eine Nummerierung ist (Nr., lfd., #, Nummer)
+        const firstCol = row[0];
+        if (firstCol === 'nr' || firstCol === 'nr.' || firstCol === 'lfd' || firstCol === '#' ||
+            firstCol === 'nummer' || firstCol === 'lfd.' || firstCol === '' ||
+            /^\d+$/.test(firstCol)) {
+          colOffset = 1;
+        }
+        break;
+      }
+    }
+
+    // Spalten-Mapping basierend auf Header-Zeile
+    const headerRow = rows[headerZeile].map(c => String(c||'').trim().toLowerCase());
+    const findCol = (...namen) => {
+      for (const name of namen) {
+        const idx = headerRow.findIndex(h => h.includes(name));
+        if (idx >= 0) return idx;
+      }
+      return -1;
+    };
+
+    // Spalten-Indizes ermitteln (mit Fallback auf feste Positionen + Offset)
+    const COL = {
+      nachname:      findCol('nachname', 'name', 'familienname') >= 0 ? findCol('nachname', 'name', 'familienname') : (0 + colOffset),
+      vorname:       findCol('vorname', 'firstname') >= 0 ? findCol('vorname', 'firstname') : (1 + colOffset),
+      klasse:        findCol('klasse', 'class') >= 0 ? findCol('klasse', 'class') : (2 + colOffset),
+      name_print:    findCol('name-print', 'name print', 'n-print') >= 0 ? findCol('name-print', 'name print', 'n-print') : (3 + colOffset),
+      name_presse:   findCol('name-presse', 'name presse', 'n-presse') >= 0 ? findCol('name-presse', 'name presse', 'n-presse') : (4 + colOffset),
+      name_homepage: findCol('name-homepage', 'name homepage', 'n-homepage') >= 0 ? findCol('name-homepage', 'name homepage', 'n-homepage') : (5 + colOffset),
+      name_events:   findCol('name-events', 'name events', 'n-events') >= 0 ? findCol('name-events', 'name events', 'n-events') : (6 + colOffset),
+      name_social:   findCol('name-social', 'name social', 'n-social') >= 0 ? findCol('name-social', 'name social', 'n-social') : (7 + colOffset),
+      foto_print:    findCol('foto-print', 'foto print', 'f-print') >= 0 ? findCol('foto-print', 'foto print', 'f-print') : (8 + colOffset),
+      foto_presse:   findCol('foto-presse', 'foto presse', 'f-presse') >= 0 ? findCol('foto-presse', 'foto presse', 'f-presse') : (9 + colOffset),
+      foto_homepage: findCol('foto-homepage', 'foto homepage', 'f-homepage') >= 0 ? findCol('foto-homepage', 'foto homepage', 'f-homepage') : (10 + colOffset),
+      foto_events:   findCol('foto-events', 'foto events', 'f-events') >= 0 ? findCol('foto-events', 'foto events', 'f-events') : (11 + colOffset),
+      foto_social:   findCol('foto-social', 'foto social', 'f-social') >= 0 ? findCol('foto-social', 'foto social', 'f-social') : (12 + colOffset),
+    };
+
     const daten = [];
-    for (let i = 1; i < rows.length; i++) {
+    // Starte ab der Zeile NACH der Header-Zeile
+    for (let i = headerZeile + 1; i < rows.length; i++) {
       const cols = rows[i].map(c => String(c||'').trim());
-      // Leerzeilen und Header-Zeilen überspringen
-      const nachname = cols[0]?.trim() || '';
-      const vorname  = cols[1]?.trim() || '';
+      const nachname = cols[COL.nachname] || '';
+      const vorname  = cols[COL.vorname]  || '';
+
+      // Leerzeilen überspringen
       if (!nachname || !vorname) continue;
+      // Weitere Header-Zeilen überspringen
       if (nachname.toLowerCase().includes('name') || nachname.toLowerCase().includes('nachname')) continue;
+      // Trennzeichen überspringen
       if (nachname === '-' || nachname === '–' || nachname === '/' || nachname.length < 2) continue;
+      // Reine Zahlen (Nummerierungen) überspringen
+      if (/^\d+$/.test(nachname)) continue;
+      // Komplett leere Zeilen überspringen
       if (cols.every(c => !c || c === '-' || c === '–' || c === '/' || c === ' ')) continue;
+
       daten.push({
-        nachname:       cols[0] || '',
-        vorname:        cols[1] || '',
-        klasse:         cols[2] || null,
-        name_print:     istX(cols[3]),
-        name_presse:    istX(cols[4]),
-        name_homepage:  istX(cols[5]),
-        name_events:    istX(cols[6]),
-        name_social:    istX(cols[7]),
-        foto_print:     istX(cols[8]),
-        foto_presse:    istX(cols[9]),
-        foto_homepage:  istX(cols[10]),
-        foto_events:    istX(cols[11]),
-        foto_social:    istX(cols[12]),
+        nachname,
+        vorname,
+        klasse:         cols[COL.klasse] || null,
+        name_print:     istX(cols[COL.name_print]),
+        name_presse:    istX(cols[COL.name_presse]),
+        name_homepage:  istX(cols[COL.name_homepage]),
+        name_events:    istX(cols[COL.name_events]),
+        name_social:    istX(cols[COL.name_social]),
+        foto_print:     istX(cols[COL.foto_print]),
+        foto_presse:    istX(cols[COL.foto_presse]),
+        foto_homepage:  istX(cols[COL.foto_homepage]),
+        foto_events:    istX(cols[COL.foto_events]),
+        foto_social:    istX(cols[COL.foto_social]),
         schuljahr,
         importiert_von: Auth.id(),
       });
