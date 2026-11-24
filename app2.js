@@ -7250,7 +7250,6 @@ async function bearbeiteVotingKampagne(kampagneId) {
   const { data: k } = await Backend.client.from('voting_campaigns').select('*').eq('id', kampagneId).single();
   const { data: kandidatenRaw } = await Backend.client.from('voting_candidates')
     .select('*').eq('campaign_id', kampagneId).order('reihenfolge');
-  console.log('[BE] Geladene Kandidaten:', kandidatenRaw?.map(k=>({id:k.id,name:k.name,erfolg:k.erfolg})));
 
   // Public URLs (Bucket ist öffentlich)
   const kandidaten = await Promise.all((kandidatenRaw||[]).map(async k2 => {
@@ -7339,9 +7338,7 @@ async function bearbeiteVotingKampagne(kampagneId) {
 
 async function speichereVotingBearbeitung(kampagneId) {
   const ids = Array.isArray(window._veKandidatenIds) ? window._veKandidatenIds : [];
-  console.log('[VB] Start - kampagneId:', kampagneId, '| ids:', ids);
   const titelEl = document.getElementById('ve-titel');
-  console.log('[VB] Titel-Element:', !!titelEl, '| Wert:', titelEl?.value);
   const titel = titelEl?.value?.trim();
   if (!titel) { toast('Titel darf nicht leer sein', 'warning'); return; }
 
@@ -7382,16 +7379,13 @@ async function speichereVotingBearbeitung(kampagneId) {
       }
     }
 
-    console.log('[VB] Update kid:', kid, '| data:', JSON.stringify(updateData));
-    const { error: updErr } = await Backend.client
+      const { error: updErr } = await Backend.client
       .from('voting_candidates').update(updateData).eq('id', kid);
     if (updErr) {
-      console.error('[VB] Update Fehler:', updErr);
-      toast('Fehler bei Kandidat ' + name + ': ' + updErr.message, 'danger');
+          toast('Fehler bei Kandidat ' + name + ': ' + updErr.message, 'danger');
       return;
     }
-    console.log('[VB] Update OK für:', kid);
-  }
+    }
 
   document.querySelector('.modal-overlay')?.remove();
   toast('✅ Abstimmung gespeichert', 'success');
