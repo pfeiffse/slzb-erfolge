@@ -8029,9 +8029,43 @@ async function zeigeVotingAushang(kampagneId) {
     return k2;
   }));
 
+  // Modal mit Canvas öffnen
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal modal-xl';
+
+  modal.innerHTML = `
+    <div class="modal-header" style="background:var(--slzb-primary);color:#fff">
+      <h3 style="color:#fff;margin:0">📢 Abstimmungs-Ausgaben</h3>
+      <button class="btn btn-ghost btn-sm" style="color:#fff" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="tabs mb-3" style="display:flex;gap:8px">
+        <button class="tab-btn active" onclick="switchVotingAushangTab('a3',this)">📄 A3 Aushang</button>
+        <button class="tab-btn" onclick="switchVotingAushangTab('social',this)">📱 Social Media</button>
+        <button class="tab-btn" onclick="switchVotingAushangTab('bildschirm',this)">🖥️ Bildschirm</button>
+      </div>
+      <div style="text-align:center;background:#111;padding:16px;border-radius:8px">
+        <canvas id="voting-aushang-canvas" width="1587" height="1123"
+          style="max-width:100%;max-height:60vh;display:block;margin:0 auto;border-radius:8px"></canvas>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Schließen</button>
+      <button class="btn btn-outline" onclick="zeigeVotingBildausschnitt()">🖼️ Bildausschnitt</button>
+      <button class="btn btn-primary" onclick="downloadVotingAushang()">📥 PNG herunterladen</button>
+    </div>`;
+
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+
   window._votingAushangKampagne = k;
   window._votingAushangKandidaten = kandidaten;
   window._votingAushangFormat = 'a3';
+  window._bildOffset = { x: 0.5, y: 0.5 };
+  window._bildZoom = 1.0;
 
   setTimeout(() => zeichneVotingAushang('a3'), 100);
 }
