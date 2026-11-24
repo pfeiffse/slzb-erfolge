@@ -2406,6 +2406,18 @@ function nwModusWechsel(modus) {
 }
 
 let _nwKandidatId = 0;
+function nwBildVorschau(id, input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const preview = document.getElementById('nw-bild-preview-'+id);
+    const img = document.getElementById('nw-bild-img-'+id);
+    if (preview && img) { img.src = e.target.result; preview.style.display = 'block'; }
+  };
+  reader.readAsDataURL(file);
+}
+
 function nwKandidatHinzu() {
   const container = document.getElementById('nw-kandidaten');
   if (!container) return;
@@ -2426,8 +2438,8 @@ function nwKandidatHinzu() {
         <input type="text" id="nw-sport-${id}" placeholder="z.B. Judo" style="width:100%;background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
       </div>
       <div style="flex:2;min-width:180px">
-        <label style="color:#aaa;font-size:.75rem">Foto-URL (optional)</label>
-        <input type="text" id="nw-bild-${id}" placeholder="https://..." style="width:100%;background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+        <label style=\"color:#aaa;font-size:.75rem\">Foto hochladen (optional)</label>
+        <input type=\"file\" id=\"nw-bild-${id}\" accept=\"image/jpeg,image/png,image/webp\" onchange=\"nwBildVorschau(${id},this)\" style=\"width:100%;background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:6px;font-size:.8rem\"><div id=\"nw-bild-preview-${id}\" style=\"margin-top:4px;display:none\"><img id=\"nw-bild-img-${id}\" style=\"max-height:60px;border-radius:6px;object-fit:cover\"></div>
       </div>
       <div style="flex:2;min-width:200px">
         <label style="color:#aaa;font-size:.75rem">Erfolge (eine pro Zeile)</label>
@@ -2463,7 +2475,7 @@ async function nwVorschau() {
       kandidaten.push({
         name: document.getElementById(`nw-name-${id}`)?.value||'',
         sportart: document.getElementById(`nw-sport-${id}`)?.value||'',
-        bild: document.getElementById(`nw-bild-${id}`)?.value||null,
+        bildInput: document.getElementById(`nw-bild-${id}`),
         erfolge: erfolgeRaw.split('\n').map(s=>s.trim()).filter(Boolean),
       });
     });
