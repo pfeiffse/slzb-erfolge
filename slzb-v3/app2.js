@@ -1213,51 +1213,99 @@ async function zeigeNegativlisteUeberfuehren() {
 }
 
 async function fuehreNegativlisteUeber() {
-  const liste = window._dsListe || [];
-  if (!liste.length) return;
-
-  // Für jeden Eintrag einen Datenschutz-Widerspruch in der App speichern
-  // Da wir keine Schüler-IDs haben, speichern wir als Freitext-Einträge
-  let ok = 0;
-  for (const e of liste) {
-    const name = `${e.nachname}, ${e.vorname}`.trim();
-    // Prüfe ob bereits vorhanden
-    const { data: existing } = await Backend.client
-      .from('datenschutz_widerspruch')
-      .select('id').eq('nachname', e.nachname).eq('vorname', e.vorname).limit(1);
-    if (!existing?.length) {
-      await Backend.client.from('datenschutz_widerspruch').insert([{
-        ...e, importiert_von: Auth.id()
-      }]);
-    }
-    ok++;
-  }
+  // Nicht mehr nötig - Einwilligungsseite liest direkt aus datenschutz_widerspruch
   document.querySelector('.modal-overlay')?.remove();
-  toast(`✅ ${ok} Einträge überführt`, 'success');
   navigateTo('einwilligungen');
 }
 
-function renderEinwilligungen() {
-  return`<div class="page">
+async function renderEinwilligungen() {
+  // Negativliste aus Supabase laden
+  const { data: negativliste } = await Backend.client
+    .from('datenschutz_widerspruch')
+    .select('*')
+    .order('nachname');
+  const dsListe = negativliste || [];
+
+  const dsTabelle = dsListe.length ? `
+    <div class="card mb-4">
+      <div class="card-header">
+        <h2>🚫 Datenschutz-Negativliste (${dsListe.length} Einträge)</h2>
+        <span class="text-muted" style="font-size:.8rem">Importiert aus Excel – Widersprüche zur Veröffentlichung</span>
+      </div>
+      <div class="table-wrap">
+        <table style="font-size:.82rem">
+          <thead><tr>
+            <th>Name</th><th>Klasse</th>
+            <th title="Name-Print">N-P</th>
+            <th title="Name-Presse">N-Pr</th>
+            <th title="Name-Homepage">N-H</th>
+            <th title="Name-Events">N-E</th>
+            <th title="Name-Social">N-S</th>
+            <th title="Foto-Print">F-P</th>
+            <th title="Foto-Presse">F-Pr</th>
+            <th title="Foto-Homepage">F-H</th>
+            <th title="Foto-Events">F-E</th>
+            <th title="Foto-Social">F-S</th>
+            <th>Schuljahr</th>
+          </tr></thead>
+          <tbody>
+            ${dsListe.map(e => {
+              const icon = (v) => v
+                ? '<span style="color:#E2001A;font-weight:700">✗</span>'
+                : '<span style="color:#4caf50">✓</span>';
+              return `<tr>
+                <td><strong>${esc(e.nachname)}</strong>, ${esc(e.vorname)}</td>
+                <td>${esc(e.klasse||'–')}</td>
+                <td>${icon(e.name_print)}</td>
+                <td>${icon(e.name_presse)}</td>
+                <td>${icon(e.name_homepage)}</td>
+                <td>${icon(e.name_events)}</td>
+                <td>${icon(e.name_social)}</td>
+                <td>${icon(e.foto_print)}</td>
+                <td>${icon(e.foto_presse)}</td>
+                <td>${icon(e.foto_homepage)}</td>
+                <td>${icon(e.foto_events)}</td>
+                <td>${icon(e.foto_social)}</td>
+                <td style="font-size:.75rem;color:#888">${esc(e.schuljahr||'–')}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>` : `
+    <div class="card mb-4">
+      <div class="card-body">
+        <p class="text-muted">Noch keine Negativliste importiert. Bitte unter <strong>Datenschutz → Negativliste importieren</strong> die Excel-Datei hochladen.</p>
+      </div>
+    </div>`;
+
+  return `<div class="page">
     <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
       <div><h1>🔒 Einwilligungsverwaltung</h1></div>
-      ${Auth.canDo('datenschutz') ? `<button class="btn btn-outline btn-sm" onclick="zeigeNegativlisteUeberfuehren()">📋 Negativliste → Einwilligungen</button>` : ''}
+      ${Auth.canDo('datenschutz') ? `<button class="btn btn-outline btn-sm" onclick="navigateTo('datenschutz_import')">📥 Negativliste importieren</button>` : ''}
     </div>
-    <div class="card"><div class="table-wrap"><table>
-      <thead><tr><th>Schüler/in</th><th>Gültig bis</th><th>Foto</th><th>Print</th><th>Homepage</th><th>Dig.Sign.</th><th>Social</th><th>Einzel</th><th>Widerruf</th><th>Aktionen</th></tr></thead>
-      <tbody>${SLZB_DB.schueler.map(s=>{
-        const abgelaufen=s.ewGueltigBis&&new Date(s.ewGueltigBis)<new Date();
-        return`<tr>
-          <td>${esc(s.anzeigename)}<br><span class="text-xs text-muted">${esc(s.schuelerNr||s.id)}</span></td>
-          <td class="text-sm">${fmt(s.ewGueltigBis)||'–'}${abgelaufen?'<br><span class="badge badge-danger">Abgelaufen</span>':''}</td>
-          <td>${einwilligungIcon(s.ew?.foto)}</td><td>${einwilligungIcon(s.ew?.print)}</td>
-          <td>${einwilligungIcon(s.ew?.homepage)}</td><td>${einwilligungIcon(s.ew?.digitalSignage)}</td>
-          <td>${einwilligungIcon(s.ew?.socialMedia)}</td><td>${einwilligungIcon(s.ew?.einzeldarstellung)}</td>
-          <td>${s.ewWiderruf?'<span class="badge badge-danger">Widerrufen</span>':'<span class="badge badge-success">Aktiv</span>'}</td>
-          <td>${!s.ewWiderruf&&Auth.canDo('datenschutz')?`<button class="btn btn-danger btn-sm" onclick="widerrufEinwilligung('${s.id}','${esc(s.anzeigename)}')">Widerrufen</button>`:'–'}</td>
-        </tr>`;}).join('')}
-      </tbody>
-    </table></div></div>
+
+    ${dsTabelle}
+
+    ${SLZB_DB.schueler.length ? `
+    <div class="card">
+      <div class="card-header"><h2>👤 Schüler-Einwilligungen (${SLZB_DB.schueler.length})</h2></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Schüler/in</th><th>Gültig bis</th><th>Foto</th><th>Print</th><th>Homepage</th><th>Dig.Sign.</th><th>Social</th><th>Einzel</th><th>Widerruf</th><th>Aktionen</th></tr></thead>
+        <tbody>${SLZB_DB.schueler.map(s=>{
+          const abgelaufen=s.ewGueltigBis&&new Date(s.ewGueltigBis)<new Date();
+          return`<tr>
+            <td>${esc(s.anzeigename)}<br><span class="text-xs text-muted">${esc(s.schuelerNr||s.id)}</span></td>
+            <td class="text-sm">${fmt(s.ewGueltigBis)||'–'}${abgelaufen?'<br><span class="badge badge-danger">Abgelaufen</span>':''}</td>
+            <td>${einwilligungIcon(s.ew?.foto)}</td><td>${einwilligungIcon(s.ew?.print)}</td>
+            <td>${einwilligungIcon(s.ew?.homepage)}</td><td>${einwilligungIcon(s.ew?.digitalSignage)}</td>
+            <td>${einwilligungIcon(s.ew?.socialMedia)}</td><td>${einwilligungIcon(s.ew?.einzeldarstellung)}</td>
+            <td>${s.ewWiderruf?'<span class="badge badge-danger">Widerrufen</span>':'<span class="badge badge-success">Aktiv</span>'}</td>
+            <td>${!s.ewWiderruf&&Auth.canDo('datenschutz')?`<button class="btn btn-danger btn-sm" onclick="widerrufEinwilligung('${s.id}','${esc(s.anzeigename)}')">Widerrufen</button>`:'–'}</td>
+          </tr>`;}).join('')}
+        </tbody>
+      </table></div>
+    </div>` : ''}
   </div>`;
 }
 
