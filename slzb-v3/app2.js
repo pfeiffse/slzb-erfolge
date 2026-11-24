@@ -7251,13 +7251,20 @@ async function bearbeiteVotingKampagne(kampagneId) {
   const { data: kandidatenRaw } = await Backend.client.from('voting_candidates')
     .select('*').eq('campaign_id', kampagneId).order('reihenfolge');
 
-  // Bilder: Public URL aus storage_path oder aus bild_url extrahieren
+  // Bilder: Signed URL für poster-exports, Public URL für achievement-media
   const kandidaten = await Promise.all((kandidatenRaw||[]).map(async k2 => {
     const bucket = k2.storage_bucket || 'achievement-media';
     const sp = k2.storage_path;
     if (sp) {
-      const { data: pubData } = Backend.client.storage.from(bucket).getPublicUrl(sp);
-      if (pubData?.publicUrl) return { ...k2, bild_url: pubData.publicUrl };
+      if (bucket === 'poster-exports') {
+        // poster-exports ist privat → Signed URL
+        const { data: sd } = await Backend.client.storage.from(bucket).createSignedUrl(sp, 3600);
+        if (sd?.signedUrl) return { ...k2, bild_url: sd.signedUrl };
+      } else {
+        // achievement-media ist öffentlich → Public URL
+        const { data: pubData } = Backend.client.storage.from(bucket).getPublicUrl(sp);
+        if (pubData?.publicUrl) return { ...k2, bild_url: pubData.publicUrl };
+      }
     }
     if (!sp && k2.bild_url) {
       const parts = k2.bild_url.split('/object/');
@@ -7267,8 +7274,13 @@ async function bearbeiteVotingKampagne(kampagneId) {
         if (bucketEnd > 0) {
           const exBucket = rest.slice(0, bucketEnd);
           const exPath = rest.slice(bucketEnd+1).split('?')[0];
-          const { data: pubData } = Backend.client.storage.from(exBucket).getPublicUrl(exPath);
-          if (pubData?.publicUrl) return { ...k2, bild_url: pubData.publicUrl, storage_path: exPath, storage_bucket: exBucket };
+          if (exBucket === 'poster-exports') {
+            const { data: sd } = await Backend.client.storage.from(exBucket).createSignedUrl(exPath, 3600);
+            if (sd?.signedUrl) return { ...k2, bild_url: sd.signedUrl, storage_path: exPath, storage_bucket: exBucket };
+          } else {
+            const { data: pubData } = Backend.client.storage.from(exBucket).getPublicUrl(exPath);
+            if (pubData?.publicUrl) return { ...k2, bild_url: pubData.publicUrl, storage_path: exPath, storage_bucket: exBucket };
+          }
         }
       }
     }
@@ -8001,16 +8013,19 @@ async function zeigeVotingAushang(kampagneId) {
   const { data: kandidatenRaw } = await Backend.client.from('voting_candidates')
     .select('*').eq('campaign_id', kampagneId).order('reihenfolge');
 
-  // Bilder: storage_path → Public URL (korrekte Bucket-Erkennung)
+  // Bilder: Signed URL für poster-exports, Public URL für achievement-media
   const kandidaten = await Promise.all((kandidatenRaw||[]).map(async k2 => {
     const sp = k2.storage_path;
     const bucket = k2.storage_bucket || 'achievement-media';
     if (sp) {
-      // Public URL aus storage_path + bucket
-      const { data: pubData } = Backend.client.storage.from(bucket).getPublicUrl(sp);
-      if (pubData?.publicUrl) return { ...k2, bild_url: pubData.publicUrl };
+      if (bucket === 'poster-exports') {
+        const { data: sd } = await Backend.client.storage.from(bucket).createSignedUrl(sp, 3600);
+        if (sd?.signedUrl) return { ...k2, bild_url: sd.signedUrl };
+      } else {
+        const { data: pubData } = Backend.client.storage.from(bucket).getPublicUrl(sp);
+        if (pubData?.publicUrl) return { ...k2, bild_url: pubData.publicUrl };
+      }
     }
-    // Fallback: bild_url direkt (poster-exports ist öffentlich)
     return k2;
   }));
 
