@@ -8029,7 +8029,7 @@ async function zeigeVotingAushang(kampagneId) {
     return k2;
   }));
 
-    window._votingAushangKampagne = k;
+  window._votingAushangKampagne = k;
   window._votingAushangKandidaten = kandidaten;
   window._votingAushangFormat = 'a3';
 
