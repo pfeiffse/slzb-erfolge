@@ -7991,69 +7991,20 @@ async function zeigeVotingAushang(kampagneId) {
   const { data: kandidatenRaw } = await Backend.client.from('voting_candidates')
     .select('*').eq('campaign_id', kampagneId).order('reihenfolge');
 
-  // Bilder für Kandidaten laden: Public URL (Bucket ist öffentlich)
+  // Bilder: storage_path → Public URL (korrekte Bucket-Erkennung)
   const kandidaten = await Promise.all((kandidatenRaw||[]).map(async k2 => {
-    // 1. storage_path aus bild_url extrahieren
-    let storagePath = k2.storage_path;
-    if (!storagePath && k2.bild_url) {
-      const m = k2.bild_url.match(/\/object\/(?:sign|public)\/achievement-media\/([^?]+)/);
-      storagePath = m?.[1] || null;
-    }
-    // 2. Public URL (Bucket ist öffentlich – kein Ablaufdatum)
-    if (storagePath) {
-      const { data: pubData } = Backend.client.storage.from('achievement-media').getPublicUrl(storagePath);
+    const sp = k2.storage_path;
+    const bucket = k2.storage_bucket || 'achievement-media';
+    if (sp) {
+      // Public URL aus storage_path + bucket
+      const { data: pubData } = Backend.client.storage.from(bucket).getPublicUrl(sp);
       if (pubData?.publicUrl) return { ...k2, bild_url: pubData.publicUrl };
     }
-    // 3. Fallback: Bild aus achievement_media über achievement_id
-    if (!storagePath && k2.achievement_id) {
-      const { data: media } = await Backend.client.from('achievement_media')
-        .select('storage_path').eq('achievement_id', k2.achievement_id).limit(1).single();
-      if (media?.storage_path) {
-        const { data: pubData } = Backend.client.storage.from('achievement-media').getPublicUrl(media.storage_path);
-        if (pubData?.publicUrl) return { ...k2, bild_url: pubData.publicUrl };
-      }
-    }
-    // 4. poster-exports Bucket (öffentlich) – bild_url direkt verwenden
-    if (k2.bild_url && k2.bild_url.includes('poster-exports')) {
-      return k2; // bereits öffentliche URL
-    }
+    // Fallback: bild_url direkt (poster-exports ist öffentlich)
     return k2;
   }));
 
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  const modal = document.createElement('div');
-  modal.className = 'modal modal-xl';
-
-  const tabs = ['A3 Aushang', 'Social Media', 'Bildschirm'];
-
-  modal.innerHTML = `
-    <div class="modal-header" style="background:var(--slzb-primary);color:#fff">
-      <h3 style="color:#fff;margin:0">📢 Abstimmungs-Ausgaben</h3>
-      <button class="btn btn-ghost btn-sm" style="color:#fff" onclick="this.closest('.modal-overlay').remove()">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="tabs mb-3" style="display:flex;gap:8px">
-        <button class="tab-btn active" onclick="switchVotingAushangTab('a3',this)">📄 A3 Aushang</button>
-        <button class="tab-btn" onclick="switchVotingAushangTab('social',this)">📱 Social Media</button>
-        <button class="tab-btn" onclick="switchVotingAushangTab('bildschirm',this)">🖥️ Bildschirm</button>
-      </div>
-      <div style="text-align:center;background:#111;padding:16px;border-radius:8px">
-        <canvas id="voting-aushang-canvas" width="1587" height="1123"
-          style="max-width:100%;max-height:60vh;display:block;margin:0 auto;border-radius:8px"></canvas>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Schließen</button>
-      <button class="btn btn-outline" onclick="zeigeVotingBildausschnitt()">🖼️ Bildausschnitt</button>
-      <button class="btn btn-primary" onclick="downloadVotingAushang()">📥 PNG herunterladen</button>
-    </div>`;
-
-  overlay.appendChild(modal);
-  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
-  document.body.appendChild(overlay);
-
-  window._votingAushangKampagne = k;
+    window._votingAushangKampagne = k;
   window._votingAushangKandidaten = kandidaten;
   window._votingAushangFormat = 'a3';
 
