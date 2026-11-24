@@ -8186,29 +8186,10 @@ async function zeichneVotingAushang(format) {
     ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.lineWidth=1;
     slzbRoundRect(ctx, cx, cardStartY, cardW, cardH, 16); ctx.stroke();
 
-    // Bild laden via fetch+Blob (CORS-kompatibel für Canvas)
+    // Bild laden via ladeBild() (bewährte Methode aus poster.js)
     const imgH = Math.round(cardH*0.55);
-    const _drawFallback = () => {
-      ctx.fillStyle='rgba(255,255,255,0.05)'; ctx.fillRect(cx, cardStartY, cardW, imgH);
-      ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.font=`${Math.round(cardW*0.3)}px Arial`;
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('🏃', cx+cardW/2, cardStartY+imgH/2);
-    };
     if (k2.bild_url) {
-      let imgEl = null;
-      try {
-        const res = await fetch(k2.bild_url);
-        if (res.ok) {
-          const blob = await res.blob();
-          const blobUrl = URL.createObjectURL(blob);
-          imgEl = await new Promise(resolve => {
-            const img = new Image();
-            img.onload = () => resolve(img);
-            img.onerror = () => resolve(null);
-            img.src = blobUrl;
-          });
-        }
-      } catch(_) {}
+      const imgEl = await ladeBild(k2.bild_url);
       if (imgEl) {
         ctx.save();
         slzbRoundRect(ctx, cx, cardStartY, cardW, imgH, [16,16,0,0]); ctx.clip();
@@ -8216,9 +8197,17 @@ async function zeichneVotingAushang(format) {
         const sw = imgEl.naturalWidth*scale, sh = imgEl.naturalHeight*scale;
         ctx.drawImage(imgEl, cx+(cardW-sw)/2, cardStartY+(imgH-sh)/2, sw, sh);
         ctx.restore();
-      } else { _drawFallback(); }
+      } else {
+        ctx.fillStyle='rgba(255,255,255,0.05)'; ctx.fillRect(cx, cardStartY, cardW, imgH);
+        ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.font=`${Math.round(cardW*0.3)}px Arial`;
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText('🏃', cx+cardW/2, cardStartY+imgH/2);
+      }
     } else {
-      _drawFallback();
+      ctx.fillStyle='rgba(255,255,255,0.05)'; ctx.fillRect(cx, cardStartY, cardW, imgH);
+      ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.font=`${Math.round(cardW*0.3)}px Arial`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('🏃', cx+cardW/2, cardStartY+imgH/2);
     }
 
     // Gradient über Bild
