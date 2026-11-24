@@ -8144,46 +8144,45 @@ async function zeichneVotingAushang(format) {
     ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.lineWidth=1;
     slzbRoundRect(ctx, cx, cardStartY, cardW, cardH, 16); ctx.stroke();
 
-    // Bild
-    const imgH = Math.round(cardH*0.55);
-    if (k2.bild_url) {
+    const bildUrl = k2.bild_url || null;
+    if (bildUrl) {
       try {
-        // Bild über fetch als Blob laden (CORS-kompatibel für Canvas)
-        const img = await (async () => {
-          try {
-            const res = await fetch(k2.bild_url);
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            const blob = await res.blob();
-            const blobUrl = URL.createObjectURL(blob);
-            return new Promise(resolve => {
-              const i = new Image();
-              i.crossOrigin = 'anonymous';
-              i.onload = () => { resolve(i); }
-              i.onerror = () => resolve(null);
-              i.src = blobUrl;
-            });
-          } catch(e) {
-            // Fallback: direkt ohne CORS
-            return new Promise(resolve => {
-              const i = new Image();
-              i.onload = () => resolve(i);
-              i.onerror = () => resolve(null);
-              i.src = k2.bild_url;
-            });
-          }
-        })();
-        if (img) {
+        // Bild als HTML-Element laden (kein CORS-Problem)
+        const imgEl = await new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = () => resolve(null);
+          img.src = bildUrl;
+        });
+        if (imgEl) {
+          // Bild über temporären Canvas in Hauptcanvas zeichnen
+          const tmpCanvas = document.createElement("canvas");
+          tmpCanvas.width = cardW; tmpCanvas.height = imgH;
+          const tmpCtx = tmpCanvas.getContext("2d");
+          // Cover-Fit
+          const scale = Math.max(cardW/imgEl.width, imgH/imgEl.height);
+          const sw = imgEl.width*scale, sh = imgEl.height*scale;
+          const ox = (cardW-sw)/2, oy = (imgH-sh)/2;
+          tmpCtx.drawImage(imgEl, ox, oy, sw, sh);
           ctx.save();
           slzbRoundRect(ctx, cx, cardStartY, cardW, imgH, [16,16,0,0]); ctx.clip();
-          drawCover(ctx, img, cx, cardStartY, cardW, imgH);
+          ctx.drawImage(tmpCanvas, cx, cardStartY);
           ctx.restore();
+        } else {
+          // Fallback: Emoji
+          ctx.fillStyle="rgba(255,255,255,0.05)"; ctx.fillRect(cx, cardStartY, cardW, imgH);
+          ctx.fillStyle="rgba(255,255,255,0.3)"; ctx.font=`${Math.round(cardW*0.3)}px Arial`;
+          ctx.textAlign="center"; ctx.textBaseline="middle";
+          ctx.fillText("🏃", cx+cardW/2, cardStartY+imgH/2);
         }
-      } catch(e) { console.warn('Bild:', e.message); }
+      } catch(e) {
+        ctx.fillStyle="rgba(255,255,255,0.05)"; ctx.fillRect(cx, cardStartY, cardW, imgH);
+      }
     } else {
-      ctx.fillStyle='rgba(255,255,255,0.05)'; ctx.fillRect(cx, cardStartY, cardW, imgH);
-      ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.font=`${Math.round(cardW*0.3)}px Arial`;
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('🏃', cx+cardW/2, cardStartY+imgH/2);
+      ctx.fillStyle="rgba(255,255,255,0.05)"; ctx.fillRect(cx, cardStartY, cardW, imgH);
+      ctx.fillStyle="rgba(255,255,255,0.3)"; ctx.font=`${Math.round(cardW*0.3)}px Arial`;
+      ctx.textAlign="center"; ctx.textBaseline="middle";
+      ctx.fillText("🏃", cx+cardW/2, cardStartY+imgH/2);
     }
 
     // Gradient über Bild
