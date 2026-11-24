@@ -7335,12 +7335,8 @@ async function bearbeiteVotingKampagne(kampagneId) {
   window._veKandidatenIds = kandidaten.map(k2 => k2.id);
 }
 
-async function speichereVotingBearbeitung(kampagneId, kandidatenIds) {
-  // IDs aus window-Variable wenn nicht übergeben
-  let ids = kandidatenIds || window._veKandidatenIds || [];
-  // Sicherstellen dass ids ein Array ist
-  if (typeof ids === 'string') { try { ids = JSON.parse(ids); } catch(_) { ids = []; } }
-  if (!Array.isArray(ids)) ids = [];
+async function speichereVotingBearbeitung(kampagneId) {
+  const ids = Array.isArray(window._veKandidatenIds) ? window._veKandidatenIds : [];
   const titel = document.getElementById('ve-titel')?.value.trim();
   if (!titel) { toast('Titel darf nicht leer sein', 'warning'); return; }
 
@@ -7350,48 +7346,47 @@ async function speichereVotingBearbeitung(kampagneId, kandidatenIds) {
     start_at: document.getElementById('ve-start')?.value || null,
     end_at:   document.getElementById('ve-end')?.value   || null,
   }).eq('id', kampagneId);
-  if (kErr) { toast('Fehler: ' + kErr.message, 'danger'); return; }
+  if (kErr) { toast('Fehler beim Speichern: ' + kErr.message, 'danger'); return; }
 
   // Kandidaten aktualisieren
-  console.log('[Voting] IDs:', ids);
   for (const kid of ids) {
-    const nameEl = document.getElementById(`ve-name-${kid}`);
-    const sportEl = document.getElementById(`ve-sport-${kid}`);
-    const name   = nameEl?.value?.trim() || '';
-    const sport  = sportEl?.value?.trim() || '';
-    const erfolg = document.getElementById(`ve-erfolg-${kid}`)?.value?.trim() || '';
-    const klasse = document.getElementById(`ve-klasse-${kid}`)?.value?.trim() || '';
-    const bildInput = document.getElementById(`ve-bild-${kid}`);
-    if (!name) { console.warn('[Voting] Kein Name für kid:', kid); continue; }
-
-    let bildUrl = null;
-    let storagePath = null;
-
-    if (bildInput?.files?.[0]) {
-      // Neues Bild hochladen
-      const file = bildInput.files[0];
-      const pfad = `voting/${kampagneId}_${kid}_${Date.now()}.${file.name.split('.').pop()}`;
-        const { error: upErr } = await Backend.client.storage
-        .from('poster-exports').upload(pfad, file, { contentType: file.type, upsert: true });
-      if (upErr) {
-          } else {
-        const { data: urlData } = Backend.client.storage.from('poster-exports').getPublicUrl(pfad);
-        bildUrl = urlData?.publicUrl || null;
-        storagePath = pfad;
-          }
-    } else {
-      }
+    const name   = document.getElementById('ve-name-'+kid)?.value?.trim() || '';
+    const sport  = document.getElementById('ve-sport-'+kid)?.value?.trim() || '';
+    const erfolg = document.getElementById('ve-erfolg-'+kid)?.value?.trim() || '';
+    const klasse = document.getElementById('ve-klasse-'+kid)?.value?.trim() || '';
+    const bildInput = document.getElementById('ve-bild-'+kid);
+    if (!name) continue;
 
     const updateData = { name, sportart: sport, erfolg, klasse };
-    if (bildUrl) { updateData.bild_url = bildUrl; updateData.storage_path = storagePath; updateData.storage_bucket = 'poster-exports'; }
-    const { error: updErr } = await Backend.client.from('voting_candidates').update(updateData).eq('id', kid);
-    if (updErr) console.warn('[Voting] Update Fehler:', updErr.message);
+
+    // Neues Bild hochladen wenn vorhanden
+    if (bildInput?.files?.[0]) {
+      const file = bildInput.files[0];
+      const pfad = 'voting/'+kampagneId+'_'+kid+'_'+Date.now()+'.'+file.name.split('.').pop();
+      const { error: upErr } = await Backend.client.storage
+        .from('poster-exports').upload(pfad, file, { contentType: file.type, upsert: true });
+      if (!upErr) {
+        const { data: urlData } = Backend.client.storage.from('poster-exports').getPublicUrl(pfad);
+        if (urlData?.publicUrl) {
+          updateData.bild_url = urlData.publicUrl;
+          updateData.storage_path = pfad;
+          updateData.storage_bucket = 'poster-exports';
+        }
+      } else {
+        toast('Bild-Upload Fehler: ' + upErr.message, 'warning');
+      }
+    }
+
+    const { error: updErr } = await Backend.client
+      .from('voting_candidates').update(updateData).eq('id', kid);
+    if (updErr) {
+      toast('Fehler bei Kandidat ' + name + ': ' + updErr.message, 'danger');
+      return;
+    }
   }
 
   document.querySelector('.modal-overlay')?.remove();
   toast('✅ Abstimmung gespeichert', 'success');
-  // Cache leeren damit neue Bilder sofort sichtbar sind
-  APP._erfolgeCache = null;
   navigateTo('sportler-des-monats');
 }
 
