@@ -796,3 +796,192 @@ tbody tr.clickable { cursor: pointer; }
 .divider { border: none; border-top: 1px solid var(--slzb-border); margin: 16px 0; }
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .section-title { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--slzb-muted); margin-bottom: 10px; }
+
+/* ══════════════════════════════════════════════════════════════
+   MOBILE-OPTIMIERUNGEN FÜR TRAINER
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Floating Action Button (Neue Meldung) ─────────────────── */
+.fab {
+  display: none;
+  position: fixed;
+  bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+  right: 16px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--slzb-red);
+  color: #fff;
+  border: none;
+  font-size: 1.6rem;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(226,0,26,0.45);
+  z-index: 900;
+  align-items: center;
+  justify-content: center;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.fab:active { transform: scale(0.93); box-shadow: 0 2px 8px rgba(226,0,26,0.4); }
+
+/* ── Bottom Navigation Bar ─────────────────────────────────── */
+.bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: calc(60px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: var(--slzb-primary);
+  border-top: 1px solid rgba(255,255,255,.12);
+  z-index: 950;
+  flex-direction: row;
+  align-items: stretch;
+  box-shadow: 0 -2px 12px rgba(0,0,0,.2);
+}
+.bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: rgba(255,255,255,.6);
+  font-size: .62rem;
+  font-weight: 600;
+  letter-spacing: .02em;
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 6px 4px;
+  transition: color .15s, background .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.bottom-nav-item .nav-icon-big { font-size: 1.3rem; line-height: 1; }
+.bottom-nav-item.active { color: #fff; background: rgba(255,255,255,.1); }
+.bottom-nav-item:active { background: rgba(255,255,255,.15); }
+.bottom-nav-badge {
+  position: absolute;
+  top: 6px;
+  right: calc(50% - 18px);
+  background: var(--slzb-red);
+  color: #fff;
+  font-size: .55rem;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+
+/* ── Mobile-spezifische Verbesserungen ─────────────────────── */
+@media (max-width: 600px) {
+  /* FAB und Bottom-Nav einblenden */
+  .fab { display: flex; }
+  .bottom-nav { display: flex; }
+
+  /* Main-Content: Platz für Bottom-Nav */
+  .main-content {
+    padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* Meldungsart-Karten: 2 Spalten, kompakter */
+  .meldungsart-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px;
+  }
+  .meldungsart-card {
+    padding: 14px 10px !important;
+    min-height: 90px;
+  }
+  .meldungsart-icon { font-size: 1.6rem !important; margin-bottom: 6px; }
+  .meldungsart-title { font-size: .82rem !important; }
+  .meldungsart-desc { font-size: .7rem !important; display: none; }
+
+  /* Detailansicht: Tabs als horizontaler Scroll */
+  .tabs { gap: 4px !important; }
+  .tab-btn { padding: 7px 12px !important; font-size: .78rem !important; }
+
+  /* Karten-Header: kompakter */
+  .card-header h2 { font-size: .95rem; }
+  .card-header { gap: 8px; flex-wrap: wrap; }
+
+  /* Buttons in Header: kleiner */
+  .card-header .btn { font-size: .75rem; padding: 5px 10px; }
+
+  /* Formular: größere Touch-Targets */
+  .form-group label { font-size: .82rem; margin-bottom: 5px; }
+  input[type="text"], input[type="email"], input[type="date"],
+  input[type="number"], input[type="url"], select, textarea {
+    min-height: 44px;
+    padding: 10px 12px !important;
+    font-size: 16px !important;
+    border-radius: 8px;
+  }
+  textarea { min-height: 80px; }
+
+  /* Details/Summary (Weitere Details) */
+  details summary { min-height: 44px; }
+
+  /* Poster-Ausgabe-Buttons: 2 Spalten */
+  .ausgabe-buttons { grid-template-columns: repeat(2, 1fr) !important; }
+
+  /* Tabellen: kompakter */
+  table th, table td { padding: 8px 6px !important; font-size: .78rem; }
+
+  /* Alerts: kompakter */
+  .alert { padding: 10px 12px; font-size: .82rem; }
+
+  /* Page-Header: kompakter */
+  .page-header { padding-bottom: 10px; margin-bottom: 12px; }
+  .page-header h1 { font-size: 1.1rem; }
+  .page-header p { font-size: .8rem; }
+
+  /* Erfolg-Detail: Tabs kleiner */
+  #tab-kerndaten, #tab-beteiligte, #tab-medien { font-size: .78rem; }
+
+  /* Modal: volle Höhe auf kleinen Screens */
+  .modal { max-height: 95vh; }
+  .modal-body { padding: 14px; }
+  .modal-footer { padding: 10px 14px; gap: 8px; }
+  .modal-footer .btn { flex: 1; }
+
+  /* Topbar: Logo kleiner */
+  .topbar { height: 48px; padding: 0 10px; }
+  .hamburger-btn { width: 36px; height: 36px; }
+
+  /* Sidebar: volle Breite auf sehr kleinen Screens */
+  .sidebar { width: min(280px, 85vw); }
+
+  /* Stat-Cards: Touch-freundlicher */
+  .stat-card { cursor: pointer; }
+  .stat-card:active { transform: scale(0.97); }
+
+  /* Sammelmeldung-Tabelle: horizontal scrollbar */
+  #sammel-tabelle { min-width: 600px; }
+
+  /* Bild-Upload: größerer Touch-Bereich */
+  input[type="file"] { min-height: 44px; padding: 10px !important; }
+
+  /* Schnellerfassung auf Dashboard: 2 Spalten */
+  .schnellerfassung-grid { grid-template-columns: repeat(2, 1fr) !important; }
+}
+
+/* ── Sehr kleine Geräte: zusätzliche Anpassungen ───────────── */
+@media (max-width: 380px) {
+  .meldungsart-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .meldungsart-card { padding: 10px 8px !important; }
+  .bottom-nav-item { font-size: .58rem; }
+  .bottom-nav-item .nav-icon-big { font-size: 1.2rem; }
+}
+
+/* ── Touch-Feedback für alle interaktiven Elemente ─────────── */
+@media (hover: none) and (pointer: coarse) {
+  .btn:active { opacity: 0.8; transform: scale(0.97); }
+  .card:active { transform: scale(0.99); }
+  .nav-item:active { background: rgba(255,255,255,.15) !important; }
+  .meldungsart-card:active { transform: scale(0.97) !important; }
+}

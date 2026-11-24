@@ -50,6 +50,31 @@ function formatDatumZeitraum(datumVon, datumBis, lang=false) {
   return `${von.toLocaleDateString('de-DE', opts)}–${bis.toLocaleDateString('de-DE', opts)}`;
 }
 
+
+// ── Datenschutz-Warnung auf Canvas zeichnen ──────────────────
+// Zeichnet ein rotes X über das Bild wenn Datenschutz-Einschränkung
+function zeichneDatenschutzWarnung(ctx, x, y, w, h, typ='foto') {
+  // Halbtransparenter roter Overlay
+  ctx.save();
+  ctx.fillStyle = 'rgba(226,0,26,0.75)';
+  ctx.fillRect(x, y, w, h);
+  // Weißes X
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = Math.round(Math.min(w,h) * 0.08);
+  ctx.lineCap = 'round';
+  const pad = Math.round(Math.min(w,h) * 0.15);
+  ctx.beginPath();
+  ctx.moveTo(x+pad, y+pad); ctx.lineTo(x+w-pad, y+h-pad);
+  ctx.moveTo(x+w-pad, y+pad); ctx.lineTo(x+pad, y+h-pad);
+  ctx.stroke();
+  // Text
+  ctx.fillStyle = '#fff';
+  ctx.font = `bold ${Math.round(Math.min(w,h)*0.1)}px Montserrat, Arial, sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  ctx.fillText('Datenschutz', x+w/2, y+h-8);
+  ctx.restore();
+}
+
 function zeichneSlzbHintergrund(ctx, W, H, bild, akzent='rot') {
   ctx.fillStyle = '#000'; ctx.fillRect(0,0,W,H);
   if (bild) {
@@ -571,6 +596,11 @@ async function zeichneSLZBPoster(canvasId, e) {
   else if (bild && fmt === 'portrait') await zeichnePosterPortrait(ctx, e, bild, hauptbild);
   else if (bild) await zeichnePosterPortrait(ctx, e, bild, hauptbild); // square → portrait-layout
   else await zeichnePosterKeinBild(ctx, e);
+
+  // Datenschutz-Warnung
+  if (window._posterDsGesperrt) {
+    if (typeof zeigeDatenschutzWarnung === 'function') zeigeDatenschutzWarnung(canvas, ctx);
+  }
 }
 
 // Layout 1: Querformat-Bild → Bild oben, Text unten
@@ -1318,6 +1348,11 @@ async function zeichneSocialFormat(canvasId, e, format) {
     else if (fmt==='portrait') await zeichneSocialBeitragPortrait(ctx, e, bild, hauptbild, W, H);
     else await zeichneSocialBeitragLandscape(ctx, e, bild, hauptbild, W, H);
   }
+
+  // Datenschutz-Warnung
+  if (window._posterDsGesperrt) {
+    if (typeof zeigeDatenschutzWarnung === 'function') zeigeDatenschutzWarnung(canvas, ctx);
+  }
 }
 
 // Social Beitrag: Querformat-Bild
@@ -1385,6 +1420,11 @@ async function zeichneSlzbBildschirmFormat(canvasId, e) {
     ort: e.ort||null
   });
   zeichneSlzbFooterNeu(ctx, W, H);
+
+  // Datenschutz-Warnung
+  if (window._posterDsGesperrt) {
+    if (typeof zeigeDatenschutzWarnung === 'function') zeigeDatenschutzWarnung(canvas, ctx);
+  }
 }
 
 // Social Beitrag: Hochformat-Bild (Vollhintergrund)

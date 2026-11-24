@@ -530,11 +530,71 @@ function htmlZuBlobUrl(html) {
   return URL.createObjectURL(blob);
 }
 
+
+// ── Datenschutz-Prüfung für Poster ───────────────────────────
+async function pruefeAthletDatenschutz(athletenName) {
+  if (!athletenName) return { gesperrt: false, einschraenkungen: [] };
+  try {
+    const { data } = await Backend.client
+      .from('datenschutz_widerspruch')
+      .select('*')
+      .or(`nachname.ilike.%${athletenName.split(' ')[0]}%,vorname.ilike.%${athletenName.split(' ').pop()}%`)
+      .limit(5);
+    if (!data?.length) return { gesperrt: false, einschraenkungen: [] };
+    const einschraenkungen = [];
+    for (const e of data) {
+      if (e.foto_print || e.foto_homepage || e.foto_social) einschraenkungen.push(`${e.vorname} ${e.nachname}: Foto eingeschränkt`);
+      if (e.name_print || e.name_homepage || e.name_social) einschraenkungen.push(`${e.vorname} ${e.nachname}: Name eingeschränkt`);
+    }
+    return { gesperrt: einschraenkungen.length > 0, einschraenkungen, eintraege: data };
+  } catch(e) {
+    return { gesperrt: false, einschraenkungen: [] };
+  }
+}
+
+function zeigeDatenschutzWarnung(canvas, ctx) {
+  const w = canvas.width, h = canvas.height;
+  // Rotes Kreuz über das Poster
+  ctx.save();
+  ctx.globalAlpha = 0.75;
+  ctx.strokeStyle = '#E2001A';
+  ctx.lineWidth = Math.min(w, h) * 0.04;
+  ctx.lineCap = 'round';
+  const pad = Math.min(w, h) * 0.08;
+  ctx.beginPath();
+  ctx.moveTo(pad, pad); ctx.lineTo(w - pad, h - pad);
+  ctx.moveTo(w - pad, pad); ctx.lineTo(pad, h - pad);
+  ctx.stroke();
+  // Warnung-Box
+  ctx.globalAlpha = 0.92;
+  ctx.fillStyle = '#E2001A';
+  const bh = h * 0.12, by = h * 0.44;
+  ctx.fillRect(0, by, w, bh);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = `bold ${Math.round(bh * 0.45)}px Montserrat, Arial`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('⚠ DATENSCHUTZ – NICHT VERÖFFENTLICHEN', w/2, by + bh/2);
+  ctx.restore();
+}
+
 async function zeigeA3Vorschau(erfolgId) {
   toast('A3-Ausgabe wird vorbereitet...','info');
   try {
     const e = await DB.getErfolgById(erfolgId);
     if (!e) { toast('Erfolg nicht gefunden','danger'); return; }
+
+    // Datenschutz-Prüfung
+    const athletenName = e.athletenName || e.result_text || '';
+    const dsCheck = await pruefeAthletDatenschutz(athletenName);
+    if (dsCheck.gesperrt) {
+      window._posterDsGesperrt = true;
+      window._posterDsHinweise = dsCheck.einschraenkungen;
+    } else {
+      window._posterDsGesperrt = false;
+      window._posterDsHinweise = [];
+    }
 
     // Poster-Canvas erstellen (1080×1350 → A3 Querformat via CSS)
     const anzBilder = (e.bilder||[]).filter(b=>b.signedUrl).length;
@@ -574,6 +634,9 @@ async function zeigeA3Vorschau(erfolgId) {
           </div>
         </div>
       </div>
+      ${window._posterDsGesperrt ? `<div style="background:#E2001A;color:#fff;padding:10px 16px;font-weight:700;font-size:.85rem;text-align:center;border-radius:6px;margin:8px 16px">
+        ⚠️ DATENSCHUTZ: ${(window._posterDsHinweise||[]).join(' · ')||'Einschränkungen vorhanden'} – Nicht veröffentlichen!
+      </div>` : ''}
       <div class="modal-footer">
         <button class="btn btn-ghost close-btn">Schließen</button>
         <button class="btn btn-outline dl-png">🖼️ PNG herunterladen</button>
@@ -617,6 +680,12 @@ async function zeigeBildschirmModal(erfolgId) {
   try {
     const e = await DB.getErfolgById(erfolgId);
     if (!e) { toast('Erfolg nicht gefunden','danger'); return; }
+
+    // Datenschutz-Prüfung
+    const athletenName = e.athletenName || e.result_text || '';
+    const dsCheck = await pruefeAthletDatenschutz(athletenName);
+    window._posterDsGesperrt = dsCheck.gesperrt;
+    window._posterDsHinweise = dsCheck.einschraenkungen;
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     const modal = document.createElement('div');
@@ -682,6 +751,12 @@ async function zeigeSocialModal(erfolgId) {
   try {
     const e = await DB.getErfolgById(erfolgId);
     if (!e) { toast('Erfolg nicht gefunden','danger'); return; }
+
+    // Datenschutz-Prüfung
+    const athletenName = e.athletenName || e.result_text || '';
+    const dsCheck = await pruefeAthletDatenschutz(athletenName);
+    window._posterDsGesperrt = dsCheck.gesperrt;
+    window._posterDsHinweise = dsCheck.einschraenkungen;
 
     const anzBilder = (e.bilder||[]).filter(b=>b.signedUrl).length;
     const tab2 = anzBilder>=2 ? `<button class="tab-btn" onclick="wechsleSocialFormat('2bilder','${e.id}')">🖼️ 2 Bilder</button>` : '';
@@ -1094,9 +1169,80 @@ function erzeugeJTFOHtml(e, typ) {
 }
 
 // ── Einwilligungen ───────────────────────────────────────────
+
+// ── Negativliste → Einwilligungen überführen ─────────────────
+async function zeigeNegativlisteUeberfuehren() {
+  const { data: liste } = await Backend.client
+    .from('datenschutz_widerspruch').select('*').order('nachname');
+  if (!liste?.length) { toast('Keine Negativliste vorhanden', 'warning'); return; }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal'; modal.style.maxWidth = '700px';
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>📋 Negativliste → Einwilligungen</h3>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-info mb-3"><span class="alert-icon">ℹ️</span>
+        <span>${liste.length} Einträge in der Negativliste. Diese werden als Datenschutz-Widersprüche in der App hinterlegt.</span>
+      </div>
+      <div style="max-height:300px;overflow-y:auto;border:1px solid var(--slzb-border);border-radius:8px">
+        ${liste.map(e => `<div style="padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.08);font-size:.85rem">
+          <strong>${esc(e.nachname)}, ${esc(e.vorname)}</strong>
+          ${e.klasse ? ` · ${esc(e.klasse)}` : ''}
+          <span style="color:#888;font-size:.75rem;margin-left:8px">
+            ${[e.foto_print?'Foto-Print':'', e.foto_homepage?'Foto-Web':'', e.foto_social?'Foto-Social':'',
+               e.name_print?'Name-Print':'', e.name_homepage?'Name-Web':''].filter(Boolean).join(', ')||'Keine Einschränkungen'}
+          </span>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="fuehreNegativlisteUeber()">✅ Überführen</button>
+    </div>`;
+
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+  window._dsListe = liste;
+}
+
+async function fuehreNegativlisteUeber() {
+  const liste = window._dsListe || [];
+  if (!liste.length) return;
+
+  // Für jeden Eintrag einen Datenschutz-Widerspruch in der App speichern
+  // Da wir keine Schüler-IDs haben, speichern wir als Freitext-Einträge
+  let ok = 0;
+  for (const e of liste) {
+    const name = `${e.nachname}, ${e.vorname}`.trim();
+    // Prüfe ob bereits vorhanden
+    const { data: existing } = await Backend.client
+      .from('datenschutz_widerspruch')
+      .select('id').eq('nachname', e.nachname).eq('vorname', e.vorname).limit(1);
+    if (!existing?.length) {
+      await Backend.client.from('datenschutz_widerspruch').insert([{
+        ...e, importiert_von: Auth.id()
+      }]);
+    }
+    ok++;
+  }
+  document.querySelector('.modal-overlay')?.remove();
+  toast(`✅ ${ok} Einträge überführt`, 'success');
+  navigateTo('einwilligungen');
+}
+
 function renderEinwilligungen() {
   return`<div class="page">
-    <div class="page-header"><h1>🔒 Einwilligungsverwaltung</h1></div>
+    <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div><h1>🔒 Einwilligungsverwaltung</h1></div>
+      ${Auth.canDo('datenschutz') ? `<button class="btn btn-outline btn-sm" onclick="zeigeNegativlisteUeberfuehren()">📋 Negativliste → Einwilligungen</button>` : ''}
+    </div>
     <div class="card"><div class="table-wrap"><table>
       <thead><tr><th>Schüler/in</th><th>Gültig bis</th><th>Foto</th><th>Print</th><th>Homepage</th><th>Dig.Sign.</th><th>Social</th><th>Einzel</th><th>Widerruf</th><th>Aktionen</th></tr></thead>
       <tbody>${SLZB_DB.schueler.map(s=>{
@@ -8370,9 +8516,13 @@ async function importiereDatenschutzExcel() {
     const daten = [];
     for (let i = 1; i < rows.length; i++) {
       const cols = rows[i].map(c => String(c||'').trim());
-      if (!cols[0] || !cols[1]) continue;
-      if (cols[0].toLowerCase().includes('name') || cols[0].toLowerCase().includes('nachname')) continue;
-      if (cols.every(c => !c || c === '-' || c === '–')) continue;
+      // Leerzeilen und Header-Zeilen überspringen
+      const nachname = cols[0]?.trim() || '';
+      const vorname  = cols[1]?.trim() || '';
+      if (!nachname || !vorname) continue;
+      if (nachname.toLowerCase().includes('name') || nachname.toLowerCase().includes('nachname')) continue;
+      if (nachname === '-' || nachname === '–' || nachname === '/' || nachname.length < 2) continue;
+      if (cols.every(c => !c || c === '-' || c === '–' || c === '/' || c === ' ')) continue;
       daten.push({
         nachname:       cols[0] || '',
         vorname:        cols[1] || '',
