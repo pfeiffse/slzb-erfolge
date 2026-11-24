@@ -2698,7 +2698,14 @@ async function zeichneNachwuchswahlPoster(canvasId, opts) {
     ctx.textAlign='center'; ctx.textBaseline='top';
     ctx.fillText(k.name||'', W/2, y); y+=40;
     ctx.fillStyle='#0B63CE'; ctx.font='bold 18px Montserrat, Arial, sans-serif';
-    ctx.fillText((k.sportart||'').toUpperCase(), W/2, y);
+    ctx.fillText((k.sportart||'').toUpperCase(), W/2, y); y+=28;
+    // Erfolge anzeigen
+    if (k.erfolge?.length) {
+      ctx.fillStyle='rgba(255,255,255,0.8)'; ctx.font='16px Montserrat, Arial, sans-serif';
+      k.erfolge.slice(0,3).forEach(e => {
+        ctx.fillText(e, W/2, y, W-120); y+=24;
+      });
+    }
   } else {
     // 2-3 Kandidaten nebeneinander
     const bW = kandidaten.length===2 ? 380 : 280;
@@ -2744,8 +2751,11 @@ async function zeichneNachwuchswahlPoster(canvasId, opts) {
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText('👉 Jetzt abstimmen!', W/2, y+35);
   if (link) {
-    ctx.fillStyle=SLZB_COLORS.gray1; ctx.font='14px Montserrat, Arial, sans-serif';
-    ctx.textBaseline='top'; ctx.fillText(link, W/2, y+78, W-80);
+    // Link als lesbarer Text mit Pfeil
+    ctx.fillStyle=SLZB_COLORS.gray1; ctx.font='bold 14px Montserrat, Arial, sans-serif';
+    ctx.textBaseline='top';
+    const linkText = link.length > 40 ? link.substring(0,40)+'...' : link;
+    ctx.fillText('🔗 ' + linkText, W/2, y+78, W-80);
   }
 
   // Footer
