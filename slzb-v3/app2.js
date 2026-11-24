@@ -7353,12 +7353,17 @@ async function speichereVotingBearbeitung(kampagneId, kandidatenIds) {
   if (kErr) { toast('Fehler: ' + kErr.message, 'danger'); return; }
 
   // Kandidaten aktualisieren
+  console.log('[Voting] IDs:', ids);
   for (const kid of ids) {
-    const name   = document.getElementById(`ve-name-${kid}`)?.value.trim();
-    const sport  = document.getElementById(`ve-sport-${kid}`)?.value.trim();
-    const erfolg = document.getElementById(`ve-erfolg-${kid}`)?.value.trim();
-    const klasse = document.getElementById(`ve-klasse-${kid}`)?.value.trim();
+    const nameEl = document.getElementById(`ve-name-${kid}`);
+    const sportEl = document.getElementById(`ve-sport-${kid}`);
+    console.log('[Voting] kid:', kid, '| nameEl:', !!nameEl, '| value:', nameEl?.value);
+    const name   = nameEl?.value?.trim() || '';
+    const sport  = sportEl?.value?.trim() || '';
+    const erfolg = document.getElementById(`ve-erfolg-${kid}`)?.value?.trim() || '';
+    const klasse = document.getElementById(`ve-klasse-${kid}`)?.value?.trim() || '';
     const bildInput = document.getElementById(`ve-bild-${kid}`);
+    if (!name) { console.warn('[Voting] Kein Name für kid:', kid); continue; }
 
     let bildUrl = null;
     let storagePath = null;
