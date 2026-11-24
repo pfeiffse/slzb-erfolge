@@ -5997,7 +5997,8 @@ async function renderVotingVerwaltung() {
   return `<div class=\"page\">
     <div class=\"page-header flex items-center gap-3\">
       <h1>🏆 Sportler/in des Monats</h1>
-      ${Auth.canDo('bearbeiten')?`<button class=\"btn btn-primary btn-sm\" onclick=\"zeigeVotingErstellen()\">+ Neue Abstimmung</button>`:''}
+      ${Auth.canDo('voting')?`<button class=\"btn btn-primary btn-sm\" onclick=\"zeigeVotingErstellen()\">+ Neue Abstimmung</button>`:''}
+      ${Auth.canDo('voting')?`<button class=\"btn btn-primary btn-sm\" onclick=\"zeigeJahreswahl()\">🏆 Sportler des Jahres</button>`:''}
     </div>
     ${!kampagnen?.length?`<div class=\"alert alert-info\"><span class=\"alert-icon\">ℹ️</span><span>Noch keine Abstimmungen.</span></div>`:''}
     ${aktive.length?`<h3 style=\"margin-bottom:12px;color:#00c853\">🗳️ Aktive Abstimmung</h3><div class=\"grid grid-2 mb-4\">${aktive.map(karte).join('')}</div>`:''}
@@ -6008,6 +6009,96 @@ async function renderVotingVerwaltung() {
 
 
 // ── Neue Abstimmung erstellen ─────────────────────────────────
+
+// ── Sportler des Jahres ──────────────────────────────────────
+async function zeigeJahreswahl() {
+  const { data: kampagnen } = await Backend.client
+    .from('voting_campaigns').select('id,titel,monat,status')
+    .in('status', ['beendet','aktiv']).order('monat');
+  if (!kampagnen?.length) { toast('Keine abgeschlossenen Monats-Abstimmungen gefunden', 'warning'); return; }
+  const ids = kampagnen.map(k => k.id);
+  const { data: alleKandidaten } = await Backend.client
+    .from('voting_candidates').select('*').in('campaign_id', ids).order('reihenfolge');
+  if (!alleKandidaten?.length) { toast('Keine Kandidaten gefunden', 'warning'); return; }
+  const { data: alleStimmen } = await Backend.client
+    .from('voting_votes').select('candidate_id,campaign_id').in('campaign_id', ids);
+  const stimmenMap = {};
+  (alleStimmen||[]).forEach(s => { stimmenMap[s.candidate_id] = (stimmenMap[s.candidate_id]||0) + 1; });
+  const siegerIds = new Set();
+  kampagnen.forEach(k => {
+    const kk = alleKandidaten.filter(c => c.campaign_id === k.id);
+    if (!kk.length) return;
+    const sieger = kk.reduce((b,c) => (stimmenMap[c.id]||0) > (stimmenMap[b.id]||0) ? c : b);
+    siegerIds.add(sieger.id);
+  });
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal'; modal.style.maxWidth = '700px';
+  const jahr = new Date().getFullYear();
+  const kandidatenHTML = alleKandidaten.map(k => {
+    const istSieger = siegerIds.has(k.id);
+    const kp = kampagnen.find(kp => kp.id === k.campaign_id);
+    const ml = kp && kp.monat ? new Date(kp.monat+'-01').toLocaleDateString('de-DE',{month:'long',year:'numeric'}) : '';
+    return '<div style="padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px">'
+      + '<input type="checkbox" class="jahres-check" value="'+k.id+'"'
+      + ' data-name="'+esc(k.name)+'" data-sport="'+esc(k.sportart||'')+'"'
+      + ' data-erfolg="'+esc(k.erfolg||'')+'" data-bild="'+esc(k.bild_url||'')+'"'
+      + (istSieger ? ' checked' : '') + ' style="accent-color:#E2001A">'
+      + '<div>'
+      + '<div style="font-weight:600;font-size:.85rem">'+esc(k.name)+'</div>'
+      + '<div style="font-size:.75rem;color:#888">'+esc(k.sportart||'')+' · '+ml+(istSieger ? ' · 🏆 Monats-Sieger' : '')+'</div>'
+      + '</div></div>';
+  }).join('');
+  modal.innerHTML = '<div class="modal-header">'
+    + '<h3>🏆 Sportler/in des Jahres '+jahr+'</h3>'
+    + '<button class="btn btn-ghost btn-sm" onclick="this.closest(\'.modal-overlay\').remove()">✕</button>'
+    + '</div><div class="modal-body">'
+    + '<div class="alert alert-info mb-3"><span class="alert-icon">ℹ️</span>'
+    + '<span>Monats-Sieger werden automatisch vorgeschlagen. Auswahl anpassbar.</span></div>'
+    + '<div style="max-height:300px;overflow-y:auto;border:1px solid var(--slzb-border);border-radius:8px">'
+    + kandidatenHTML + '</div>'
+    + '<div class="form-row cols-2 mt-3">'
+    + '<div class="form-group"><label style="font-weight:600">Titel</label>'
+    + '<input type="text" id="jahres-titel" value="Sportler/in des Jahres '+jahr+'" style="width:100%"></div>'
+    + '<div class="form-group"><label style="font-weight:600">Ende</label>'
+    + '<input type="datetime-local" id="jahres-end" style="width:100%"></div>'
+    + '</div></div>'
+    + '<div class="modal-footer">'
+    + '<button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">Abbrechen</button>'
+    + '<button class="btn btn-outline" onclick="erstelleJahreswahl(\'entwurf\')">💾 Entwurf</button>'
+    + '<button class="btn btn-primary" onclick="erstelleJahreswahl(\'aktiv\')">▶️ Aktivieren</button>'
+    + '</div>';
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+async function erstelleJahreswahl(status) {
+  const titel = document.getElementById('jahres-titel')?.value.trim();
+  const end = document.getElementById('jahres-end')?.value || null;
+  const gewaehlte = [...document.querySelectorAll('.jahres-check:checked')];
+  if (!titel) { toast('Bitte Titel eingeben', 'warning'); return; }
+  if (!gewaehlte.length) { toast('Bitte mindestens einen Kandidaten auswählen', 'warning'); return; }
+  const jahr = new Date().getFullYear();
+  const { data: kampagne, error: kErr } = await Backend.client
+    .from('voting_campaigns')
+    .insert([{ titel, monat: jahr+'-01', status, end_at: end, erstellt_von: Auth.id() }])
+    .select('id').single();
+  if (kErr) { toast('Fehler: ' + kErr.message, 'danger'); return; }
+  const kandidaten = gewaehlte.map((cb, i) => ({
+    campaign_id: kampagne.id, name: cb.dataset.name,
+    sportart: cb.dataset.sport, erfolg: cb.dataset.erfolg,
+    bild_url: cb.dataset.bild || null, reihenfolge: i+1, erstellt_von: Auth.id(),
+  }));
+  const { error: cErr } = await Backend.client.from('voting_candidates').insert(kandidaten);
+  if (cErr) { toast('Fehler: ' + cErr.message, 'danger'); return; }
+  document.querySelector('.modal-overlay')?.remove();
+  toast('✅ Jahreswahl "'+titel+'" erstellt!', 'success');
+  navigateTo('sportler-des-monats');
+}
+
+
 function zeigeVotingErstellen() {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';

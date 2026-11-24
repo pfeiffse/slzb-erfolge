@@ -145,13 +145,14 @@ const Auth = {
   canDo(action) {
     const r = this.rolle();
     const perms = {
-      erfassen:    ['trainer','mitarbeiter','redaktion','oea','admin'],
+      erfassen:    ['trainer','mitarbeiter','redaktion','oea','admin','schueler'],
       bearbeiten:  ['redaktion','oea','admin'],
       freigeben:   ['redaktion','oea','admin'],
       datenschutz: ['datenschutz','admin'],
       admin:       ['admin'],
       ausgaben:    ['redaktion','oea','admin'],
       nichtSport:  ['mitarbeiter','trainer','redaktion','oea','admin'],
+      voting:      ['redaktion','oea','admin','schueler'],
     };
     return (perms[action]||[]).includes(r);
   },
