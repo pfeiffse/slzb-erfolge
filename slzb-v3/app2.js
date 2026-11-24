@@ -8349,32 +8349,30 @@ async function importiereDatenschutzExcel() {
   toast('⏳ Wird verarbeitet...', 'info');
 
   try {
-    // Datei als Text lesen (CSV) oder ArrayBuffer (XLSX)
-    const text = await datei.text();
-    // Normalisiere Zeilenumbrüche (Windows \r\n, Mac \r, Unix \n)
-    const normalizedText = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-    const zeilen = normalizedText.split('\n');
-
-    // Header-Zeile überspringen (erste Zeile)
+    // SheetJS für Excel + CSV
+    if (!window.XLSX) {
+      await new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+        s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
+    }
+    const arrayBuffer = await datei.arrayBuffer();
+    const wb = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+    const istX = (v) => {
+      if (!v && v !== 0) return false;
+      const s = String(v).trim().toLowerCase();
+      return s === 'x' || s === '1' || s === 'ja' || s === 'yes' || s === 'true';
+    };
     const daten = [];
-    for (let i = 1; i < zeilen.length; i++) {
-      const zeile = zeilen[i].trim();
-      if (!zeile) continue; // Komplett leere Zeile
-      const cols = zeile.split(/[,;|\t]/).map(c => c.trim().replace(/^"|"$/g, '').trim());
-      // Leere Zeilen überspringen
-      if (!cols[0] || !cols[0].trim()) continue;
-      if (cols.length < 2 || !cols[1] || !cols[1].trim()) continue;
-      // Zeilen überspringen die nur Trennzeichen/Leerzeichen enthalten
-      if (cols.every(c => !c || c === '-' || c === '–')) continue;
-      // Zeilen überspringen die wie Header aussehen
+    for (let i = 1; i < rows.length; i++) {
+      const cols = rows[i].map(c => String(c||'').trim());
+      if (!cols[0] || !cols[1]) continue;
       if (cols[0].toLowerCase().includes('name') || cols[0].toLowerCase().includes('nachname')) continue;
-
-      const istX = (v) => {
-        if (!v || v.trim() === '' || v.trim() === '-') return false;
-        const s = v.trim().toLowerCase();
-        return s === 'x' || s === '1' || s === 'ja' || s === 'yes' || s === 'true';
-      };
-
+      if (cols.every(c => !c || c === '-' || c === '–')) continue;
       daten.push({
         nachname:       cols[0] || '',
         vorname:        cols[1] || '',
