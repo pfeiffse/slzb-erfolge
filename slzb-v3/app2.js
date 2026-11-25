@@ -1369,9 +1369,17 @@ async function renderAusgaben() {
       <div class="card-body">
         <div class="alert alert-info mb-2"><span class="alert-icon">ℹ️</span>
           <span>Erstellt pro Athlet 2 Poster im SLZB-Stil: Porträt + Erfolge. Ideal für Weltcup-Vorschauen.</span></div>
-        <button class="btn btn-primary" onclick="zeigeAthletenVorstellung()">
-          🖼️ Athleten-Vorstellung erstellen
-        </button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="zeigeAthletenVorstellung()">
+            🖼️ Athleten-Vorstellung erstellen
+          </button>
+          <button class="btn btn-outline" onclick="zeigeAthletenProfileVerwaltung()">
+            👤 Athleten-Profile
+          </button>
+          <button class="btn btn-outline" onclick="zeigeVeranstaltungsWorkspace()">
+            📋 Gespeicherte Veranstaltungen
+          </button>
+        </div>
       </div>
     </div>
 
@@ -8305,7 +8313,7 @@ async function zeigeAthletenVorstellung() {
           <option value="twitter">🐦 Twitter/X-Banner 1500×500</option>
         </select>
       </div>
-      <button class=\"btn btn-ghost btn-sm\" onclick=\"zeigeVeranstaltungsWorkspace()\" title=\"Gespeicherte Veranstaltungen laden\">📋 Gespeicherte</button>\\n      <button class=\"btn btn-ghost\" onclick=\"this.closest(\\'.modal-overlay\\').remove()\">Abbrechen</button>\\n      <button class=\"btn btn-primary\" onclick=\"erstelleAthletenVorstellung()\">🖼️ Erstellen & herunterladen</button>\\n    </div>`;
+      <button class=\"btn btn-ghost btn-sm\" onclick=\"zeigeVeranstaltungsWorkspace()\" title=\"Gespeicherte Veranstaltungen laden\">📋 Gespeicherte</button>\\n      <button class=\\\"btn btn-ghost btn-sm\\\" onclick=\\\"zeigeAthletenProfileVerwaltung()\\\" title=\\\"Athleten-Profile verwalten\\\">👤 Profile</button>\\n      <button class=\"btn btn-ghost\" onclick=\"this.closest(\\'.modal-overlay\\').remove()\">Abbrechen</button>\\n      <button class=\"btn btn-primary\" onclick=\"erstelleAthletenVorstellung()\">🖼️ Erstellen & herunterladen</button>\\n    </div>`;
 
   overlay.appendChild(modal);
   overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
@@ -8541,6 +8549,450 @@ function avAthletHinzu() {
 // ── Veranstaltungs-Workspace ──────────────────────────────────
 // Gespeicherte Veranstaltungen für Athletenvorstellung
 
+
+// ══════════════════════════════════════════════════════════════
+// ATHLETEN-PROFILE (Supabase)
+// ══════════════════════════════════════════════════════════════
+
+async function ladeAthletenProfile(suchbegriff = '') {
+  try {
+    let query = Backend.client
+      .from('athleten_profile')
+      .select('*')
+      .eq('aktiv', true)
+      .order('name');
+    if (suchbegriff) {
+      query = query.or(`name.ilike.%${suchbegriff}%,vorname.ilike.%${suchbegriff}%,nachname.ilike.%${suchbegriff}%,sportart.ilike.%${suchbegriff}%`);
+    }
+    const { data, error } = await query.limit(50);
+    if (error) throw new Error(error.message);
+    return data || [];
+  } catch(e) {
+    console.warn('[Athleten-Profile]', e.message);
+    return [];
+  }
+}
+
+async function speichereAthletProfil(profil) {
+  const { data, error } = await Backend.client
+    .from('athleten_profile')
+    .upsert([{ ...profil, erstellt_von: Auth.id(), aktualisiert_am: new Date().toISOString() }])
+    .select().single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+async function loescheAthletProfil(id) {
+  const { error } = await Backend.client
+    .from('athleten_profile')
+    .update({ aktiv: false })
+    .eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+// Athleten-Profile Verwaltung
+async function zeigeAthletenProfileVerwaltung() {
+  const profile = await ladeAthletenProfile();
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal modal-xl';
+  modal.style.maxWidth = '800px';
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>👤 Athleten-Profile</h3>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-info mb-3"><span class="alert-icon">ℹ️</span>
+        <span>Athleten-Profile speichern Name, Sportart und Standardbild dauerhaft. Beim Erstellen einer Athletenvorstellung können Profile direkt geladen werden.</span>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <input type="text" id="ap-suche" placeholder="Athlet suchen..." style="flex:1"
+          oninput="apSuche(this.value)">
+        <button class="btn btn-primary btn-sm" onclick="zeigeAthletProfilFormular()">+ Neues Profil</button>
+      </div>
+      <div id="ap-liste">
+        ${profile.length === 0 ? '<p class="text-muted">Noch keine Profile angelegt.</p>' :
+          `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">
+            ${profile.map(p => `
+              <div style="border:1px solid var(--slzb-border);border-radius:10px;overflow:hidden;cursor:pointer"
+                onclick="apProfilWaehlen(${JSON.stringify(p).replace(/"/g,'&quot;')})">
+                <div style="height:120px;background:var(--slzb-bg-secondary);overflow:hidden">
+                  ${p.bild_url
+                    ? `<img src="${esc(p.bild_url)}" style="width:100%;height:100%;object-fit:cover;object-position:center 20%"
+                        onerror="this.style.display='none'">`
+                    : `<div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:2.5rem">🏃</div>`}
+                </div>
+                <div style="padding:10px">
+                  <div style="font-weight:700;font-size:.9rem">${esc(p.name)}</div>
+                  <div style="font-size:.78rem;color:#888;margin-top:2px">${esc(p.sportart||'–')}${p.klasse?' · '+esc(p.klasse):''}</div>
+                  ${p.kader ? `<div style="font-size:.72rem;color:#666">${esc(p.kader)}</div>` : ''}
+                  <div style="display:flex;gap:6px;margin-top:8px">
+                    <button class="btn btn-ghost btn-sm" style="font-size:.72rem;flex:1"
+                      onclick="event.stopPropagation();zeigeAthletProfilFormular(${JSON.stringify(p).replace(/"/g,'&quot;')})">✏️ Bearbeiten</button>
+                    <button class="btn btn-ghost btn-sm" style="font-size:.72rem;color:#E2001A"
+                      onclick="event.stopPropagation();apLoeschen('${p.id}')">🗑️</button>
+                  </div>
+                </div>
+              </div>`).join('')}
+          </div>`}
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Schließen</button>
+    </div>`;
+
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+async function apSuche(suchbegriff) {
+  const profile = await ladeAthletenProfile(suchbegriff);
+  const liste = document.getElementById('ap-liste');
+  if (!liste) return;
+  if (!profile.length) { liste.innerHTML = '<p class="text-muted">Keine Profile gefunden.</p>'; return; }
+  liste.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">
+    ${profile.map(p => `
+      <div style="border:1px solid var(--slzb-border);border-radius:10px;overflow:hidden;cursor:pointer"
+        onclick="apProfilWaehlen(${JSON.stringify(p).replace(/"/g,'&quot;')})">
+        <div style="height:100px;background:var(--slzb-bg-secondary);overflow:hidden">
+          ${p.bild_url ? `<img src="${esc(p.bild_url)}" style="width:100%;height:100%;object-fit:cover">` : '<div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:2rem">🏃</div>'}
+        </div>
+        <div style="padding:8px">
+          <div style="font-weight:700;font-size:.88rem">${esc(p.name)}</div>
+          <div style="font-size:.75rem;color:#888">${esc(p.sportart||'–')}</div>
+        </div>
+      </div>`).join('')}
+  </div>`;
+}
+
+function zeigeAthletProfilFormular(profil = null) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.maxWidth = '500px';
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>${profil ? '✏️ Profil bearbeiten' : '+ Neues Athleten-Profil'}</h3>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row cols-2">
+        <div class="form-group">
+          <label>Vorname <span class="required">*</span></label>
+          <input type="text" id="ap-vorname" value="${esc(profil?.vorname||'')}" placeholder="Max">
+        </div>
+        <div class="form-group">
+          <label>Nachname <span class="required">*</span></label>
+          <input type="text" id="ap-nachname" value="${esc(profil?.nachname||'')}" placeholder="Mustermann">
+        </div>
+        <div class="form-group">
+          <label>Sportart</label>
+          <input type="text" id="ap-sportart" value="${esc(profil?.sportart||'')}" list="ap-sportarten-list" placeholder="z.B. Eisschnelllauf">
+          <datalist id="ap-sportarten-list">${(typeof SLZB_DB !== 'undefined' ? SLZB_DB.sportarten : []).map(s=>`<option value="${esc(s.name)}">`).join('')}</datalist>
+        </div>
+        <div class="form-group">
+          <label>Klasse / Jahrgang</label>
+          <input type="text" id="ap-klasse" value="${esc(profil?.klasse||'')}" placeholder="z.B. 11b">
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Kader / Kategorie</label>
+          <input type="text" id="ap-kader" value="${esc(profil?.kader||'')}" placeholder="z.B. Nationalkader U20">
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Standardbild</label>
+          <input type="file" id="ap-bild" accept="image/jpeg,image/png,image/webp"
+            onchange="apBildVorschau(this)">
+          ${profil?.bild_url ? `<img src="${esc(profil.bild_url)}" id="ap-bild-preview"
+            style="max-height:80px;max-width:100%;margin-top:6px;border-radius:6px;object-fit:cover">` :
+            `<img id="ap-bild-preview" src="" style="display:none;max-height:80px;max-width:100%;margin-top:6px;border-radius:6px;object-fit:cover">`}
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Notizen</label>
+          <textarea id="ap-notizen" rows="2" placeholder="Interne Notizen..."
+            style="width:100%;resize:vertical">${esc(profil?.notizen||'')}</textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="apSpeichern('${profil?.id||''}')">💾 Speichern</button>
+    </div>`;
+
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+function apBildVorschau(input) {
+  const file = input?.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const preview = document.getElementById('ap-bild-preview');
+    if (preview) { preview.src = ev.target.result; preview.style.display = 'block'; }
+    window._apBildDataUrl = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function apSpeichern(existingId) {
+  const vorname = document.getElementById('ap-vorname')?.value.trim();
+  const nachname = document.getElementById('ap-nachname')?.value.trim();
+  if (!vorname || !nachname) { toast('Vor- und Nachname sind Pflichtfelder', 'warning'); return; }
+
+  const name = `${vorname} ${nachname}`.trim();
+  let bildUrl = null;
+  let storagePath = null;
+
+  // Bild hochladen wenn vorhanden
+  if (window._apBildDataUrl) {
+    try {
+      const response = await fetch(window._apBildDataUrl);
+      const blob = await response.blob();
+      const dateiname = `${Auth.id()}/${name.replace(/\s+/g,'_')}_${Date.now()}.jpg`;
+      const { data: uploadData, error: uploadErr } = await Backend.client.storage
+        .from('achievement-media')
+        .upload(dateiname, blob, { contentType: 'image/jpeg', upsert: true });
+      if (!uploadErr) {
+        storagePath = uploadData.path;
+        const { data: pubData } = Backend.client.storage
+          .from('achievement-media').getPublicUrl(storagePath);
+        bildUrl = pubData?.publicUrl || null;
+      }
+    } catch(e) { console.warn('Bild-Upload:', e.message); }
+    window._apBildDataUrl = null;
+  }
+
+  const profil = {
+    ...(existingId ? { id: existingId } : {}),
+    name,
+    vorname,
+    nachname,
+    sportart: document.getElementById('ap-sportart')?.value.trim() || null,
+    klasse: document.getElementById('ap-klasse')?.value.trim() || null,
+    kader: document.getElementById('ap-kader')?.value.trim() || null,
+    notizen: document.getElementById('ap-notizen')?.value.trim() || null,
+    ...(bildUrl ? { bild_url: bildUrl, storage_path: storagePath } : {}),
+  };
+
+  try {
+    await speichereAthletProfil(profil);
+    toast(`✅ Profil "${name}" gespeichert`, 'success');
+    document.querySelector('.modal-overlay')?.remove();
+    window._apBildDataUrl = null;
+  } catch(e) {
+    toast('Fehler: ' + e.message, 'danger');
+  }
+}
+
+async function apLoeschen(id) {
+  if (!confirm('Profil wirklich löschen?')) return;
+  try {
+    await loescheAthletProfil(id);
+    toast('Profil gelöscht', 'info');
+    document.querySelector('.modal-overlay')?.remove();
+    zeigeAthletenProfileVerwaltung();
+  } catch(e) { toast('Fehler: ' + e.message, 'danger'); }
+}
+
+// Profil in Athletenvorstellung laden
+async function apProfilWaehlen(profil) {
+  document.querySelector('.modal-overlay')?.remove();
+  // Finde den nächsten freien Athleten-Slot oder füge neuen hinzu
+  const liste = document.getElementById('av-athleten-liste');
+  if (!liste) { toast('Bitte zuerst das Athletenvorstellungs-Formular öffnen', 'warning'); return; }
+
+  avAthletHinzu();
+  const id = _avCounter;
+  setTimeout(async () => {
+    const setVal = (elId, val) => { const el = document.getElementById(elId); if (el && val) el.value = val; };
+    setVal(`av-vorname-${id}`, profil.vorname || profil.name.split(' ')[0]);
+    setVal(`av-nachname-${id}`, profil.nachname || profil.name.split(' ').slice(1).join(' '));
+    setVal(`av-kader-${id}`, profil.kader);
+    if (profil.bild_url) {
+      const preview = document.getElementById(`av-bild-preview-${id}`);
+      if (preview) { preview.src = profil.bild_url; preview.style.display = 'block'; }
+      // Bild als DataURL laden
+      try {
+        const res = await fetch(profil.bild_url);
+        const blob = await res.blob();
+        const reader = new FileReader();
+        reader.onload = ev => {
+          const img = new Image();
+          img.onload = () => { window[`_avBildObj_${id}`] = img; };
+          img.src = ev.target.result;
+        };
+        reader.readAsDataURL(blob);
+      } catch(e) { console.warn('Profil-Bild:', e.message); }
+    }
+    toast(`✅ ${profil.name} hinzugefügt`, 'success');
+  }, 100);
+}
+
+// ══════════════════════════════════════════════════════════════
+// ERGEBNIS-UPDATE AUS WORKSPACE
+// ══════════════════════════════════════════════════════════════
+
+function zeigeErgebnisUpdateModal(veranstaltungsId) {
+  const liste = ladeGespeicherteVeranstaltungen();
+  const v = liste.find(x => x.id === veranstaltungsId);
+  if (!v) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.maxWidth = '600px';
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>🏆 Ergebnis-Update: ${esc(v.veranstaltung)}</h3>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-info mb-3"><span class="alert-icon">ℹ️</span>
+        <span>Trage das aktuelle Ergebnis ein. Ein neues Poster wird sofort generiert.</span>
+      </div>
+      <div class="form-row cols-2">
+        <div class="form-group">
+          <label>Athlet <span class="required">*</span></label>
+          <select id="eu-athlet" style="width:100%">
+            ${(v.athleten||[]).map(a => `<option value="${esc(a.name||a.vorname+' '+a.nachname)}">${esc(a.name||a.vorname+' '+a.nachname)}</option>`).join('')}
+            <option value="__alle__">Alle Athleten (Gesamtbilanz)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Disziplin</label>
+          <input type="text" id="eu-disziplin" placeholder="z.B. 500m Sprint">
+        </div>
+        <div class="form-group">
+          <label>Platzierung</label>
+          <input type="number" id="eu-platz" min="1" max="999" placeholder="z.B. 3">
+        </div>
+        <div class="form-group">
+          <label>Ergebnis / Zeit</label>
+          <input type="text" id="eu-ergebnis" placeholder="z.B. 38,42 Sek.">
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Zusatzinfo</label>
+          <input type="text" id="eu-zusatz" placeholder="z.B. Neuer Schulrekord · Qualifikation für WM">
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Foto (optional)</label>
+          <input type="file" id="eu-bild" accept="image/jpeg,image/png,image/webp"
+            onchange="euBildVorschau(this)">
+          <img id="eu-bild-preview" src="" style="display:none;max-height:80px;margin-top:6px;border-radius:6px">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
+      <button class="btn btn-outline" onclick="euErstellePoster('${veranstaltungsId}', false)">🖼️ Nur Poster</button>
+      <button class="btn btn-primary" onclick="euErstellePoster('${veranstaltungsId}', true)">📤 Poster + Meldung</button>
+    </div>`;
+
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+function euBildVorschau(input) {
+  const file = input?.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const preview = document.getElementById('eu-bild-preview');
+    if (preview) { preview.src = ev.target.result; preview.style.display = 'block'; }
+    window._euBildDataUrl = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function euErstellePoster(veranstaltungsId, mitMeldung) {
+  const liste = ladeGespeicherteVeranstaltungen();
+  const v = liste.find(x => x.id === veranstaltungsId);
+  if (!v) return;
+
+  const athletName = document.getElementById('eu-athlet')?.value;
+  const disziplin  = document.getElementById('eu-disziplin')?.value.trim();
+  const platz      = parseInt(document.getElementById('eu-platz')?.value) || null;
+  const ergebnis   = document.getElementById('eu-ergebnis')?.value.trim();
+  const zusatz     = document.getElementById('eu-zusatz')?.value.trim();
+
+  if (!athletName) { toast('Bitte Athleten auswählen', 'warning'); return; }
+
+  document.querySelector('.modal-overlay')?.remove();
+  toast('⏳ Poster wird erstellt...', 'info');
+
+  // Bild laden
+  let bild = null;
+  if (window._euBildDataUrl) {
+    bild = await new Promise(res => {
+      const img = new Image(); img.onload = () => res(img); img.onerror = () => res(null);
+      img.src = window._euBildDataUrl;
+    });
+    window._euBildDataUrl = null;
+  }
+
+  // Athlet-Daten aus Workspace
+  const athlet = athletName === '__alle__'
+    ? { name: v.veranstaltung, vorname: '', nachname: '' }
+    : (v.athleten||[]).find(a => (a.name||a.vorname+' '+a.nachname) === athletName) || { name: athletName };
+
+  // Poster erstellen
+  const W = 1080, H = 1350;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  window._bildOffset = { x: 0.5, y: 0.2 };
+  window._bildZoom = 1.0;
+
+  await zeichneAthletPortrait(ctx, W, H, {
+    ...athlet,
+    sportart: v.sportart || '',
+    veranstaltung: v.veranstaltung,
+    ort: v.ort || '',
+    kader: disziplin || athlet.kader || '',
+    ziel: ergebnis ? `${platz ? platz+'. Platz' : ''} ${ergebnis}`.trim() : zusatz || '',
+    erfolge: [
+      ...(platz ? [`${platz}. Platz${disziplin?' – '+disziplin:''}${ergebnis?' ('+ergebnis+')':''}`] : []),
+      ...(zusatz ? [zusatz] : []),
+    ],
+    bild,
+    akzent: 'rot',
+  });
+
+  // Download
+  const a = document.createElement('a');
+  a.download = `SLZB_Update_${(athlet.name||'').replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.png`;
+  canvas.toBlob(blob => { a.href = URL.createObjectURL(blob); a.click(); }, 'image/png');
+
+  // Optional: Meldung erstellen
+  if (mitMeldung && platz) {
+    toast('✅ Poster heruntergeladen! Meldung wird vorbereitet...', 'success');
+    setTimeout(() => {
+      navigateTo('neue-meldung');
+      setTimeout(() => {
+        const titelEl = document.getElementById('f-titel');
+        const sportEl = document.getElementById('f-sportart-text');
+        const schuelerEl = document.getElementById('f-schueler-text');
+        if (titelEl) titelEl.value = `${platz}. Platz${disziplin?' – '+disziplin:''} bei ${v.veranstaltung}`;
+        if (sportEl) sportEl.value = v.sportart || '';
+        if (schuelerEl) schuelerEl.value = athlet.name || '';
+      }, 300);
+    }, 1000);
+  } else {
+    toast('✅ Poster heruntergeladen!', 'success');
+  }
+}
+
 function ladeGespeicherteVeranstaltungen() {
   return JSON.parse(localStorage.getItem('slzb_av_veranstaltungen') || '[]');
 }
@@ -8623,6 +9075,10 @@ function zeigeVeranstaltungsWorkspace() {
               <div style="display:flex;gap:6px;flex-shrink:0;margin-left:12px">
                 <button class="btn btn-primary btn-sm" onclick="ladeVeranstaltungWorkspace('${v.id}')">
                   ▶ Laden
+                </button>
+                <button class="btn btn-outline btn-sm" onclick="zeigeErgebnisUpdateModal('${v.id}')"
+                  title="Ergebnis eintragen und Poster erstellen">
+                  🏆 Update
                 </button>
                 <button class="btn btn-ghost btn-sm" style="color:#E2001A"
                   onclick="loescheGespeicherteVeranstaltung('${v.id}');this.closest('.modal-overlay').remove();zeigeVeranstaltungsWorkspace()">
