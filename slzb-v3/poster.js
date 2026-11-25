@@ -3470,13 +3470,18 @@ async function zeichneAthletPortrait(ctx, W, H, opts) {
     ? (opts.erfolge||[]).join(' | ')
     : null;
 
+  // Ort + Veranstaltung kombinieren
+  const wettbewerbMitOrt = opts.ort
+    ? `${opts.veranstaltung || ''} · ${opts.ort}`.trim().replace(/^·\s*/, '')
+    : (opts.veranstaltung || null);
+
   zeichneSlzbKarte(ctx, W, H, {
     subtitle: opts.kader || opts.sportart || '',
     vorname: opts.vorname || '',
     nachname: opts.nachname || '',
     titel: (!opts.vorname && !opts.nachname) ? opts.name : null,
     zusatz: opts.klasse || null,
-    wettbewerb: opts.ziel || null,
+    wettbewerb: wettbewerbMitOrt,
     ergebnis: erfolgTextP,
   }, akzent);
 
@@ -3624,7 +3629,8 @@ async function zeichneCarouselDeckblatt(ctx, W, H, opts) {
   zeichneSlzbKarte(ctx, W, H, {
     subtitle: 'UNSERE ATHLETEN',
     titel: opts.veranstaltung || 'Weltcup-Vorschau',
-    wettbewerb: opts.datum || '',
+    wettbewerb: opts.ort ? `📍 ${opts.ort}` : (opts.datum || ''),
+    ergebnis: opts.ort && opts.datum ? opts.datum : null,
   }, akzent);
   zeichneSlzbFooterNeu(ctx, W, H, akzent);
   if (opts.gesamt) zeichneCarouselBadge(ctx, W, H, 1, opts.gesamt);

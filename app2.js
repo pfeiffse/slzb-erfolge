@@ -4578,17 +4578,18 @@ function wvAusgeblendetZuruecksetzen() {
   document.querySelector('.modal-overlay')?.remove();
 }
 
-async function zeigeWochenvorschau() {
+async function zeigeWochenvorschau(wochen = 1) {
   const _eigene = await ladeKalenderEintraege();
   const alleTermine = [...((typeof SLZB_TERMINE !== 'undefined') ? SLZB_TERMINE : []), ..._eigene];
   const jetzt = new Date(); jetzt.setHours(0,0,0,0);
 
-  // Woche: ab HEUTE bis Sonntag (vergangene Tage ausblenden)
+  // Zeitraum: ab HEUTE bis Ende der gewählten Wochen-Anzahl
   const heute = new Date(jetzt); heute.setHours(0,0,0,0);
   const tag = jetzt.getDay(); // 0=So, 1=Mo...
   const diffMo = tag === 0 ? -6 : 1 - tag;
   const montag = new Date(jetzt); montag.setDate(jetzt.getDate() + diffMo); montag.setHours(0,0,0,0);
-  const sonntag = new Date(montag); sonntag.setDate(montag.getDate() + 6); sonntag.setHours(23,59,59,999);
+  // Sonntag = Ende der letzten gewählten Woche
+  const sonntag = new Date(montag); sonntag.setDate(montag.getDate() + (wochen * 7) - 1); sonntag.setHours(23,59,59,999);
 
   const monatNamen = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
   const tagNamen = ['So','Mo','Di','Mi','Do','Fr','Sa'];
@@ -4613,6 +4614,7 @@ async function zeigeWochenvorschau() {
   const wocheLabelHeute = heute > montag
     ? `${heute.getDate()}. ${monatNamen[heute.getMonth()]} – ${sonntag.getDate()}. ${monatNamen[sonntag.getMonth()]} ${sonntag.getFullYear()}`
     : wocheLabel;
+  const zeitraumLabel = wochen > 1 ? `${wochen}-Wochen-Vorschau` : 'Wochenvorschau';
 
   // Gruppiere nach Tag
   const nachTag = {};
@@ -4630,7 +4632,7 @@ async function zeigeWochenvorschau() {
 
   modal.innerHTML = `
     <div class="modal-header">
-      <h3>📅 Wochenvorschau – ${esc(wocheLabelHeute)}</h3>
+      <h3>📅 ${esc(zeitraumLabel)} – ${esc(wocheLabelHeute)}</h3>
       <button class="btn btn-ghost btn-sm close-x">✕</button>
     </div>
     <div class="modal-body">
@@ -4671,6 +4673,12 @@ async function zeigeWochenvorschau() {
     <div class="modal-footer" style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-ghost close-btn">Schließen</button>
       ${ausgeblendetIds.size > 0 ? `<button class="btn btn-ghost btn-sm" onclick="wvAusgeblendetZuruecksetzen()" style="color:#888;font-size:.8rem">↺ Alle einblenden</button>` : ''}
+      <div style="display:flex;gap:4px;align-items:center">
+        <span style="font-size:.75rem;color:#888">Zeitraum:</span>
+        <button class="btn btn-ghost btn-sm ${wochen===1?'active':''}" onclick="document.querySelector('.modal-overlay')?.remove();zeigeWochenvorschau(1)" style="font-size:.75rem;padding:3px 8px">1W</button>
+        <button class="btn btn-ghost btn-sm ${wochen===2?'active':''}" onclick="document.querySelector('.modal-overlay')?.remove();zeigeWochenvorschau(2)" style="font-size:.75rem;padding:3px 8px">2W</button>
+        <button class="btn btn-ghost btn-sm ${wochen===4?'active':''}" onclick="document.querySelector('.modal-overlay')?.remove();zeigeWochenvorschau(4)" style="font-size:.75rem;padding:3px 8px">4W</button>
+      </div>
       <button class="btn btn-outline" onclick="wochenvorschauPoster()">🖼️ Poster (1:1)</button>
       <button class="btn btn-outline" onclick="wochenvorschauStories()">📱 Instagram Stories</button>
       <button class="btn btn-primary" onclick="navigateTo('kalender');document.querySelector('.modal-overlay')?.remove()">📅 Zum Kalender</button>
@@ -8264,6 +8272,10 @@ async function zeigeAthletenVorstellung() {
           <input type="text" id="av-veranstaltung" placeholder="z.B. Junioren-Weltcup Eisschnelllauf" style="width:100%">
         </div>
         <div class="form-group">
+          <label style="font-weight:600">Ort / Stadt</label>
+          <input type="text" id="av-ort" placeholder="z.B. Innsbruck, Österreich" style="width:100%">
+        </div>
+        <div class="form-group">
           <label style="font-weight:600">Sportart</label>
           <input type="text" id="av-sportart" list="av-sportarten-list" placeholder="z.B. Eisschnelllauf" style="width:100%">
           <datalist id="av-sportarten-list">${SLZB_DB.sportarten.map(s=>`<option value="${esc(s.name)}">`).join('')}</datalist>
@@ -8293,9 +8305,7 @@ async function zeigeAthletenVorstellung() {
           <option value="twitter">🐦 Twitter/X-Banner 1500×500</option>
         </select>
       </div>
-      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
-      <button class="btn btn-primary" onclick="erstelleAthletenVorstellung()">🖼️ Erstellen & herunterladen</button>
-    </div>`;
+      <button class=\"btn btn-ghost btn-sm\" onclick=\"zeigeVeranstaltungsWorkspace()\" title=\"Gespeicherte Veranstaltungen laden\">📋 Gespeicherte</button>\\n      <button class=\"btn btn-ghost\" onclick=\"this.closest(\\'.modal-overlay\\').remove()\">Abbrechen</button>\\n      <button class=\"btn btn-primary\" onclick=\"erstelleAthletenVorstellung()\">🖼️ Erstellen & herunterladen</button>\\n    </div>`;
 
   overlay.appendChild(modal);
   overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
@@ -8312,6 +8322,127 @@ let _avCounter = 0;
 // Bild-Vorschau im Athleten-Formular
 
 // Teamfoto-Vorschau
+
+// ── Athleten-Bildarchiv ───────────────────────────────────────
+// Lädt alle Bilder eines Athleten aus bestehenden Meldungen
+async function ladeAthletenBilder(athletenName) {
+  if (!athletenName || athletenName.length < 2) return [];
+  try {
+    // Suche Meldungen mit diesem Athleten
+    const teile = athletenName.trim().split(/\s+/);
+    const suchbegriff = teile[0]; // Nachname oder erster Name
+    const { data: teilnahmen } = await Backend.client
+      .from('achievement_participants')
+      .select('achievement_id, participant_role')
+      .ilike('participant_role', `%${suchbegriff}%`)
+      .limit(20);
+    if (!teilnahmen?.length) return [];
+
+    const erfolgIds = [...new Set(teilnahmen.map(t => t.achievement_id))];
+
+    // Bilder zu diesen Meldungen laden
+    const { data: bilder } = await Backend.client
+      .from('achievement_media')
+      .select('id, achievement_id, storage_path, original_name, caption, alt_text')
+      .in('achievement_id', erfolgIds)
+      .limit(30);
+    if (!bilder?.length) return [];
+
+    // Public URLs generieren
+    return bilder.map(b => {
+      const { data } = Backend.client.storage
+        .from('achievement-media')
+        .getPublicUrl(b.storage_path);
+      return {
+        id: b.id,
+        url: data?.publicUrl || null,
+        storagePath: b.storage_path,
+        caption: b.caption || b.alt_text || '',
+        erfolgId: b.achievement_id,
+      };
+    }).filter(b => b.url);
+  } catch(e) {
+    console.warn('[Athleten-Archiv]', e.message);
+    return [];
+  }
+}
+
+// Zeigt Bildarchiv-Picker für einen Athleten
+async function zeigeAthletenBildarchiv(athletenId) {
+  const nameEl = document.getElementById(`av-vorname-${athletenId}`);
+  const nachnameEl = document.getElementById(`av-nachname-${athletenId}`);
+  const vorname = nameEl?.value.trim() || '';
+  const nachname = nachnameEl?.value.trim() || '';
+  const name = `${vorname} ${nachname}`.trim();
+
+  if (!name) { toast('Bitte zuerst den Athletennamen eingeben', 'warning'); return; }
+
+  toast('⏳ Suche Bilder...', 'info');
+  const bilder = await ladeAthletenBilder(name);
+
+  if (!bilder.length) {
+    toast(`Keine Bilder für "${name}" in Meldungen gefunden`, 'info');
+    return;
+  }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.maxWidth = '700px';
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>📸 Bildarchiv: ${esc(name)}</h3>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="text-muted mb-3" style="font-size:.85rem">${bilder.length} Bild(er) aus bestehenden Meldungen gefunden. Klicke auf ein Bild um es zu verwenden.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px">
+        ${bilder.map((b,i) => `
+          <div style="cursor:pointer;border-radius:8px;overflow:hidden;border:2px solid transparent;transition:border-color .2s"
+            onclick="avBildAusArchivWaehlen(${athletenId}, '${esc(b.url)}', this)">
+            <img src="${esc(b.url)}" alt="${esc(b.caption)}"
+              style="width:100%;height:120px;object-fit:cover;display:block"
+              onerror="this.parentNode.style.display='none'">
+            ${b.caption ? `<div style="font-size:.7rem;padding:4px 6px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(b.caption)}</div>` : ''}
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
+    </div>`;
+
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+async function avBildAusArchivWaehlen(athletenId, url, el) {
+  // Bild als DataURL laden und cachen
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const dataUrl = await new Promise(res => {
+      const reader = new FileReader();
+      reader.onload = ev => res(ev.target.result);
+      reader.readAsDataURL(blob);
+    });
+    const img = new Image();
+    img.onload = () => {
+      window[`_avBildObj_${athletenId}`] = img;
+      // Vorschau aktualisieren
+      const preview = document.getElementById(`av-bild-preview-${athletenId}`);
+      if (preview) { preview.src = dataUrl; preview.style.display = 'block'; }
+      toast('✅ Bild aus Archiv übernommen', 'success');
+      document.querySelector('.modal-overlay')?.remove();
+    };
+    img.src = dataUrl;
+  } catch(e) {
+    toast('Fehler beim Laden: ' + e.message, 'danger');
+  }
+}
+
 function avTeamfotoVorschau(input) {
   const file = input?.files?.[0];
   if (!file) return;
@@ -8393,7 +8524,7 @@ function avAthletHinzu() {
         <div class="form-hint">Format: Datum – Veranstaltung (optional)</div>
       </div>
       <div class="form-group" style="grid-column:1/-1">
-        <label style="font-size:.8rem">Bild (aus Meldung wählen oder hochladen)</label>
+        <label style=\"font-size:.8rem;display:flex;justify-content:space-between;align-items:center\">Bild hochladen<button type=\"button\" class=\"btn btn-ghost btn-sm\" style=\"font-size:.72rem;padding:2px 8px\" onclick=\"zeigeAthletenBildarchiv(${id})\">📂 Aus Archiv</button></label>
         <input type="file" id="av-bild-${id}" accept="image/jpeg,image/png,image/webp"
           style="width:100%;font-size:.8rem"
           onchange="avBildVorschau(${id}, this)">
@@ -8406,6 +8537,135 @@ function avAthletHinzu() {
 
 
 // ── Athletenvorstellung mit gespeicherten Daten wiederherstellen ──
+
+// ── Veranstaltungs-Workspace ──────────────────────────────────
+// Gespeicherte Veranstaltungen für Athletenvorstellung
+
+function ladeGespeicherteVeranstaltungen() {
+  return JSON.parse(localStorage.getItem('slzb_av_veranstaltungen') || '[]');
+}
+
+function speichereVeranstaltung(daten) {
+  const liste = ladeGespeicherteVeranstaltungen();
+  const id = 'av_' + Date.now();
+  const eintrag = { id, ...daten, gespeichertAm: new Date().toISOString() };
+  liste.unshift(eintrag); // Neueste zuerst
+  // Maximal 10 gespeicherte Veranstaltungen
+  localStorage.setItem('slzb_av_veranstaltungen', JSON.stringify(liste.slice(0, 10)));
+  return id;
+}
+
+function loescheGespeicherteVeranstaltung(id) {
+  const liste = ladeGespeicherteVeranstaltungen().filter(v => v.id !== id);
+  localStorage.setItem('slzb_av_veranstaltungen', JSON.stringify(liste));
+}
+
+
+function avSpeichereWorkspace() {
+  const opts = window._avOptsBase;
+  const athleten = window._avAthleten;
+  if (!opts || !athleten?.length) { toast('Keine Daten zum Speichern', 'warning'); return; }
+
+  const daten = {
+    veranstaltung: opts.veranstaltung,
+    ort: opts.ort || '',
+    sportart: opts.sportart || '',
+    format: window._avFormat || 'carousel',
+    teamfotoUrl: opts.teamfoto?.src || null,
+    athleten: athleten.map((a, i) => ({
+      vorname: a.vorname,
+      nachname: a.nachname,
+      name: a.name,
+      kader: a.kader,
+      ziel: a.ziel,
+      erfolge: a.erfolge,
+      starts: a.starts,
+      erfolgeStr: a.erfolge?.join(', ') || '',
+      startsStr: a.starts?.join('\n') || '',
+      bildUrl: a.bild?.src || null, // DataURL
+    }))
+  };
+
+  speichereVeranstaltung(daten);
+  toast('✅ Veranstaltung gespeichert – unter "📋 Gespeicherte Veranstaltungen" abrufbar', 'success');
+}
+
+function zeigeVeranstaltungsWorkspace() {
+  const liste = ladeGespeicherteVeranstaltungen();
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.maxWidth = '650px';
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>📋 Gespeicherte Veranstaltungen</h3>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <div class="modal-body">
+      ${!liste.length ? '<p class="text-muted">Noch keine Veranstaltungen gespeichert. Erstelle eine Athletenvorstellung und speichere sie für spätere Updates.</p>' :
+        liste.map(v => `
+          <div style="border:1px solid var(--slzb-border);border-radius:8px;padding:12px;margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div>
+                <div style="font-weight:700;font-size:.95rem">${esc(v.veranstaltung)}</div>
+                <div style="font-size:.8rem;color:#888;margin-top:2px">
+                  ${v.sportart ? esc(v.sportart) + ' · ' : ''}
+                  ${v.ort ? '📍 ' + esc(v.ort) + ' · ' : ''}
+                  ${v.athleten?.length || 0} Athlet(en) · 
+                  ${new Date(v.gespeichertAm).toLocaleDateString('de-DE')}
+                </div>
+                <div style="font-size:.78rem;color:#666;margin-top:4px">
+                  ${(v.athleten||[]).map(a => esc(a.name||a.vorname+' '+a.nachname)).join(', ')}
+                </div>
+              </div>
+              <div style="display:flex;gap:6px;flex-shrink:0;margin-left:12px">
+                <button class="btn btn-primary btn-sm" onclick="ladeVeranstaltungWorkspace('${v.id}')">
+                  ▶ Laden
+                </button>
+                <button class="btn btn-ghost btn-sm" style="color:#E2001A"
+                  onclick="loescheGespeicherteVeranstaltung('${v.id}');this.closest('.modal-overlay').remove();zeigeVeranstaltungsWorkspace()">
+                  🗑️
+                </button>
+              </div>
+            </div>
+          </div>`).join('')}
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Schließen</button>
+    </div>`;
+
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+function ladeVeranstaltungWorkspace(id) {
+  const liste = ladeGespeicherteVeranstaltungen();
+  const v = liste.find(x => x.id === id);
+  if (!v) return;
+  document.querySelector('.modal-overlay')?.remove();
+
+  // Daten in _avGespeicherteDaten laden und Modal öffnen
+  window._avGespeicherteDaten = {
+    veranstaltung: v.veranstaltung,
+    ort: v.ort || '',
+    sportart: v.sportart || '',
+    format: v.format || 'carousel',
+    teamfotoUrl: v.teamfotoUrl || null,
+    athleten: (v.athleten || []).map(a => ({
+      ...a,
+      erfolgeStr: a.erfolge?.join(', ') || '',
+      startsStr: a.starts?.join('\n') || '',
+      bildUrl: a.bildUrl || null,
+      bildObj: null,
+    }))
+  };
+  zeigeAthletenVorstellungMitDaten();
+  toast('✅ Veranstaltung geladen – Bilder bitte neu hochladen', 'info');
+}
+
 function zeigeAthletenVorstellungMitDaten() {
   // Öffne das Modal und stelle die Daten wieder her
   zeigeAthletenVorstellung();
@@ -8446,6 +8706,7 @@ function zeigeAthletenVorstellungMitDaten() {
           const el = document.getElementById(elId);
           if (el && val) el.value = val;
         };
+        setVal('av-ort', gespeichert.ort);
         setVal(`av-vorname-${id}`, athlet.vorname);
         setVal(`av-nachname-${id}`, athlet.nachname);
         setVal(`av-kader-${id}`, athlet.kader);
@@ -8472,6 +8733,7 @@ function zeigeAthletenVorstellungMitDaten() {
 
 async function erstelleAthletenVorstellung() {
   const veranstaltung = document.getElementById('av-veranstaltung')?.value.trim();
+  const ort = document.getElementById('av-ort')?.value.trim() || '';
   const sportart = document.getElementById('av-sportart')?.value.trim();
   const format = document.getElementById('av-format')?.value || 'carousel';
   if (!veranstaltung) { toast('Bitte Veranstaltungsname eingeben', 'warning'); return; }
@@ -8553,6 +8815,7 @@ async function erstelleAthletenVorstellung() {
   // Daten für Zurück-Funktion speichern (NACH dem Teamfoto-Laden)
   window._avGespeicherteDaten = {
     veranstaltung,
+    ort,
     sportart,
     format,
     teamfotoUrl: teamfoto?.src || null,  // DataURL des Teamfotos
@@ -8565,7 +8828,7 @@ async function erstelleAthletenVorstellung() {
     }))
   };
 
-  const opts_base = { veranstaltung, sportart, akzent: 'blau', teamfoto };
+  const opts_base = { veranstaltung, ort, sportart, akzent: 'blau', teamfoto };
   await zeigeAthletenVorschau(athleten, opts_base, format);
 }
 
@@ -8630,6 +8893,7 @@ async function zeigeAthletenVorschau(athleten, opts_base, format) {
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove();zeigeAthletenVorstellungMitDaten()">← Zurück</button>
       <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
+      <button class="btn btn-outline btn-sm" onclick="avSpeichereWorkspace()" title="Veranstaltung für spätere Updates speichern">💾 Speichern</button>
       <button class="btn btn-primary" onclick="avStarteDownload()">📥 Alle herunterladen</button>
     </div>`;
 
