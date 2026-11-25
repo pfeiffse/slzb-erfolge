@@ -3474,6 +3474,25 @@ async function zeichneAthletPortrait(ctx, W, H, opts) {
     ergebnis: erfolgTextP,
   }, akzent);
 
+  // Nächster Start als Hinweis
+  const naechsterStart = (opts.starts||[])[0];
+  if (naechsterStart) {
+    const MARGIN = Math.round(W * 0.055);
+    const boxY = H * 0.84;
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = '#003366';
+    slzbRoundRect(ctx, MARGIN, boxY, W - MARGIN*2, 44, 8);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${Math.round(W*0.022)}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`🏁 ${naechsterStart}`, W/2, boxY + 22);
+    ctx.restore();
+  }
+
   zeichneSlzbFooterNeu(ctx, W, H, akzent);
 }
 
@@ -3497,13 +3516,50 @@ async function zeichneAthletErfolge(ctx, W, H, opts) {
 
   // Erfolge als Text
   const erfolgText = (opts.erfolge||[]).join(' | ');
+
+  // Starts/Rennen separat anzeigen wenn vorhanden
+  const starts = opts.starts || [];
+  let zusatzText = null;
+  if (starts.length) {
+    zusatzText = '🏁 ' + starts.slice(0, 3).join(' · ');
+    if (starts.length > 3) zusatzText += ` (+${starts.length - 3} weitere)`;
+  }
+
   zeichneSlzbKarte(ctx, W, H, {
     subtitle: 'BISHERIGE ERFOLGE',
     vorname: opts.vorname || '',
     nachname: opts.nachname || '',
     titel: (!opts.vorname && !opts.nachname) ? opts.name : null,
     ergebnis: erfolgText || 'Erste internationale Erfahrungen',
+    zusatz: zusatzText,
   }, akzent);
+
+  // Anstehende Starts als extra Block wenn vorhanden
+  if (starts.length) {
+    const MARGIN = Math.round(W * 0.055);
+    const boxY = H * 0.82;
+    const boxH = Math.min(starts.length * 28 + 40, H * 0.14);
+    // Hintergrund
+    ctx.save();
+    ctx.globalAlpha = 0.82;
+    ctx.fillStyle = '#003366';
+    slzbRoundRect(ctx, MARGIN, boxY, W - MARGIN*2, boxH, 10);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    // Titel
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${Math.round(W*0.022)}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('🏁 ANSTEHENDE STARTS', MARGIN + 14, boxY + 10);
+    // Einträge
+    ctx.font = `${Math.round(W*0.019)}px Montserrat, Arial, sans-serif`;
+    ctx.fillStyle = '#C9CCD2';
+    starts.slice(0, 3).forEach((s, i) => {
+      ctx.fillText(`• ${s}`, MARGIN + 14, boxY + 34 + i * 26);
+    });
+    ctx.restore();
+  }
 
   zeichneSlzbFooterNeu(ctx, W, H, akzent);
 }

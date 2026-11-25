@@ -1144,14 +1144,17 @@ async function speichereErfolg(status, meldungsart) {
   }
 
   // Datenschutz-Prüfung
-  if (athletText && status === 'Eingereicht' && typeof pruefeDatenschutz === 'function') {
-    const dsWarnungen = await pruefeDatenschutz([athletText]);
-    if (dsWarnungen.length) {
-      // Warnung anzeigen, dann weiter
-      zeigeDatenschutzWarnung([athletText], async () => {
-        await _speichereErfolgDurchfuehren(daten, athletText, status, meldungsart);
-      });
-      return;
+  if (athletText && status === 'Eingereicht' && typeof pruefeAthletDatenschutz === 'function') {
+    const dsCheck = await pruefeAthletDatenschutz(athletText);
+    if (dsCheck.gesperrt) {
+      const hinweise = (dsCheck.einschraenkungen||[]).join('\n• ');
+      const weiter = confirm(
+        `⚠️ DATENSCHUTZ-HINWEIS\n\n` +
+        `Für "${athletText}" bestehen folgende Einschränkungen:\n• ${hinweise}\n\n` +
+        `Die Meldung kann trotzdem eingereicht werden, aber beachten Sie die Einschränkungen bei der Veröffentlichung.\n\n` +
+        `Trotzdem einreichen?`
+      );
+      if (!weiter) return;
     }
   }
 

@@ -532,19 +532,45 @@ function htmlZuBlobUrl(html) {
 
 
 // ── Datenschutz-Prüfung für Poster ───────────────────────────
-async function pruefeAthletDatenschutz(athletenName) {
+async function pruefeAthletDatenschutz(athletenName, sportart) {
   if (!athletenName) return { gesperrt: false, einschraenkungen: [] };
   try {
-    const { data } = await Backend.client
+    // Suche nach Vor- und Nachname (flexibel)
+    const teile = athletenName.trim().split(/\s+/);
+    const ersterTeil = teile[0] || '';
+    const letzterTeil = teile[teile.length - 1] || '';
+
+    let query = Backend.client
       .from('datenschutz_widerspruch')
       .select('*')
-      .or(`nachname.ilike.%${athletenName.split(' ')[0]}%,vorname.ilike.%${athletenName.split(' ').pop()}%`)
-      .limit(5);
+      .or(`nachname.ilike.%${ersterTeil}%,vorname.ilike.%${ersterTeil}%,nachname.ilike.%${letzterTeil}%,vorname.ilike.%${letzterTeil}%`)
+      .limit(10);
+
+    // Sportart-Filter wenn angegeben
+    if (sportart) {
+      query = query.or(`sportart.ilike.%${sportart}%,sportart.is.null`);
+    }
+
+    const { data } = await query;
     if (!data?.length) return { gesperrt: false, einschraenkungen: [] };
+
     const einschraenkungen = [];
     for (const e of data) {
-      if (e.foto_print || e.foto_homepage || e.foto_social) einschraenkungen.push(`${e.vorname} ${e.nachname}: Foto eingeschränkt`);
-      if (e.name_print || e.name_homepage || e.name_social) einschraenkungen.push(`${e.vorname} ${e.nachname}: Name eingeschränkt`);
+      const name = `${e.vorname} ${e.nachname}`.trim();
+      const details = [];
+      if (e.foto_print)    details.push('Foto-Print');
+      if (e.foto_presse)   details.push('Foto-Presse');
+      if (e.foto_homepage) details.push('Foto-Homepage');
+      if (e.foto_events)   details.push('Foto-Events');
+      if (e.foto_social)   details.push('Foto-Social');
+      if (e.name_print)    details.push('Name-Print');
+      if (e.name_presse)   details.push('Name-Presse');
+      if (e.name_homepage) details.push('Name-Homepage');
+      if (e.name_events)   details.push('Name-Events');
+      if (e.name_social)   details.push('Name-Social');
+      if (details.length) {
+        einschraenkungen.push(`${name}: ${details.join(', ')} gesperrt`);
+      }
     }
     return { gesperrt: einschraenkungen.length > 0, einschraenkungen, eintraege: data };
   } catch(e) {
@@ -1235,7 +1261,7 @@ async function renderEinwilligungen() {
       <div class="table-wrap">
         <table style="font-size:.82rem">
           <thead><tr>
-            <th>Name</th><th>Klasse</th>
+            <th>Name</th><th>Klasse</th><th>Sportart</th>
             <th title="Name-Print">N-P</th>
             <th title="Name-Presse">N-Pr</th>
             <th title="Name-Homepage">N-H</th>
@@ -1256,6 +1282,7 @@ async function renderEinwilligungen() {
               return `<tr>
                 <td><strong>${esc(e.nachname)}</strong>, ${esc(e.vorname)}</td>
                 <td>${esc(e.klasse||'–')}</td>
+                <td>${esc(e.sportart||'–')}</td>
                 <td>${icon(e.name_print)}</td>
                 <td>${icon(e.name_presse)}</td>
                 <td>${icon(e.name_homepage)}</td>
@@ -7709,11 +7736,72 @@ function avAthletHinzu() {
         <input type="text" id="av-erfolge-${id}" placeholder="z.B. 1. Platz DM 2025, 3. Platz EM 2024" style="width:100%;font-size:.85rem">
       </div>
       <div class="form-group" style="grid-column:1/-1">
+        <label style="font-size:.8rem">🏁 Anstehende Starts / Rennen (ein Eintrag pro Zeile)</label>
+        <textarea id="av-starts-${id}" rows="3"
+          placeholder="z.B. 15.12.2026 – Junioren-Weltcup Innsbruck&#10;22.01.2027 – Deutsche Meisterschaft Berlin"
+          style="width:100%;font-size:.85rem;resize:vertical;padding:6px 8px;border:1px solid var(--slzb-border);border-radius:6px;background:var(--slzb-bg-secondary);color:var(--slzb-text)"></textarea>
+        <div class="form-hint">Format: Datum – Veranstaltung (optional)</div>
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
         <label style="font-size:.8rem">Bild (aus Meldung wählen oder hochladen)</label>
         <input type="file" id="av-bild-${id}" accept="image/jpeg,image/png,image/webp" style="width:100%;font-size:.8rem">
       </div>
     </div>`;
   liste.appendChild(div);
+}
+
+
+// ── Athletenvorstellung mit gespeicherten Daten wiederherstellen ──
+function zeigeAthletenVorstellungMitDaten() {
+  // Öffne das Modal und stelle die Daten wieder her
+  zeigeAthletenVorstellung();
+  // Nach kurzem Delay (DOM muss aufgebaut sein) Daten einfüllen
+  setTimeout(() => {
+    const gespeichert = window._avGespeicherteDaten;
+    if (!gespeichert) return;
+
+    // Veranstaltung + Sportart wiederherstellen
+    const veranstEl = document.getElementById('av-veranstaltung');
+    const sportartEl = document.getElementById('av-sportart');
+    const formatEl = document.getElementById('av-format');
+    if (veranstEl && gespeichert.veranstaltung) veranstEl.value = gespeichert.veranstaltung;
+    if (sportartEl && gespeichert.sportart) sportartEl.value = gespeichert.sportart;
+    if (formatEl && gespeichert.format) formatEl.value = gespeichert.format;
+
+    // Athleten wiederherstellen
+    if (gespeichert.athleten?.length) {
+      // Bestehende Athleten-Divs entfernen
+      const liste = document.getElementById('av-athleten-liste');
+      if (liste) liste.innerHTML = '';
+      _avCounter = 0;
+
+      for (const athlet of gespeichert.athleten) {
+        avAthletHinzu();
+        const id = _avCounter;
+        const setVal = (elId, val) => {
+          const el = document.getElementById(elId);
+          if (el && val) el.value = val;
+        };
+        setVal(`av-vorname-${id}`, athlet.vorname);
+        setVal(`av-nachname-${id}`, athlet.nachname);
+        setVal(`av-kader-${id}`, athlet.kader);
+        setVal(`av-ziel-${id}`, athlet.ziel);
+        setVal(`av-erfolge-${id}`, athlet.erfolgeStr);
+        setVal(`av-starts-${id}`, athlet.startsStr);
+
+        // Bild-Vorschau wiederherstellen (als Blob-URL)
+        if (athlet.bildUrl) {
+          const preview = document.getElementById(`av-bild-preview-${id}`);
+          if (preview) {
+            preview.src = athlet.bildUrl;
+            preview.style.display = 'block';
+          }
+          // Bild-Objekt für spätere Verwendung speichern
+          window[`_avBildObj_${id}`] = athlet.bildObj;
+        }
+      }
+    }
+  }, 150);
 }
 
 async function erstelleAthletenVorstellung() {
@@ -7738,6 +7826,8 @@ async function erstelleAthletenVorstellung() {
     const ziel     = document.getElementById(`av-ziel-${id}`)?.value.trim() || '';
     const erfolgeStr = document.getElementById(`av-erfolge-${id}`)?.value.trim() || '';
     const erfolge  = erfolgeStr ? erfolgeStr.split(',').map(s=>s.trim()).filter(Boolean) : [];
+    const startsStr = document.getElementById(`av-starts-${id}`)?.value.trim() || '';
+    const starts   = startsStr ? startsStr.split('\n').map(s=>s.trim()).filter(Boolean) : [];
     const bildInput = document.getElementById(`av-bild-${id}`);
     let bild = null;
     if (bildInput?.files?.[0]) {
@@ -7746,10 +7836,24 @@ async function erstelleAthletenVorstellung() {
         const img = new Image(); img.onload = () => res(img); img.onerror = () => res(null); img.src = url;
       });
     }
-    athleten.push({ vorname, nachname, name: `${vorname} ${nachname}`.trim(), kader, ziel, erfolge, bild });
+    athleten.push({ vorname, nachname, name: `${vorname} ${nachname}`.trim(), kader, ziel, erfolge, starts, bild });
   }
 
   if (!athleten.length) { toast('Keine gültigen Athleten', 'warning'); return; }
+
+  // Daten für Zurück-Funktion speichern
+  window._avGespeicherteDaten = {
+    veranstaltung,
+    sportart,
+    format,
+    athleten: athleten.map((a, i) => ({
+      ...a,
+      erfolgeStr: a.erfolge?.join(', ') || '',
+      startsStr: a.starts?.join('\n') || '',
+      bildUrl: a.bild ? (a.bild.src || null) : null,
+      bildObj: a.bild || null,
+    }))
+  };
 
   document.querySelector('.modal-overlay')?.remove();
 
@@ -7827,7 +7931,7 @@ async function zeigeAthletenVorschau(athleten, opts_base, format) {
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove();zeigeAthletenVorstellung()">← Zurück</button>
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove();zeigeAthletenVorstellungMitDaten()">← Zurück</button>
       <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
       <button class="btn btn-primary" onclick="avStarteDownload()">📥 Alle herunterladen</button>
     </div>`;
@@ -8610,6 +8714,7 @@ async function importiereDatenschutzExcel() {
       foto_homepage: findCol('foto-homepage', 'foto homepage', 'f-homepage') >= 0 ? findCol('foto-homepage', 'foto homepage', 'f-homepage') : (10 + colOffset),
       foto_events:   findCol('foto-events', 'foto events', 'f-events') >= 0 ? findCol('foto-events', 'foto events', 'f-events') : (11 + colOffset),
       foto_social:   findCol('foto-social', 'foto social', 'f-social') >= 0 ? findCol('foto-social', 'foto social', 'f-social') : (12 + colOffset),
+      sportart:      findCol('sportart', 'sport', 'disziplin') >= 0 ? findCol('sportart', 'sport', 'disziplin') : -1,
     };
 
     const daten = [];
@@ -8644,6 +8749,7 @@ async function importiereDatenschutzExcel() {
         foto_homepage:  istX(cols[COL.foto_homepage]),
         foto_events:    istX(cols[COL.foto_events]),
         foto_social:    istX(cols[COL.foto_social]),
+        sportart:       COL.sportart >= 0 ? (cols[COL.sportart] || null) : null,
         schuljahr,
         importiert_von: Auth.id(),
       });
