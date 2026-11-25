@@ -262,15 +262,22 @@ const DB = {
       .order('created_at');
     if (error || !data?.length) return [];
     const bilder = await Promise.all(data.map(async (b) => {
-      let signedUrl = null;
-      try {
-        // Signed URL (3600s = 1h) – funktioniert auch bei privaten Buckets
-        const { data: urlData, error: urlErr } = await Backend.client.storage
-          .from('achievement-media')
-          .createSignedUrl(b.storage_path, 3600);
-        signedUrl = urlData?.signedUrl || null;
-        if (urlErr) console.warn('[getBilder] Signed URL Fehler:', urlErr.message);
-      } catch(e) { console.warn('Signed URL:', e.message); }
+      // Public URL verwenden (Bucket ist öffentlich) - kein Ablauf-Problem
+      const { data: pubData } = Backend.client.storage
+        .from('achievement-media')
+        .getPublicUrl(b.storage_path);
+      let signedUrl = pubData?.publicUrl || null;
+
+      // Fallback: Signed URL (24h) wenn Public URL nicht funktioniert
+      if (!signedUrl) {
+        try {
+          const { data: urlData, error: urlErr } = await Backend.client.storage
+            .from('achievement-media')
+            .createSignedUrl(b.storage_path, 86400); // 24h statt 1h
+          signedUrl = urlData?.signedUrl || null;
+          if (urlErr) console.warn('[getBilder] Signed URL Fehler:', urlErr.message);
+        } catch(e) { console.warn('Signed URL:', e.message); }
+      }
       return {
         id:           b.id,
         storagePath:  b.storage_path,

@@ -517,17 +517,23 @@ async function ladeBild(url) {
   let img = await tryLoad(true);
   if (img) return img;
 
-  // Fallback: Bild über fetch als Blob laden (umgeht CORS-Restriktionen)
+  // Fallback: Bild über fetch als DataURL laden (umgeht CORS, kein Memory-Leak)
   try {
     const res = await fetch(url);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const blob = await res.blob();
-    const blobUrl = URL.createObjectURL(blob);
+    // DataURL statt Blob-URL: dauerhaft gültig, kein Revoke nötig
+    const dataUrl = await new Promise((res2, rej) => {
+      const reader = new FileReader();
+      reader.onload = ev => res2(ev.target.result);
+      reader.onerror = rej;
+      reader.readAsDataURL(blob);
+    });
     return new Promise(resolve => {
       const img2 = new Image();
       img2.onload = () => resolve(img2);
       img2.onerror = () => resolve(null);
-      img2.src = blobUrl;
+      img2.src = dataUrl;
     });
   } catch(e) {
     console.warn('[ladeBild] Fehler:', e.message, url.substring(0,60));

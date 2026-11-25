@@ -2371,8 +2371,13 @@ function posterBildVorschau(inputId) {
   const thumb = document.getElementById(`${inputId}-thumb`);
   const img = document.getElementById(`${inputId}-thumb-img`);
   if (thumb && img) {
-    thumb.style.display='block';
-    img.src = URL.createObjectURL(file);
+    // DataURL statt Blob-URL (kein Memory-Leak, dauerhaft gültig)
+    const reader = new FileReader();
+    reader.onload = ev => {
+      img.src = ev.target.result;
+      thumb.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
   }
 }
 
@@ -2702,12 +2707,19 @@ async function nwVorschau() {
         erfolge: erfolgeRaw.split('\n').map(s=>s.trim()).filter(Boolean),
       });
     });
-    // Bilder als Blob-URLs laden
+    // Bilder als DataURLs laden (dauerhaft gültig, kein Revoke-Problem)
     const kandidatenMitBild = await Promise.all(kandidatenRaw.map(async k => {
       let bild = null;
       if (k.bildInput?.files?.[0]) {
-        bild = URL.createObjectURL(k.bildInput.files[0]);
+        // Neues Bild: als DataURL laden
+        bild = await new Promise(res => {
+          const reader = new FileReader();
+          reader.onload = ev => res(ev.target.result);
+          reader.onerror = () => res(null);
+          reader.readAsDataURL(k.bildInput.files[0]);
+        });
       } else if (k.bildInput?.dataset?.vorhandeneUrl) {
+        // Vorhandene URL aus Supabase direkt verwenden
         bild = k.bildInput.dataset.vorhandeneUrl;
       }
       return { ...k, bild };
