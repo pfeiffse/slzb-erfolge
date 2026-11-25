@@ -8992,7 +8992,7 @@ async function zeigeAthletenVorstellung() {
           <option value="twitter">🐦 Twitter/X-Banner 1500×500</option>
         </select>
       </div>
-      <button class=\"btn btn-ghost btn-sm\" onclick=\"zeigeVeranstaltungsWorkspace()\" title=\"Gespeicherte Veranstaltungen laden\">📋 Gespeicherte</button>\\n      <button class=\\\"btn btn-ghost btn-sm\\\" onclick=\\\"zeigeAthletenProfileVerwaltung()\\\" title=\\\"Athleten-Profile verwalten\\\">👤 Profile</button>\\n      <button class=\"btn btn-ghost\" onclick=\"this.closest(\\'.modal-overlay\\').remove()\">Abbrechen</button>\\n      <button class=\"btn btn-primary\" onclick=\"erstelleAthletenVorstellung()\">🖼️ Erstellen & herunterladen</button>\\n    </div>`;
+      <button class=\"btn btn-ghost btn-sm\" onclick=\"zeigeVeranstaltungsWorkspace()\" title=\"Gespeicherte Veranstaltungen laden\">📋 Gespeicherte</button>\n      <button class=\"btn btn-ghost btn-sm\" onclick=\"zeigeAthletenProfileVerwaltung()\" title=\"Athleten-Profile verwalten\">👤 Profile</button>\n      <button class=\"btn btn-ghost\" onclick=\"this.closest(\\'.modal-overlay\\').remove()\">Abbrechen</button>\n      <button class=\"btn btn-primary\" onclick=\"erstelleAthletenVorstellung()\">🖼️ Erstellen & herunterladen</button>\n    </div>`;
 
   overlay.appendChild(modal);
   overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
