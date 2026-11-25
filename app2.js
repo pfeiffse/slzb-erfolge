@@ -3128,6 +3128,206 @@ function jubHerunterladen() {
 // ══════════════════════════════════════════════════════════════
 // SCHULNACHRICHTEN-POSTER (Grau/Stahlblau)
 // ══════════════════════════════════════════════════════════════
+
+// ── Foto-Karussell ────────────────────────────────────────────
+function zeigeFotoKarussellModal() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal modal-xl';
+  modal.style.maxWidth = '700px';
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>📸 Foto-Karussell erstellen</h3>
+      <button class="btn btn-ghost btn-sm close-x">✕</button>
+    </div>
+    <div class="modal-body" style="background:#111;padding:16px">
+      <div class="form-row cols-2 mb-3">
+        <div class="form-group">
+          <label style="color:#fff">Titel <span class="required">*</span></label>
+          <input type="text" id="fk-titel" placeholder="z.B. Frühstück der Champions 2026"
+            style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px;width:100%">
+        </div>
+        <div class="form-group">
+          <label style="color:#fff">Untertitel / Kategorie</label>
+          <input type="text" id="fk-untertitel" placeholder="z.B. SLZB Berlin · November 2026"
+            style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px;width:100%">
+        </div>
+        <div class="form-group">
+          <label style="color:#fff">Datum</label>
+          <input type="date" id="fk-datum"
+            style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px;width:100%">
+        </div>
+        <div class="form-group">
+          <label style="color:#fff">Akzentfarbe</label>
+          <select id="fk-akzent" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px;width:100%">
+            <option value="grau">⚪ Grau (Schulnachrichten)</option>
+            <option value="rot">🔴 Rot (Sporterfolge)</option>
+            <option value="blau">🔵 Blau (Personen/Events)</option>
+            <option value="gruen">🟢 Grün (Events/Termine)</option>
+          </select>
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label style="color:#fff">Deckblatt-Hintergrundbild (optional)</label>
+          <input type="file" id="fk-deckbild" accept="image/jpeg,image/png,image/webp"
+            style="width:100%;font-size:.85rem" onchange="fkDeckbildVorschau(this)">
+          <img id="fk-deckbild-preview" src="" alt="Vorschau"
+            style="display:none;max-height:80px;max-width:100%;margin-top:6px;border-radius:6px;object-fit:cover">
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label style="color:#fff">📸 Fotos hochladen (mehrere möglich)</label>
+          <input type="file" id="fk-fotos" accept="image/jpeg,image/png,image/webp"
+            multiple style="width:100%;font-size:.85rem" onchange="fkFotosVorschau(this)">
+          <div id="fk-fotos-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div>
+          <div class="form-hint">Jedes Foto wird eine eigene Karussell-Folie. Reihenfolge = Upload-Reihenfolge.</div>
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label style="color:#fff">Bildunterschrift (gilt für alle Fotos, optional)</label>
+          <input type="text" id="fk-caption" placeholder="z.B. Frühstück der Champions · SLZB Berlin"
+            style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px;width:100%">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost close-btn">Abbrechen</button>
+      <button class="btn btn-primary" onclick="erstelleFotoKarussell()">📸 Karussell erstellen & herunterladen</button>
+    </div>`;
+
+  modal.querySelector('.close-x').onclick = () => overlay.remove();
+  modal.querySelector('.close-btn').onclick = () => overlay.remove();
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+
+  // Heutiges Datum vorausfüllen
+  const heute = new Date().toISOString().slice(0,10);
+  document.getElementById('fk-datum').value = heute;
+}
+
+function fkDeckbildVorschau(input) {
+  const file = input?.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const preview = document.getElementById('fk-deckbild-preview');
+    if (preview) { preview.src = ev.target.result; preview.style.display = 'block'; }
+    window._fkDeckbildDataUrl = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function fkFotosVorschau(input) {
+  const files = [...(input?.files || [])];
+  const container = document.getElementById('fk-fotos-preview');
+  if (!container) return;
+  container.innerHTML = '';
+  window._fkFotoDataUrls = [];
+
+  files.forEach((file, i) => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      window._fkFotoDataUrls[i] = ev.target.result;
+      // Vorschau-Thumbnail
+      const img = document.createElement('img');
+      img.src = ev.target.result;
+      img.style.cssText = 'height:60px;width:60px;object-fit:cover;border-radius:4px;border:2px solid #444';
+      img.title = file.name;
+      container.appendChild(img);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function erstelleFotoKarussell() {
+  const titel     = document.getElementById('fk-titel')?.value.trim();
+  const untertitel= document.getElementById('fk-untertitel')?.value.trim() || '';
+  const datum     = document.getElementById('fk-datum')?.value || '';
+  const akzent    = document.getElementById('fk-akzent')?.value || 'grau';
+  const caption   = document.getElementById('fk-caption')?.value.trim() || '';
+
+  if (!titel) { toast('Bitte Titel eingeben', 'warning'); return; }
+
+  const fotos = window._fkFotoDataUrls?.filter(Boolean) || [];
+  if (!fotos.length) { toast('Bitte mindestens ein Foto hochladen', 'warning'); return; }
+
+  toast('⏳ Karussell wird erstellt...', 'info');
+  document.querySelector('.modal-overlay')?.remove();
+
+  // Deckbild laden
+  let deckbild = null;
+  if (window._fkDeckbildDataUrl) {
+    deckbild = await new Promise(res => {
+      const img = new Image(); img.onload = () => res(img); img.onerror = () => res(null);
+      img.src = window._fkDeckbildDataUrl;
+    });
+  }
+
+  // Fotos laden
+  const fotoImgs = await Promise.all(fotos.map(url => new Promise(res => {
+    const img = new Image(); img.onload = () => res(img); img.onerror = () => res(null);
+    img.src = url;
+  })));
+
+  // Datum formatieren
+  const datumText = datum ? new Date(datum + 'T12:00:00').toLocaleDateString('de-DE', {
+    day: '2-digit', month: 'long', year: 'numeric'
+  }) : '';
+
+  const W = 1080, H = 1350;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  const gesamt = fotoImgs.length + 1; // +1 für Deckblatt
+  const dateien = [];
+
+  // Deckblatt zeichnen
+  await zeichneFotoKarussellDeckblatt(ctx, W, H, {
+    titel, untertitel, datum: datumText, akzent, bild: deckbild, gesamt
+  });
+  const deckblattUrl = await canvasToDataUrl(canvas);
+  dateien.push({ name: '01_Deckblatt.png', url: deckblattUrl });
+
+  // Foto-Folien zeichnen
+  for (let i = 0; i < fotoImgs.length; i++) {
+    ctx.clearRect(0, 0, W, H);
+    await zeichneFotoKarussellFolie(ctx, W, H, {
+      bild: fotoImgs[i], akzent, caption,
+      nr: i + 2, gesamt
+    });
+    const url = await canvasToDataUrl(canvas);
+    const nr = String(i + 2).padStart(2, '0');
+    dateien.push({ name: `${nr}_Foto_${i+1}.png`, url });
+    await new Promise(r => setTimeout(r, 100));
+  }
+
+  // Als ZIP herunterladen
+  await downloadAlsZip(dateien, `SLZB_Karussell_${titel.replace(/\s+/g,'_').slice(0,30)}`);
+  toast(`✅ ${dateien.length} Folien heruntergeladen!`, 'success');
+}
+
+async function canvasToDataUrl(canvas) {
+  return new Promise(res => canvas.toBlob(blob => {
+    const reader = new FileReader();
+    reader.onload = ev => res(ev.target.result);
+    reader.readAsDataURL(blob);
+  }, 'image/png'));
+}
+
+async function downloadAlsZip(dateien, zipName) {
+  // Einzeln herunterladen wenn kein JSZip verfügbar
+  for (const datei of dateien) {
+    await new Promise(res => setTimeout(res, 300));
+    const a = document.createElement('a');
+    a.href = datei.url;
+    a.download = datei.name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+}
+
 function renderSchulnachrichtenSeite() {
   return `<div class="page">
     <div class="page-header">
@@ -3144,6 +3344,23 @@ function renderSchulnachrichtenSeite() {
           </div>
           <button class="btn btn-primary" onclick="zeigeSchulnachrichtModal()" style="white-space:nowrap;background:#8A9BB0;border-color:#8A9BB0">
             📰 Poster erstellen
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header"><h2>📸 Foto-Karussell</h2></div>
+      <div class="card-body">
+        <div class="alert alert-info mb-3"><span class="alert-icon">ℹ️</span>
+          <span>Deckblatt + mehrere Fotos als Instagram-Karussell. Ideal für Events wie Frühstück der Champions, Schulveranstaltungen, Ausflüge.</span>
+        </div>
+        <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+          <div style="flex:1;min-width:200px">
+            <p class="text-sm text-muted">Deckblatt mit Titel und Datum, dann jedes Foto einzeln mit Header und Footer im SLZB-Stil. Download als ZIP.</p>
+          </div>
+          <button class="btn btn-primary" onclick="zeigeFotoKarussellModal()" style="white-space:nowrap;background:#8A9BB0;border-color:#8A9BB0">
+            📸 Karussell erstellen
           </button>
         </div>
       </div>

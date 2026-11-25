@@ -3749,3 +3749,97 @@ async function zeichneTwitterBanner(ctx, W, H, opts) {
   ctx.textAlign='right';
   ctx.fillText('#SLZBerlin', W-30, H*0.84);
 }
+
+
+// ══════════════════════════════════════════════════════════════
+// FOTO-KARUSSELL (1080×1350)
+// ══════════════════════════════════════════════════════════════
+
+// Deckblatt für Foto-Karussell
+async function zeichneFotoKarussellDeckblatt(ctx, W, H, opts) {
+  const akzent = opts.akzent || 'grau';
+  await ladeMontserrat(); await ladeLogo();
+
+  // Hintergrund
+  if (opts.bild) {
+    ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H); ctx.clip();
+    drawCover(ctx, opts.bild, 0, 0, W, H); ctx.restore();
+    // Abdunkelung
+    const grad = ctx.createLinearGradient(0,0,0,H);
+    grad.addColorStop(0,'rgba(0,0,0,0.25)');
+    grad.addColorStop(0.45,'rgba(0,0,0,0.20)');
+    grad.addColorStop(0.72,'rgba(0,0,0,0.55)');
+    grad.addColorStop(1,'rgba(0,0,0,0.88)');
+    ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
+  } else {
+    // Fallback: Gradient im Akzent-Stil
+    zeichneSlzbHintergrund(ctx, W, H, null, akzent);
+  }
+
+  zeichneSlzbDeko(ctx, W, H);
+  zeichneSlzbHeader(ctx, W, H, opts.untertitel || 'SLZB BERLIN', '', akzent);
+
+  // Haupttitel-Karte
+  zeichneSlzbKarte(ctx, W, H, {
+    subtitle: opts.untertitel ? '' : 'SCHUL- UND LEISTUNGSSPORTZENTRUM BERLIN',
+    titel: opts.titel || 'Foto-Galerie',
+    wettbewerb: opts.datum || '',
+    ergebnis: opts.untertitel || '',
+  }, akzent);
+
+  zeichneSlzbFooterNeu(ctx, W, H, akzent);
+  if (opts.gesamt) zeichneCarouselBadge(ctx, W, H, 1, opts.gesamt);
+}
+
+// Foto-Folie für Karussell
+async function zeichneFotoKarussellFolie(ctx, W, H, opts) {
+  const akzent = opts.akzent || 'grau';
+  await ladeMontserrat(); await ladeLogo();
+
+  if (opts.bild) {
+    // Foto vollflächig
+    ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H); ctx.clip();
+    window._bildOffset = window._bildOffset || { x:0.5, y:0.5 };
+    window._bildZoom   = window._bildZoom   || 1.0;
+    drawCover(ctx, opts.bild, 0, 0, W, H); ctx.restore();
+
+    // Leichter Gradient oben (für Header-Lesbarkeit)
+    const gradTop = ctx.createLinearGradient(0,0,0,H*0.22);
+    gradTop.addColorStop(0,'rgba(0,0,0,0.65)');
+    gradTop.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=gradTop; ctx.fillRect(0,0,W,H*0.22);
+
+    // Gradient unten (für Footer + Caption)
+    const gradBot = ctx.createLinearGradient(0,H*0.72,0,H);
+    gradBot.addColorStop(0,'rgba(0,0,0,0)');
+    gradBot.addColorStop(0.5,'rgba(0,0,0,0.55)');
+    gradBot.addColorStop(1,'rgba(0,0,0,0.88)');
+    ctx.fillStyle=gradBot; ctx.fillRect(0,H*0.72,W,H*0.28);
+  } else {
+    zeichneSlzbHintergrund(ctx, W, H, null, akzent);
+  }
+
+  // Header (transparent über Foto)
+  zeichneSlzbHeader(ctx, W, H, 'SLZB BERLIN', '', akzent);
+
+  // Caption wenn vorhanden
+  if (opts.caption) {
+    const MARGIN = Math.round(W * 0.055);
+    const captionY = H * 0.84;
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.font = `${Math.round(W*0.028)}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    // Schatten für Lesbarkeit
+    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur = 8;
+    ctx.fillText(opts.caption, W/2, captionY);
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  }
+
+  zeichneSlzbFooterNeu(ctx, W, H, akzent);
+  if (opts.nr && opts.gesamt) zeichneCarouselBadge(ctx, W, H, opts.nr, opts.gesamt);
+}
+
