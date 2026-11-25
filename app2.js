@@ -7932,25 +7932,9 @@ async function erstelleAthletenVorstellung() {
 
   if (!athleten.length) { toast('Keine gültigen Athleten', 'warning'); return; }
 
-  // Daten für Zurück-Funktion speichern
-  window._avGespeicherteDaten = {
-    veranstaltung,
-    sportart,
-    format,
-    teamfotoUrl: teamfoto?.src || null,  // DataURL des Teamfotos
-    athleten: athleten.map((a, i) => ({
-      ...a,
-      erfolgeStr: a.erfolge?.join(', ') || '',
-      startsStr: a.starts?.join('\n') || '',
-      bildUrl: a.bild?.src || null,  // DataURL - dauerhaft gültig
-      bildObj: a.bild || null,
-    }))
-  };
-
   document.querySelector('.modal-overlay')?.remove();
 
-  // Bearbeitungsmodus: Vorschau-Modal öffnen
-  // Teamfoto laden
+  // Teamfoto laden (ZUERST, bevor _avGespeicherteDaten gesetzt wird)
   let teamfoto = null;
   const teamfotoInput = document.getElementById('av-teamfoto');
   if (teamfotoInput?.files?.[0]) {
@@ -7976,6 +7960,21 @@ async function erstelleAthletenVorstellung() {
       img.src = dataUrl;
     });
   }
+
+  // Daten für Zurück-Funktion speichern (NACH dem Teamfoto-Laden)
+  window._avGespeicherteDaten = {
+    veranstaltung,
+    sportart,
+    format,
+    teamfotoUrl: teamfoto?.src || null,  // DataURL des Teamfotos
+    athleten: athleten.map((a, i) => ({
+      ...a,
+      erfolgeStr: a.erfolge?.join(', ') || '',
+      startsStr: a.starts?.join('\n') || '',
+      bildUrl: a.bild?.src || null,  // DataURL - dauerhaft gültig
+      bildObj: a.bild || null,
+    }))
+  };
 
   const opts_base = { veranstaltung, sportart, akzent: 'blau', teamfoto };
   await zeigeAthletenVorschau(athleten, opts_base, format);
