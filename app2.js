@@ -2462,6 +2462,41 @@ async function zeigeHighlightsKarussell() {
   modal.querySelector('.close-x').onclick = ()=>overlay.remove();
   modal.querySelector('.close-btn').onclick = ()=>overlay.remove();
   overlay.appendChild(modal);
+
+  // Ausblenden-Buttons per JS hinzufügen (vermeidet Template-String-Escaping-Probleme)
+  setTimeout(() => {
+    modal.querySelectorAll('tbody tr').forEach((row, i) => {
+      const t = wocheTermine[i];
+      if (!t) return;
+      const termId = (t._id || t.veranstaltung + t.datum).replace(/[^a-z0-9]/gi, '_');
+      const istAusgeblendet = ausgeblendetIds.has(termId);
+      const lastTd = row.querySelector('td:last-child');
+      if (!lastTd) return;
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-ghost btn-sm';
+      btn.style.cssText = `font-size:.7rem;padding:2px 6px;margin-left:4px;color:${istAusgeblendet?'#E2001A':'#888'}`;
+      btn.title = istAusgeblendet ? 'Wieder einblenden' : 'Aus Poster ausblenden';
+      btn.textContent = istAusgeblendet ? '👁️' : '🚫';
+      btn.dataset.termId = termId;
+      btn.onclick = () => {
+        const ids = new Set(JSON.parse(localStorage.getItem('slzb_wv_ausgeblendet') || '[]'));
+        if (ids.has(termId)) {
+          ids.delete(termId);
+          btn.textContent = '🚫'; btn.style.color = '#888';
+          btn.title = 'Aus Poster ausblenden';
+          toast('Termin wieder eingeblendet', 'info');
+        } else {
+          ids.add(termId);
+          btn.textContent = '👁️'; btn.style.color = '#E2001A';
+          btn.title = 'Wieder einblenden';
+          toast('Termin aus Poster ausgeblendet', 'info');
+        }
+        localStorage.setItem('slzb_wv_ausgeblendet', JSON.stringify([...ids]));
+      };
+      lastTd.appendChild(btn);
+    });
+  }, 50);
+
   overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
   document.body.appendChild(overlay);
 
@@ -4536,19 +4571,30 @@ async function loescheVideoUrl(erfolgId) {
 // ══════════════════════════════════════════════════════════════
 // WOCHENVORSCHAU – Poster + Modal
 // ══════════════════════════════════════════════════════════════
+
+function wvAusgeblendetZuruecksetzen() {
+  localStorage.removeItem('slzb_wv_ausgeblendet');
+  toast('Alle Termine wieder eingeblendet', 'success');
+  document.querySelector('.modal-overlay')?.remove();
+}
+
 async function zeigeWochenvorschau() {
   const _eigene = await ladeKalenderEintraege();
   const alleTermine = [...((typeof SLZB_TERMINE !== 'undefined') ? SLZB_TERMINE : []), ..._eigene];
   const jetzt = new Date(); jetzt.setHours(0,0,0,0);
 
-  // Aktuelle Woche: Montag bis Sonntag
+  // Woche: ab HEUTE bis Sonntag (vergangene Tage ausblenden)
+  const heute = new Date(jetzt); heute.setHours(0,0,0,0);
   const tag = jetzt.getDay(); // 0=So, 1=Mo...
   const diffMo = tag === 0 ? -6 : 1 - tag;
-  const montag = new Date(jetzt); montag.setDate(jetzt.getDate() + diffMo);
-  const sonntag = new Date(montag); sonntag.setDate(montag.getDate() + 6);
+  const montag = new Date(jetzt); montag.setDate(jetzt.getDate() + diffMo); montag.setHours(0,0,0,0);
+  const sonntag = new Date(montag); sonntag.setDate(montag.getDate() + 6); sonntag.setHours(23,59,59,999);
 
   const monatNamen = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
   const tagNamen = ['So','Mo','Di','Mi','Do','Fr','Sa'];
+
+  // Ausgeblendete Termine (vom Nutzer deaktiviert, gespeichert in localStorage)
+  const ausgeblendetIds = new Set(JSON.parse(localStorage.getItem('slzb_wv_ausgeblendet') || '[]'));
 
   const wocheTermine = alleTermine.filter(t => {
     if (!t.datum) return false;
@@ -4556,13 +4602,17 @@ async function zeigeWochenvorschau() {
     const parts = t.datum.split('-');
     const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
     d.setHours(0,0,0,0);
-    return d >= montag && d <= sonntag;
+    // Ab heute (nicht ab Montag) bis Sonntag
+    return d >= heute && d <= sonntag;
   }).sort((a,b) => (a.datum||'').localeCompare(b.datum||''));
 
   const prioFarbe = (p) => p===1?'#E2001A':p===2?'#E07000':p===3?'#0B63CE':'#666';
   const prioLabel = (p) => p===1?'🏆 Meisterschaft':p===2?'⚡ Wettkampf':p===3?'📋 Lehrgang':'📅 Regulär';
 
   const wocheLabel = `${montag.getDate()}. ${monatNamen[montag.getMonth()]} – ${sonntag.getDate()}. ${monatNamen[sonntag.getMonth()]} ${sonntag.getFullYear()}`;
+  const wocheLabelHeute = heute > montag
+    ? `${heute.getDate()}. ${monatNamen[heute.getMonth()]} – ${sonntag.getDate()}. ${monatNamen[sonntag.getMonth()]} ${sonntag.getFullYear()}`
+    : wocheLabel;
 
   // Gruppiere nach Tag
   const nachTag = {};
@@ -4580,7 +4630,7 @@ async function zeigeWochenvorschau() {
 
   modal.innerHTML = `
     <div class="modal-header">
-      <h3>📅 Wochenvorschau – ${esc(wocheLabel)}</h3>
+      <h3>📅 Wochenvorschau – ${esc(wocheLabelHeute)}</h3>
       <button class="btn btn-ghost btn-sm close-x">✕</button>
     </div>
     <div class="modal-body">
@@ -4589,7 +4639,9 @@ async function zeigeWochenvorschau() {
             <span>Diese Woche stehen keine Veranstaltungen an.</span></div>`
         : `<div class="alert alert-info mb-3">
             <span class="alert-icon">📅</span>
-            <span><strong>${wocheTermine.length} Veranstaltung(en)</strong> diese Woche</span>
+            <span><strong>${wocheTermine.length} Veranstaltung(en)</strong> diese Woche
+              ${ausgeblendetIds.size > 0 ? `<span style="color:#888;font-size:.8rem"> · ${ausgeblendetIds.size} ausgeblendet</span>` : ''}
+            </span>
           </div>
           ${Object.entries(nachTag).map(([key, {datum, termine}]) => `
             <div class="card mb-3">
@@ -4618,6 +4670,7 @@ async function zeigeWochenvorschau() {
     </div>
     <div class="modal-footer" style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-ghost close-btn">Schließen</button>
+      ${ausgeblendetIds.size > 0 ? `<button class="btn btn-ghost btn-sm" onclick="wvAusgeblendetZuruecksetzen()" style="color:#888;font-size:.8rem">↺ Alle einblenden</button>` : ''}
       <button class="btn btn-outline" onclick="wochenvorschauPoster()">🖼️ Poster (1:1)</button>
       <button class="btn btn-outline" onclick="wochenvorschauStories()">📱 Instagram Stories</button>
       <button class="btn btn-primary" onclick="navigateTo('kalender');document.querySelector('.modal-overlay')?.remove()">📅 Zum Kalender</button>
@@ -4647,19 +4700,27 @@ async function wochenvorschauPoster() {
   const diffMo2 = tag2 === 0 ? -6 : 1 - tag2;
   const montag2 = new Date(jetzt2); montag2.setDate(jetzt2.getDate() + diffMo2);
   const sonntag2 = new Date(montag2); sonntag2.setDate(montag2.getDate() + 6);
+  const heute2 = new Date(jetzt2); heute2.setHours(0,0,0,0);
   const eigeneWoche = _eigene.filter(t => {
     if (!t.datum) return false;
     const parts = t.datum.split('-');
     const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
     d.setHours(0,0,0,0);
-    return d >= montag2 && d <= sonntag2;
+    // Ab heute (nicht ab Montag)
+    return d >= heute2 && d <= sonntag2;
   });
   // Zusammenführen und Duplikate vermeiden
   const vorhandeneIds = new Set(_statisch.map(t => t._id).filter(Boolean));
   const neueEigene = eigeneWoche.filter(t => !vorhandeneIds.has(t._id));
-  const termine = [..._statisch, ...neueEigene].sort((a,b) => (a.datum||'').localeCompare(b.datum||''));
+  const alleTermineWoche = [..._statisch, ...neueEigene].sort((a,b) => (a.datum||'').localeCompare(b.datum||''));
+  // Ausgeblendete Termine herausfiltern
+  const ausgeblendetPoster = new Set(JSON.parse(localStorage.getItem('slzb_wv_ausgeblendet') || '[]'));
+  const termine = alleTermineWoche.filter(t => {
+    const termId = (t._id || t.veranstaltung + t.datum).replace(/[^a-z0-9]/gi, '_');
+    return !ausgeblendetPoster.has(termId);
+  });
   const wocheLabel = _wocheLabel;
-  if (!termine.length) { toast('Keine Termine diese Woche','warning'); return; }
+  if (!termine.length) { toast('Keine sichtbaren Termine diese Woche','warning'); return; }
 
   // Canvas erstellen
   const canvas = document.createElement('canvas');
@@ -4671,9 +4732,12 @@ async function wochenvorschauPoster() {
   const monatNamen = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
   const tagNamen = ['So','Mo','Di','Mi','Do','Fr','Sa'];
 
-  // Hintergrund
+  // Hintergrund mit rotem Fade unten
   const grad = ctx.createLinearGradient(0,0,0,H);
-  grad.addColorStop(0,'#0a0c1a'); grad.addColorStop(1,'#1B1C1F');
+  grad.addColorStop(0,'#0a0c1a');
+  grad.addColorStop(0.55,'#1B1C1F');
+  grad.addColorStop(0.78,'rgba(80,0,10,0.85)');
+  grad.addColorStop(1,'rgba(140,0,20,0.97)');
   ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
 
   // Deko
