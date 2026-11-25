@@ -3764,12 +3764,20 @@ async function zeichneFotoKarussellDeckblatt(ctx, W, H, opts) {
   if (opts.bild) {
     ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H); ctx.clip();
     drawCover(ctx, opts.bild, 0, 0, W, H); ctx.restore();
-    // Abdunkelung
+    // Akzentfarbiger Fade (wie bei Erfolgsmeldungen)
+    const akzentFarbenD = {
+      rot:   { r:226, g:0,   b:26  },
+      blau:  { r:11,  g:99,  b:206 },
+      gruen: { r:0,   g:160, b:64  },
+      grau:  { r:138, g:155, b:176 },
+      gold:  { r:201, g:162, b:39  },
+    };
+    const afD = akzentFarbenD[akzent] || akzentFarbenD.grau;
     const grad = ctx.createLinearGradient(0,0,0,H);
     grad.addColorStop(0,'rgba(0,0,0,0.25)');
-    grad.addColorStop(0.45,'rgba(0,0,0,0.20)');
-    grad.addColorStop(0.72,'rgba(0,0,0,0.55)');
-    grad.addColorStop(1,'rgba(0,0,0,0.88)');
+    grad.addColorStop(0.40,'rgba(0,0,0,0.15)');
+    grad.addColorStop(0.65,`rgba(${afD.r},${afD.g},${afD.b},0.45)`);
+    grad.addColorStop(1,  `rgba(${Math.round(afD.r*0.4)},${Math.round(afD.g*0.4)},${Math.round(afD.b*0.4)},0.92)`);
     ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
   } else {
     // Fallback: Gradient im Akzent-Stil
@@ -3796,25 +3804,34 @@ async function zeichneFotoKarussellFolie(ctx, W, H, opts) {
   const akzent = opts.akzent || 'grau';
   await ladeMontserrat(); await ladeLogo();
 
+  // Akzentfarben-Mapping für Fade
+  const akzentFarben = {
+    rot:   { r:226, g:0,   b:26  },
+    blau:  { r:11,  g:99,  b:206 },
+    gruen: { r:0,   g:160, b:64  },
+    grau:  { r:138, g:155, b:176 },
+    gold:  { r:201, g:162, b:39  },
+  };
+  const af = akzentFarben[akzent] || akzentFarben.grau;
+
   if (opts.bild) {
     // Foto vollflächig
     ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H); ctx.clip();
-    window._bildOffset = window._bildOffset || { x:0.5, y:0.5 };
-    window._bildZoom   = window._bildZoom   || 1.0;
     drawCover(ctx, opts.bild, 0, 0, W, H); ctx.restore();
 
-    // Leichter Gradient oben (für Header-Lesbarkeit)
-    const gradTop = ctx.createLinearGradient(0,0,0,H*0.22);
-    gradTop.addColorStop(0,'rgba(0,0,0,0.65)');
+    // Gradient oben (für Header-Lesbarkeit)
+    const gradTop = ctx.createLinearGradient(0,0,0,H*0.25);
+    gradTop.addColorStop(0,'rgba(0,0,0,0.70)');
     gradTop.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=gradTop; ctx.fillRect(0,0,W,H*0.22);
+    ctx.fillStyle=gradTop; ctx.fillRect(0,0,W,H*0.25);
 
-    // Gradient unten (für Footer + Caption)
-    const gradBot = ctx.createLinearGradient(0,H*0.72,0,H);
+    // Akzentfarbiger Fade unten (wie bei Erfolgsmeldungen)
+    const gradBot = ctx.createLinearGradient(0,H*0.65,0,H);
     gradBot.addColorStop(0,'rgba(0,0,0,0)');
-    gradBot.addColorStop(0.5,'rgba(0,0,0,0.55)');
-    gradBot.addColorStop(1,'rgba(0,0,0,0.88)');
-    ctx.fillStyle=gradBot; ctx.fillRect(0,H*0.72,W,H*0.28);
+    gradBot.addColorStop(0.35,`rgba(${af.r},${af.g},${af.b},0.35)`);
+    gradBot.addColorStop(0.70,`rgba(${af.r},${af.g},${af.b},0.72)`);
+    gradBot.addColorStop(1,  `rgba(${Math.round(af.r*0.5)},${Math.round(af.g*0.5)},${Math.round(af.b*0.5)},0.93)`);
+    ctx.fillStyle=gradBot; ctx.fillRect(0,H*0.65,W,H*0.35);
   } else {
     zeichneSlzbHintergrund(ctx, W, H, null, akzent);
   }

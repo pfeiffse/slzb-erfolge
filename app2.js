@@ -3240,18 +3240,17 @@ function fkFotosVorschau(input) {
 }
 
 async function erstelleFotoKarussell() {
-  const titel     = document.getElementById('fk-titel')?.value.trim();
-  const untertitel= document.getElementById('fk-untertitel')?.value.trim() || '';
-  const datum     = document.getElementById('fk-datum')?.value || '';
-  const akzent    = document.getElementById('fk-akzent')?.value || 'grau';
-  const caption   = document.getElementById('fk-caption')?.value.trim() || '';
+  const titel      = document.getElementById('fk-titel')?.value.trim();
+  const untertitel = document.getElementById('fk-untertitel')?.value.trim() || '';
+  const datum      = document.getElementById('fk-datum')?.value || '';
+  const akzent     = document.getElementById('fk-akzent')?.value || 'grau';
+  const caption    = document.getElementById('fk-caption')?.value.trim() || '';
 
   if (!titel) { toast('Bitte Titel eingeben', 'warning'); return; }
 
-  const fotos = window._fkFotoDataUrls?.filter(Boolean) || [];
-  if (!fotos.length) { toast('Bitte mindestens ein Foto hochladen', 'warning'); return; }
+  const fotoUrls = window._fkFotoDataUrls?.filter(Boolean) || [];
+  if (!fotoUrls.length) { toast('Bitte mindestens ein Foto hochladen', 'warning'); return; }
 
-  toast('⏳ Karussell wird erstellt...', 'info');
   document.querySelector('.modal-overlay')?.remove();
 
   // Deckbild laden
@@ -3264,7 +3263,7 @@ async function erstelleFotoKarussell() {
   }
 
   // Fotos laden
-  const fotoImgs = await Promise.all(fotos.map(url => new Promise(res => {
+  const fotoImgs = await Promise.all(fotoUrls.map(url => new Promise(res => {
     const img = new Image(); img.onload = () => res(img); img.onerror = () => res(null);
     img.src = url;
   })));
@@ -3274,37 +3273,228 @@ async function erstelleFotoKarussell() {
     day: '2-digit', month: 'long', year: 'numeric'
   }) : '';
 
+  // Optionen speichern
+  window._fkOpts = { titel, untertitel, datum: datumText, akzent, caption };
+  window._fkDeckbild = deckbild;
+  window._fkFotoImgs = fotoImgs;
+  window._fkBildSettings = fotoImgs.map(() => ({ x: 0.5, y: 0.5, zoom: 1.0 }));
+  // Deckbild-Settings separat
+  window._fkDeckbildSettings = { x: 0.5, y: 0.5, zoom: 1.0 };
+
+  // Vorschau-Modal öffnen (0 = Deckblatt, 1..n = Fotos)
+  await zeigeFotoKarussellVorschau();
+}
+
+async function zeigeFotoKarussellVorschau() {
+  const opts    = window._fkOpts;
+  const fotos   = window._fkFotoImgs;
+  const gesamt  = fotos.length + 1;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal modal-xl';
+  modal.style.maxWidth = '900px';
+
+  // Tab-Labels: Deckblatt + Foto 1..n
+  const tabs = ['Deckblatt', ...fotos.map((_,i) => `Foto ${i+1}`)];
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>📸 Vorschau & Bildausschnitt</h3>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove();zeigeFotoKarussellModal()">✕</button>
+    </div>
+    <div class="modal-body" style="background:#111;padding:16px">
+      <div id="fkv-tabs" class="tabs mb-3" style="flex-wrap:wrap;gap:4px;display:flex">
+        ${tabs.map((t,i) => `<button class="tab-btn ${i===0?'active':''}" onclick="fkvWechsle(${i})">${t}</button>`).join('')}
+      </div>
+      <div style="text-align:center;margin-bottom:12px">
+        <canvas id="fkv-canvas" width="540" height="675"
+          style="max-width:100%;max-height:55vh;display:block;margin:0 auto;border-radius:8px;background:#000"></canvas>
+      </div>
+      <div id="fkv-editor" style="background:rgba(255,255,255,.06);border-radius:8px;padding:12px">
+        <div style="font-size:.78rem;color:#888;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Bildausschnitt</div>
+        <div style="margin-bottom:10px">
+          <label style="font-weight:600;display:flex;justify-content:space-between;margin-bottom:4px;font-size:.82rem">
+            <span>🔍 Zoom</span><span id="fkv-zoom-lbl" style="color:#E2001A">100%</span>
+          </label>
+          <input type="range" id="fkv-zoom" min="100" max="300" step="5" value="100"
+            style="width:100%;accent-color:#E2001A" oninput="fkvAktualisiere()">
+        </div>
+        <div style="margin-bottom:10px">
+          <label style="font-weight:600;display:flex;justify-content:space-between;margin-bottom:4px;font-size:.82rem">
+            <span>↔ Horizontal</span><span id="fkv-ox-lbl" style="color:#888">50%</span>
+          </label>
+          <input type="range" id="fkv-ox" min="0" max="100" value="50"
+            style="width:100%;accent-color:#003366" oninput="fkvAktualisiere()">
+        </div>
+        <div style="margin-bottom:10px">
+          <label style="font-weight:600;display:flex;justify-content:space-between;margin-bottom:4px;font-size:.82rem">
+            <span>↕ Vertikal</span><span id="fkv-oy-lbl" style="color:#888">50%</span>
+          </label>
+          <input type="range" id="fkv-oy" min="0" max="100" value="50"
+            style="width:100%;accent-color:#003366" oninput="fkvAktualisiere()">
+        </div>
+        <div class="flex gap-2" style="flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="fkvPreset(50,20,100)">↑ Gesicht oben</button>
+          <button class="btn btn-ghost btn-sm" onclick="fkvPreset(50,50,100)">⊙ Zentrieren</button>
+          <button class="btn btn-ghost btn-sm" onclick="fkvPreset(50,30,150)">🔍 Zoom Gesicht</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove();zeigeFotoKarussellModal()">← Zurück</button>
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="fkvStarteDownload()">📥 Alle herunterladen</button>
+    </div>`;
+
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+
+  window._fkvAktuellerIdx = 0;
+
+  // Globale Editor-Funktionen
+  window.fkvWechsle = async (idx) => {
+    // Aktuelle Settings speichern
+    fkvSpeichereSettings(window._fkvAktuellerIdx);
+    window._fkvAktuellerIdx = idx;
+    // Tabs aktualisieren
+    document.querySelectorAll('#fkv-tabs .tab-btn').forEach((b,i) => b.classList.toggle('active', i===idx));
+    // Regler auf gespeicherte Werte setzen
+    fkvLadeSettings(idx);
+    await fkvRenderVorschau(idx);
+  };
+
+  window.fkvAktualisiere = async () => {
+    const x    = parseInt(document.getElementById('fkv-ox')?.value||50)/100;
+    const y    = parseInt(document.getElementById('fkv-oy')?.value||50)/100;
+    const zoom = parseInt(document.getElementById('fkv-zoom')?.value||100)/100;
+    document.getElementById('fkv-zoom-lbl').textContent = Math.round(zoom*100)+'%';
+    document.getElementById('fkv-ox-lbl').textContent   = Math.round(x*100)+'%';
+    document.getElementById('fkv-oy-lbl').textContent   = Math.round(y*100)+'%';
+    fkvSpeichereSettings(window._fkvAktuellerIdx);
+    await fkvRenderVorschau(window._fkvAktuellerIdx);
+  };
+
+  window.fkvPreset = async (ox, oy, zoom) => {
+    document.getElementById('fkv-ox').value   = ox;
+    document.getElementById('fkv-oy').value   = oy;
+    document.getElementById('fkv-zoom').value = zoom;
+    await fkvAktualisiere();
+  };
+
+  window.fkvStarteDownload = async () => {
+    fkvSpeichereSettings(window._fkvAktuellerIdx);
+    await fkvDownloadAlle();
+  };
+
+  await fkvRenderVorschau(0);
+}
+
+function fkvSpeichereSettings(idx) {
+  const x    = parseInt(document.getElementById('fkv-ox')?.value||50)/100;
+  const y    = parseInt(document.getElementById('fkv-oy')?.value||50)/100;
+  const zoom = parseInt(document.getElementById('fkv-zoom')?.value||100)/100;
+  if (idx === 0) {
+    window._fkDeckbildSettings = { x, y, zoom };
+  } else {
+    window._fkBildSettings[idx-1] = { x, y, zoom };
+  }
+}
+
+function fkvLadeSettings(idx) {
+  const s = idx === 0
+    ? (window._fkDeckbildSettings || { x:0.5, y:0.5, zoom:1.0 })
+    : (window._fkBildSettings?.[idx-1] || { x:0.5, y:0.5, zoom:1.0 });
+  document.getElementById('fkv-ox').value   = Math.round(s.x*100);
+  document.getElementById('fkv-oy').value   = Math.round(s.y*100);
+  document.getElementById('fkv-zoom').value = Math.round(s.zoom*100);
+  document.getElementById('fkv-zoom-lbl').textContent = Math.round(s.zoom*100)+'%';
+  document.getElementById('fkv-ox-lbl').textContent   = Math.round(s.x*100)+'%';
+  document.getElementById('fkv-oy-lbl').textContent   = Math.round(s.y*100)+'%';
+}
+
+async function fkvRenderVorschau(idx) {
+  const canvas = document.getElementById('fkv-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+
+  const opts   = window._fkOpts;
+  const fotos  = window._fkFotoImgs;
+  const gesamt = fotos.length + 1;
+
+  const s = idx === 0
+    ? (window._fkDeckbildSettings || { x:0.5, y:0.5, zoom:1.0 })
+    : (window._fkBildSettings?.[idx-1] || { x:0.5, y:0.5, zoom:1.0 });
+
+  window._bildOffset = { x: s.x, y: s.y };
+  window._bildZoom   = s.zoom;
+
+  if (idx === 0) {
+    await zeichneFotoKarussellDeckblatt(ctx, W, H, {
+      ...opts, bild: window._fkDeckbild, gesamt
+    });
+  } else {
+    await zeichneFotoKarussellFolie(ctx, W, H, {
+      bild: fotos[idx-1], akzent: opts.akzent, caption: opts.caption,
+      nr: idx+1, gesamt
+    });
+  }
+}
+
+async function fkvDownloadAlle() {
+  const opts   = window._fkOpts;
+  const fotos  = window._fkFotoImgs;
+  const gesamt = fotos.length + 1;
+
   const W = 1080, H = 1350;
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
 
-  const gesamt = fotoImgs.length + 1; // +1 für Deckblatt
-  const dateien = [];
+  toast('⏳ Karussell wird erstellt...', 'info');
 
-  // Deckblatt zeichnen
+  // Deckblatt
+  const ds = window._fkDeckbildSettings || { x:0.5, y:0.5, zoom:1.0 };
+  window._bildOffset = { x: ds.x, y: ds.y };
+  window._bildZoom   = ds.zoom;
   await zeichneFotoKarussellDeckblatt(ctx, W, H, {
-    titel, untertitel, datum: datumText, akzent, bild: deckbild, gesamt
+    ...opts, bild: window._fkDeckbild, gesamt
   });
-  const deckblattUrl = await canvasToDataUrl(canvas);
-  dateien.push({ name: '01_Deckblatt.png', url: deckblattUrl });
+  await fkvDownloadCanvas(canvas, '01_Deckblatt.png');
 
-  // Foto-Folien zeichnen
-  for (let i = 0; i < fotoImgs.length; i++) {
-    ctx.clearRect(0, 0, W, H);
+  // Foto-Folien
+  for (let i = 0; i < fotos.length; i++) {
+    ctx.clearRect(0,0,W,H);
+    const s = window._fkBildSettings?.[i] || { x:0.5, y:0.5, zoom:1.0 };
+    window._bildOffset = { x: s.x, y: s.y };
+    window._bildZoom   = s.zoom;
     await zeichneFotoKarussellFolie(ctx, W, H, {
-      bild: fotoImgs[i], akzent, caption,
-      nr: i + 2, gesamt
+      bild: fotos[i], akzent: opts.akzent, caption: opts.caption,
+      nr: i+2, gesamt
     });
-    const url = await canvasToDataUrl(canvas);
-    const nr = String(i + 2).padStart(2, '0');
-    dateien.push({ name: `${nr}_Foto_${i+1}.png`, url });
-    await new Promise(r => setTimeout(r, 100));
+    const nr = String(i+2).padStart(2,'0');
+    await fkvDownloadCanvas(canvas, `${nr}_Foto_${i+1}.png`);
+    await new Promise(r => setTimeout(r, 200));
   }
 
-  // Als ZIP herunterladen
-  await downloadAlsZip(dateien, `SLZB_Karussell_${titel.replace(/\s+/g,'_').slice(0,30)}`);
-  toast(`✅ ${dateien.length} Folien heruntergeladen!`, 'success');
+  window._bildOffset = { x:0.5, y:0.5 }; window._bildZoom = 1.0;
+  toast(`✅ ${gesamt} Folien heruntergeladen!`, 'success');
+}
+
+async function fkvDownloadCanvas(canvas, dateiname) {
+  return new Promise(resolve => {
+    canvas.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = dateiname;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(url); a.remove(); resolve(); }, 300);
+    }, 'image/png');
+  });
 }
 
 async function canvasToDataUrl(canvas) {
@@ -3316,15 +3506,11 @@ async function canvasToDataUrl(canvas) {
 }
 
 async function downloadAlsZip(dateien, zipName) {
-  // Einzeln herunterladen wenn kein JSZip verfügbar
   for (const datei of dateien) {
     await new Promise(res => setTimeout(res, 300));
     const a = document.createElement('a');
-    a.href = datei.url;
-    a.download = datei.name;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    a.href = datei.url; a.download = datei.name;
+    document.body.appendChild(a); a.click(); a.remove();
   }
 }
 
