@@ -17,6 +17,144 @@ function teilnehmerRollenOptionen(aktuell='Athlet') {
 }
 
 // ── Erfolg-Detail ────────────────────────────────────────────
+async 
+// ── Status-Fortschrittsbalken ─────────────────────────────────
+function renderStatusFortschritt(status) {
+  const schritte = [
+    { key: 'Entwurf',       label: 'Entwurf',    icon: '📝' },
+    { key: 'Eingereicht',   label: 'Eingereicht', icon: '📤' },
+    { key: 'Redaktion',     label: 'Prüfung',     icon: '✏️' },
+    { key: 'Freigegeben',   label: 'Freigegeben', icon: '✅' },
+    { key: 'Veröffentlicht',label: 'Veröffentlicht', icon: '🌐' },
+  ];
+
+  // Sonderstatus
+  const sonderStatus = {
+    'Rückfrage an Melder':    { step: 1, farbe: '#E07000', label: '💬 Rückfrage' },
+    'Unvollständig':          { step: 1, farbe: '#E07000', label: '⚠️ Unvollständig' },
+    'Dublettenverdacht':      { step: 2, farbe: '#E07000', label: '🔄 Dublette?' },
+    'Einwilligungsprüfung':   { step: 2, farbe: '#0B63CE', label: '🔒 Einwilligung' },
+    'Wegen Einwilligung gesperrt': { step: 2, farbe: '#E2001A', label: '🔒 Gesperrt' },
+    'Archiviert':             { step: 4, farbe: '#888', label: '🗄️ Archiviert' },
+  };
+
+  const sonder = sonderStatus[status];
+  const aktuellerSchritt = sonder ? sonder.step :
+    schritte.findIndex(s => s.key === status);
+  const farbe = sonder ? sonder.farbe : '#4caf50';
+
+  return `<div style="margin:12px 0 16px">
+    <div style="display:flex;align-items:center;gap:0;position:relative">
+      <!-- Verbindungslinie -->
+      <div style="position:absolute;top:14px;left:14px;right:14px;height:2px;background:var(--slzb-border);z-index:0"></div>
+      <div style="position:absolute;top:14px;left:14px;height:2px;z-index:1;background:${farbe};
+        width:${Math.max(0, Math.min(100, (aktuellerSchritt / (schritte.length-1)) * 100))}%;
+        transition:width .5s ease"></div>
+      ${schritte.map((s, i) => {
+        const aktiv = i <= aktuellerSchritt && !sonder;
+        const istAktuell = i === aktuellerSchritt && !sonder;
+        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;z-index:2">
+          <div style="width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+            font-size:.75rem;border:2px solid ${aktiv?farbe:'var(--slzb-border)'};
+            background:${istAktuell?farbe:aktiv?'rgba(76,175,80,0.15)':'var(--slzb-bg-secondary)'};
+            ${istAktuell?'box-shadow:0 0 0 3px rgba(76,175,80,0.25)':''}">
+            ${aktiv ? s.icon : '<span style="color:#888">○</span>'}
+          </div>
+          <span style="font-size:.65rem;color:${aktiv?'var(--slzb-text)':'#888'};text-align:center;white-space:nowrap">
+            ${s.label}
+          </span>
+        </div>`;
+      }).join('')}
+    </div>
+    ${sonder ? `<div style="text-align:center;margin-top:8px">
+      <span style="background:${sonder.farbe};color:#fff;padding:3px 12px;border-radius:12px;font-size:.78rem;font-weight:700">
+        ${sonder.label}
+      </span>
+    </div>` : ''}
+  </div>`;
+}
+
+// ── Inline-Hilfe ──────────────────────────────────────────────
+function hilfeTooltip(text) {
+  return `<span class="hilfe-tooltip" title="${esc(text)}" style="
+    display:inline-flex;align-items:center;justify-content:center;
+    width:16px;height:16px;border-radius:50%;background:rgba(11,99,206,0.15);
+    color:#0B63CE;font-size:.7rem;font-weight:700;cursor:help;margin-left:4px;
+    border:1px solid rgba(11,99,206,0.3)">?</span>`;
+}
+
+// ── Onboarding-Tour ───────────────────────────────────────────
+function zeigeOnboardingTour(rolle) {
+  // Prüfe ob Tour schon gesehen
+  if (localStorage.getItem(`slzb_tour_${rolle}`)) return;
+
+  const touren = {
+    trainer: [
+      { titel: '👋 Willkommen bei SLZB-Erfolge!', text: 'Diese App hilft dir, sportliche Erfolge deiner Schülerinnen und Schüler zu melden und zu veröffentlichen.', seite: null },
+      { titel: '➕ Neue Meldung erstellen', text: 'Klicke auf "Neue Meldung" um einen Erfolg einzureichen. Wähle die passende Meldungsart: Einzelerfolg, Teamerfolg oder Sammelmeldung.', seite: 'neue-meldung' },
+      { titel: '📋 Meine Meldungen', text: 'Hier siehst du alle deine eingereichten Meldungen und ihren aktuellen Status. Du wirst benachrichtigt wenn Rückfragen kommen.', seite: 'meine-meldungen' },
+      { titel: '📅 Veranstaltungskalender', text: 'Im Kalender findest du alle anstehenden Wettkämpfe und Veranstaltungen. Du kannst direkt Countdown-Poster erstellen.', seite: 'kalender' },
+      { titel: '✅ Fertig!', text: 'Du bist bereit! Starte mit deiner ersten Meldung. Bei Fragen wende dich an die Redaktion.', seite: null },
+    ],
+    redaktion: [
+      { titel: '👋 Willkommen in der Redaktion!', text: 'Als Redakteur prüfst und gibst du Meldungen frei, erstellst Poster und verwaltest die Veröffentlichungen.', seite: null },
+      { titel: '✏️ Redaktionsübersicht', text: 'Hier siehst du alle eingereichten Meldungen. Klicke auf eine Meldung um sie zu prüfen, zu bearbeiten und freizugeben.', seite: 'redaktion' },
+      { titel: '✅ Freigaben & Ausgaben', text: 'Freigegebene Meldungen können hier als Poster, Bildschirm- oder Social-Media-Ausgabe exportiert werden.', seite: 'ausgaben' },
+      { titel: '🎯 Event-Poster', text: 'Erstelle Athleten-Vorstellungen, Countdown-Poster und Foto-Karussells für Instagram und Digital Signage.', seite: 'ausgaben-events' },
+      { titel: '✅ Fertig!', text: 'Du bist bereit! Starte mit der Redaktionsübersicht.', seite: null },
+    ],
+  };
+
+  const tour = touren[rolle] || touren.trainer;
+  let schritt = 0;
+
+  function zeigeSchritt(i) {
+    document.querySelector('.onboarding-overlay')?.remove();
+    if (i >= tour.length) {
+      localStorage.setItem(`slzb_tour_${rolle}`, '1');
+      return;
+    }
+
+    const s = tour[i];
+    const overlay = document.createElement('div');
+    overlay.className = 'onboarding-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+
+    overlay.innerHTML = `
+      <div style="background:var(--slzb-bg);border-radius:16px;padding:28px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.5);text-align:center">
+        <div style="font-size:2.5rem;margin-bottom:12px">${s.titel.split(' ')[0]}</div>
+        <h3 style="margin-bottom:12px;font-size:1.1rem">${esc(s.titel.slice(s.titel.indexOf(' ')+1))}</h3>
+        <p style="color:var(--slzb-text-muted);font-size:.9rem;line-height:1.6;margin-bottom:20px">${esc(s.text)}</p>
+        <div style="display:flex;justify-content:center;gap:6px;margin-bottom:20px">
+          ${tour.map((_,j) => `<div style="width:8px;height:8px;border-radius:50%;background:${j===i?'#003366':'var(--slzb-border)'}"></div>`).join('')}
+        </div>
+        <div style="display:flex;gap:10px;justify-content:center">
+          <button class="btn btn-ghost btn-sm" onclick="document.querySelector('.onboarding-overlay').remove();localStorage.setItem('slzb_tour_${rolle}','1')">
+            Überspringen
+          </button>
+          ${i > 0 ? `<button class="btn btn-ghost btn-sm" onclick="zeigeOnboardingSchritt(${i-1})">← Zurück</button>` : ''}
+          <button class="btn btn-primary" onclick="zeigeOnboardingSchritt(${i+1})">
+            ${i < tour.length-1 ? 'Weiter →' : '✅ Loslegen!'}
+          </button>
+        </div>
+      </div>`;
+
+    document.body.appendChild(overlay);
+    if (s.seite) setTimeout(() => navigateTo(s.seite), 300);
+  }
+
+  window.zeigeOnboardingSchritt = zeigeSchritt;
+  setTimeout(() => zeigeSchritt(0), 800);
+}
+
+// Tour zurücksetzen (für Hilfe-Menü)
+function tourZuruecksetzen() {
+  ['trainer','redaktion','oea','admin','mitarbeiter','schueler'].forEach(r => {
+    localStorage.removeItem(`slzb_tour_${r}`);
+  });
+  toast('Tour zurückgesetzt – beim nächsten Login startet sie neu', 'info');
+}
+
 async function renderErfolgDetail() {
   const e=await DB.getErfolgById(APP.currentErfolgId);
   if (!e) return `<div class="page"><div class="alert alert-danger"><span class="alert-icon">❌</span><span>Meldung nicht gefunden.</span></div></div>`;
@@ -26,6 +164,10 @@ async function renderErfolgDetail() {
   const aktionen=getStatusAktionen(e.status,r);
 
   return `<div class="page">
+    <!-- Status-Fortschrittsbalken -->
+    <div class="card mb-3" style="padding:12px 16px">
+      ${renderStatusFortschritt(e.status)}
+    </div>
     <div class="page-header flex items-center gap-3">
       <button class="btn btn-ghost btn-sm" onclick="navigateTo('${Auth.canDo('bearbeiten')?'redaktion':'meine-meldungen'}')">← Zurück</button>
       <div style="flex:1">
@@ -205,7 +347,7 @@ async function renderErfolgDetail() {
               <input type="date" id="edit-datum" value="${e.datum||''}" style="width:100%"></div>
             <div class="form-group"><label>Ort</label>
               <input type="text" id="edit-ort" value="${esc(e.ort||'')}" style="width:100%"></div>
-            <div class="form-group"><label>Ebene</label>
+            <div class="form-group"><label>Ebene ${hilfeTooltip('Auf welcher Ebene fand der Wettkampf statt? Z.B. Bundesebene = Deutsche Meisterschaft, International = EM/WM')}</label>
               <select id="edit-ebene" style="width:100%">
                 ${['','Schulebene','Bezirk','Landesebene','Bundesebene','International','Weltmeisterschaft','Olympia','Sonstiges']
                   .map(eb=>`<option value="${eb}" ${e.ebene===eb?'selected':''}>${eb||'– keine –'}</option>`).join('')}
@@ -1803,7 +1945,7 @@ function zeigeBildUploadModal(erfolgId) {
       <div class="form-group"><label>Datei <span class="required">*</span></label>
         <input type="file" id="upload-datei" accept="image/jpeg,image/png,image/webp"></div>
       <div class="form-group">
-        <label>Fotograf / Urheber <span class="required">*</span></label>
+        <label>Fotograf / Urheber <span class="required">*</span>${hilfeTooltip('Wer hat das Foto gemacht? Z.B. "Max Mustermann" oder "SLZB Berlin". Pflichtfeld für Datenschutz.')}</label>
         <input type="text" id="upload-urheber" placeholder="z.B. Max Mustermann oder SLZB-Archiv">
         <div class="form-hint">Name des Fotografen – wird auf dem Poster angezeigt</div>
       </div>

@@ -216,6 +216,12 @@ function renderSidebar() {
       </div>
     </div>
     <nav class="sidebar-nav">${navHtml}</nav>
+    <div style="padding:10px 16px;border-top:1px solid rgba(255,255,255,.08)">
+      <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:flex-start;gap:8px;color:rgba(255,255,255,.5);font-size:.78rem"
+        onclick="typeof zeigeOnboardingTour==='function'&&(localStorage.removeItem('slzb_tour_'+Auth.rolle()),zeigeOnboardingTour(Auth.rolle()))">
+        ❓ Einführungstour starten
+      </button>
+    </div>
     <div style="padding:14px 20px;border-top:1px solid rgba(255,255,255,.1);font-size:.7rem;opacity:.4;text-align:center">SLZB-Erfolge v3.0</div>`;
   updateBadges();
 }
@@ -228,6 +234,10 @@ function initApp() {
   renderBottomNav();
   renderFAB();
   navigateTo('dashboard');
+  // Onboarding-Tour beim ersten Login
+  if (typeof zeigeOnboardingTour === 'function') {
+    setTimeout(() => zeigeOnboardingTour(Auth.rolle()), 1000);
+  }
 }
 
 // ── Bottom Navigation Bar (Mobile) ───────────────────────────
@@ -1797,39 +1807,81 @@ async function renderRueckfragen() {
 async function renderRedaktion() {
   const alle = await ladeErfolge();
   const gruppen=[
-    {label:'Neu eingegangen',status:['Eingereicht'],icon:'📥'},
-    {label:'Unvollständig',status:['Unvollständig'],icon:'⚠️'},
-    {label:'Dublettenverdacht',status:['Dublettenverdacht'],icon:'🔁'},
-    {label:'Einwilligungsprüfung',status:['Einwilligungsprüfung'],icon:'🔒'},
-    {label:'In Redaktion',status:['Redaktion','Datenprüfung'],icon:'✏️'},
-    {label:'Freigabe ÖA',status:['Freigabe Öffentlichkeitsarbeit'],icon:'📢'},
+    {label:'Neu eingegangen',status:['Eingereicht'],icon:'📥',farbe:'#0B63CE'},
+    {label:'Unvollständig',status:['Unvollständig'],icon:'⚠️',farbe:'#E07000'},
+    {label:'Dublettenverdacht',status:['Dublettenverdacht'],icon:'🔄',farbe:'#E07000'},
+    {label:'Einwilligungsprüfung',status:['Einwilligungsprüfung'],icon:'🔒',farbe:'#8A9BB0'},
+    {label:'In Redaktion',status:['Redaktion','Datenprüfung'],icon:'✏️',farbe:'#003366'},
+    {label:'Freigabe ÖA',status:['Freigabe Öffentlichkeitsarbeit'],icon:'📢',farbe:'#C9A227'},
   ];
+  const gesamt = gruppen.reduce((s,g) => s + alle.filter(e=>g.status.includes(e.status)).length, 0);
+
   return `<div class="page">
-    <div class="page-header"><h1>✏️ Redaktionsübersicht</h1></div>
+    <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div>
+        <h1>✏️ Redaktionsübersicht</h1>
+        <p class="text-muted">${gesamt} Meldung(en) in Bearbeitung</p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="ladeErfolge(true).then(()=>navigateTo('redaktion'))">↻ Aktualisieren</button>
+      </div>
+    </div>
+
+    <!-- Kanban-Übersicht -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:24px">
+      ${gruppen.map(g => {
+        const items = alle.filter(e => g.status.includes(e.status));
+        return `<div style="border:1px solid var(--slzb-border);border-radius:10px;overflow:hidden;
+          border-top:3px solid ${g.farbe}">
+          <div style="padding:10px 14px;background:var(--slzb-bg-secondary);display:flex;justify-content:space-between;align-items:center">
+            <span style="font-weight:700;font-size:.88rem">${g.icon} ${esc(g.label)}</span>
+            <span style="background:${g.farbe};color:#fff;border-radius:12px;padding:2px 10px;font-size:.75rem;font-weight:700">${items.length}</span>
+          </div>
+          ${items.length === 0
+            ? `<div style="padding:12px 14px;color:#888;font-size:.82rem;font-style:italic">Keine Meldungen</div>`
+            : items.slice(0,3).map(e => `
+              <div style="padding:10px 14px;border-top:1px solid var(--slzb-border);cursor:pointer;transition:background .15s"
+                onmouseover="this.style.background='var(--slzb-bg-secondary)'"
+                onmouseout="this.style.background=''"
+                onclick="navigateTo('erfolg-detail',{currentErfolgId:'${e.id}'})">
+                <div style="font-weight:600;font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.titel||'–')}</div>
+                <div style="font-size:.75rem;color:#888;margin-top:2px">${esc(e.sportart||'–')} · ${fmt(e.datum)}</div>
+                <div style="font-size:.72rem;color:#888">${esc(e.athletenName||'–')}</div>
+              </div>`).join('')}
+          ${items.length > 3 ? `<div style="padding:8px 14px;border-top:1px solid var(--slzb-border);font-size:.78rem;color:#888;text-align:center">
+            +${items.length-3} weitere
+          </div>` : ''}
+        </div>`;
+      }).join('')}
+    </div>
+
+    <!-- Detailliste -->
     ${gruppen.map(g=>{
       const items=alle.filter(e=>g.status.includes(e.status));
       if(!items.length) return '';
       return`<div class="card mb-3">
-        <div class="card-header"><h2>${g.icon} ${esc(g.label)}</h2><span class="badge badge-info">${items.length}</span></div>
+        <div class="card-header">
+          <h2>${g.icon} ${esc(g.label)}</h2>
+          <span class="badge badge-info">${items.length}</span>
+        </div>
         <div class="table-wrap"><table>
-          <thead><tr><th>Nr.</th><th>Titel</th><th>Sportart</th><th>Datum</th><th>Status</th><th>Melder</th><th></th></tr></thead>
-          <tbody>${items.map(e=>{const sp=SLZB_DB.getSportart(e.sportartId);
-            return`<tr class="clickable" onclick="navigateTo('erfolg-detail',{currentErfolgId:'${e.id}'})">
-              <td class="text-xs text-muted">${esc(e.erfolgNr||'–')}</td>
-              <td><strong>${esc(e.titel)}</strong>${e.dublettenhinweis?'<br><span class="badge badge-danger text-xs">Dublette</span>':''}</td>
-              <td class="text-sm">${esc(sp?.name||'–')}</td>
-              <td class="text-sm">${fmt(e.datum)}</td>
-              <td>${statusBadge(e.status)}</td>
-              <td class="text-sm">${esc(e.melderName)}</td>
-              <td><button class="btn btn-primary btn-sm" onclick="event.stopPropagation();navigateTo('erfolg-detail',{currentErfolgId:'${e.id}'})">Bearbeiten →</button></td>
-            </tr>`;}).join('')}
+          <thead><tr><th>Nr.</th><th>Titel</th><th>Sportart</th><th>Datum</th><th>Athlet</th><th>Aktionen</th></tr></thead>
+          <tbody>${items.map(e=>`<tr style="cursor:pointer" onclick="navigateTo('erfolg-detail',{currentErfolgId:'${e.id}'})">
+            <td class="text-sm text-muted">${esc(e.erfolgNr||'–')}</td>
+            <td><strong>${esc(e.titel||'–')}</strong></td>
+            <td class="text-sm">${esc(e.sportart||'–')}</td>
+            <td class="text-sm">${fmt(e.datum)}</td>
+            <td class="text-sm">${esc(e.athletenName||'–')}</td>
+            <td onclick="event.stopPropagation()">
+              <button class="btn btn-primary btn-sm" onclick="navigateTo('erfolg-detail',{currentErfolgId:'${e.id}'})">Prüfen →</button>
+            </td>
+          </tr>`).join('')}
           </tbody>
         </table></div>
-      </div>`;}).join('')}
+      </div>`;
+    }).join('')}
   </div>`;
 }
-
-// ── Archiv ───────────────────────────────────────────────────
 async function renderArchiv() {
   const alle = await ladeErfolge();
   return `<div class="page">
