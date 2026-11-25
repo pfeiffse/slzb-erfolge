@@ -1353,6 +1353,208 @@ function widerrufEinwilligung(schuelerId,name) {
 }
 
 // ── Ausgaben ─────────────────────────────────────────────────
+async 
+// ── Ausgaben: Meldungen-Poster ────────────────────────────────
+async function renderAusgabenMeldungen() {
+  const alle = await ladeErfolge();
+  const freigegebene = alle.filter(e => ['Freigegeben','Veröffentlicht'].includes(e.status));
+  return `<div class="page">
+    <div class="page-header">
+      <h1>🖼️ Poster aus Meldungen</h1>
+      <p class="text-muted">Erstelle Poster, Bildschirm- und Social-Media-Ausgaben aus freigegebenen Meldungen.</p>
+    </div>
+    ${freigegebene.length === 0
+      ? `<div class="alert alert-warning"><span class="alert-icon">⚠️</span>
+          <span>Keine freigegebenen Meldungen vorhanden. Bitte zuerst Meldungen freigeben.</span></div>`
+      : `<div class="card">
+          <div class="card-header">
+            <h2>✅ Freigegebene Meldungen (${freigegebene.length})</h2>
+            <input type="text" placeholder="Suchen..." id="ausgaben-suche"
+              oninput="ausgabenFilter(this.value)"
+              style="max-width:200px;font-size:.85rem">
+          </div>
+          <div id="ausgaben-liste" class="table-wrap"><table>
+            <thead><tr>
+              <th>Titel</th><th>Sportart</th><th>Datum</th><th>Athlet</th><th>Ausgaben</th>
+            </tr></thead>
+            <tbody>${freigegebene.map(e => `<tr>
+              <td><strong>${esc(e.titel||'–')}</strong></td>
+              <td class="text-sm">${esc(e.sportart||'–')}</td>
+              <td class="text-sm">${fmt(e.datum)}</td>
+              <td class="text-sm">${esc(e.athletenName||'–')}</td>
+              <td>
+                <div style="display:flex;gap:4px;flex-wrap:wrap">
+                  <button class="btn btn-outline btn-sm" onclick="zeigeA3Vorschau('${e.id}')" title="A3-Aushang">🖨️ A3</button>
+                  <button class="btn btn-outline btn-sm" onclick="zeigeBildschirmModal('${e.id}')" title="Bildschirm">🖥️</button>
+                  <button class="btn btn-outline btn-sm" onclick="zeigeSocialModal('${e.id}')" title="Social Media">📱</button>
+                </div>
+              </td>
+            </tr>`).join('')}
+            </tbody>
+          </table></div>
+        </div>`}
+  </div>`;
+}
+
+function ausgabenFilter(suchbegriff) {
+  const rows = document.querySelectorAll('#ausgaben-liste tbody tr');
+  const s = suchbegriff.toLowerCase();
+  rows.forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(s) ? '' : 'none';
+  });
+}
+
+// ── Ausgaben: Event-Poster ────────────────────────────────────
+function renderAusgabenEvents() {
+  return `<div class="page">
+    <div class="page-header">
+      <h1>🎯 Event-Poster</h1>
+      <p class="text-muted">Athleten-Vorstellungen, Countdowns, Jubiläen und Schulnachrichten.</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+
+      <div class="card" style="cursor:pointer" onclick="zeigeAthletenVorstellung()">
+        <div class="card-body" style="text-align:center;padding:24px">
+          <div style="font-size:2.5rem;margin-bottom:8px">🏃</div>
+          <h3 style="margin-bottom:6px">Athleten-Vorstellung</h3>
+          <p class="text-muted" style="font-size:.85rem">Weltcup-Vorschau, Karriere-Poster, Carousel</p>
+          <div style="display:flex;gap:6px;justify-content:center;margin-top:12px;flex-wrap:wrap">
+            <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();zeigeAthletenVorstellung()">Erstellen</button>
+            <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();zeigeVeranstaltungsWorkspace()">📋 Gespeicherte</button>
+            <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();zeigeAthletenProfileVerwaltung()">👤 Profile</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="cursor:pointer" onclick="navigateTo('countdown')">
+        <div class="card-body" style="text-align:center;padding:24px">
+          <div style="font-size:2.5rem;margin-bottom:8px">⏳</div>
+          <h3 style="margin-bottom:6px">Countdown-Poster</h3>
+          <p class="text-muted" style="font-size:.85rem">Vorfreude auf Wettkämpfe und Events</p>
+          <button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="event.stopPropagation();navigateTo('countdown')">Erstellen</button>
+        </div>
+      </div>
+
+      <div class="card" style="cursor:pointer" onclick="navigateTo('schulnachrichten')">
+        <div class="card-body" style="text-align:center;padding:24px">
+          <div style="font-size:2.5rem;margin-bottom:8px">📸</div>
+          <h3 style="margin-bottom:6px">Foto-Karussell</h3>
+          <p class="text-muted" style="font-size:.85rem">Events, Ausflüge, Schulveranstaltungen</p>
+          <button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="event.stopPropagation();navigateTo('schulnachrichten')">Erstellen</button>
+        </div>
+      </div>
+
+      <div class="card" style="cursor:pointer" onclick="navigateTo('jubilaeum')">
+        <div class="card-body" style="text-align:center;padding:24px">
+          <div style="font-size:2.5rem;margin-bottom:8px">🎖️</div>
+          <h3 style="margin-bottom:6px">Jubiläums-Poster</h3>
+          <p class="text-muted" style="font-size:.85rem">Ehrungen, Jubiläen, besondere Anlässe</p>
+          <button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="event.stopPropagation();navigateTo('jubilaeum')">Erstellen</button>
+        </div>
+      </div>
+
+      <div class="card" style="cursor:pointer" onclick="navigateTo('highlights')">
+        <div class="card-body" style="text-align:center;padding:24px">
+          <div style="font-size:2.5rem;margin-bottom:8px">🎠</div>
+          <h3 style="margin-bottom:6px">Highlights-Karussell</h3>
+          <p class="text-muted" style="font-size:.85rem">Monatsrückblick, Jahreshighlights</p>
+          <button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="event.stopPropagation();navigateTo('highlights')">Erstellen</button>
+        </div>
+      </div>
+
+      <div class="card" style="cursor:pointer" onclick="navigateTo('voting')">
+        <div class="card-body" style="text-align:center;padding:24px">
+          <div style="font-size:2.5rem;margin-bottom:8px">🏆</div>
+          <h3 style="margin-bottom:6px">Sportler des Monats</h3>
+          <p class="text-muted" style="font-size:.85rem">Abstimmung erstellen und verwalten</p>
+          <button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="event.stopPropagation();navigateTo('voting')">Verwalten</button>
+        </div>
+      </div>
+
+    </div>
+  </div>`;
+}
+
+// ── Ausgaben: Social Media ────────────────────────────────────
+async function renderAusgabenSocial() {
+  const alle = await ladeErfolge();
+  const freigegebene = alle.filter(e => ['Freigegeben','Veröffentlicht'].includes(e.status)).slice(0, 20);
+  return `<div class="page">
+    <div class="page-header">
+      <h1>📱 Social Media</h1>
+      <p class="text-muted">Instagram Stories, Beiträge, Reels und Twitter-Banner aus freigegebenen Meldungen.</p>
+    </div>
+    ${freigegebene.length === 0
+      ? `<div class="alert alert-warning"><span class="alert-icon">⚠️</span>
+          <span>Keine freigegebenen Meldungen vorhanden.</span></div>`
+      : `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">
+          ${freigegebene.map(e => `
+            <div class="card" style="overflow:hidden">
+              <div style="background:var(--slzb-bg-secondary);padding:12px;border-bottom:1px solid var(--slzb-border)">
+                <div style="font-weight:700;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.titel||'–')}</div>
+                <div style="font-size:.75rem;color:#888;margin-top:2px">${esc(e.sportart||'–')} · ${fmt(e.datum)}</div>
+              </div>
+              <div style="padding:10px;display:flex;gap:6px;flex-wrap:wrap">
+                <button class="btn btn-outline btn-sm" style="font-size:.75rem"
+                  onclick="zeigeSocialModal('${e.id}')" title="Story/Reel/Beitrag">📱 Social</button>
+                <button class="btn btn-ghost btn-sm" style="font-size:.75rem"
+                  onclick="zeigeBildschirmModal('${e.id}')" title="Bildschirm-Format">🖥️ Screen</button>
+              </div>
+            </div>`).join('')}
+        </div>`}
+  </div>`;
+}
+
+// ── Freigaben (eigene Seite) ──────────────────────────────────
+async function renderFreigaben() {
+  const alle = await ladeErfolge();
+  const zuFreigeben = alle.filter(e => e.status === 'Freigabe Öffentlichkeitsarbeit');
+  const freigegebene = alle.filter(e => ['Freigegeben','Veröffentlicht'].includes(e.status));
+  return `<div class="page">
+    <div class="page-header"><h1>✅ Freigaben</h1></div>
+    ${zuFreigeben.length > 0 ? `
+    <div class="card mb-4">
+      <div class="card-header"><h2>⏳ Warten auf Freigabe (${zuFreigeben.length})</h2></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Titel</th><th>Sportart</th><th>Datum</th><th>Aktionen</th></tr></thead>
+        <tbody>${zuFreigeben.map(e => `<tr>
+          <td><strong>${esc(e.titel||'–')}</strong></td>
+          <td class="text-sm">${esc(e.sportart||'–')}</td>
+          <td class="text-sm">${fmt(e.datum)}</td>
+          <td>
+            <button class="btn btn-success btn-sm" onclick="navigateTo('erfolg-detail',{currentErfolgId:'${e.id}'})">Prüfen & Freigeben</button>
+          </td>
+        </tr>`).join('')}
+        </tbody>
+      </table></div>
+    </div>` : `<div class="alert alert-success mb-4"><span class="alert-icon">✅</span>
+      <span>Keine Meldungen warten auf Freigabe.</span></div>`}
+    <div class="card">
+      <div class="card-header">
+        <h2>✅ Freigegebene Meldungen (${freigegebene.length})</h2>
+        <button class="btn btn-primary btn-sm" onclick="navigateTo('ausgaben-meldungen')">🖼️ Poster erstellen</button>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Titel</th><th>Sportart</th><th>Datum</th><th>Status</th><th>Aktionen</th></tr></thead>
+        <tbody>${freigegebene.slice(0,15).map(e => `<tr>
+          <td><strong>${esc(e.titel||'–')}</strong></td>
+          <td class="text-sm">${esc(e.sportart||'–')}</td>
+          <td class="text-sm">${fmt(e.datum)}</td>
+          <td>${statusBadge(e.status)}</td>
+          <td>
+            <div style="display:flex;gap:4px">
+              <button class="btn btn-ghost btn-sm" onclick="zeigeA3Vorschau('${e.id}')">🖨️</button>
+              <button class="btn btn-ghost btn-sm" onclick="zeigeSocialModal('${e.id}')">📱</button>
+            </div>
+          </td>
+        </tr>`).join('')}
+        </tbody>
+      </table></div>
+    </div>
+  </div>`;
+}
+
 async function renderAusgaben() {
   const alle=await ladeErfolge();
   const freigegebene=alle.filter(e=>['Freigegeben','Veröffentlicht'].includes(e.status));

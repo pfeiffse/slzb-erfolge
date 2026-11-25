@@ -164,35 +164,33 @@ function renderSidebar() {
   const r = Auth.rolle(); const name = Auth.name();
   const initials = name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
   const navDef = [
-    {page:'dashboard',icon:'🏠',label:'Dashboard',roles:['trainer','redaktion','oea','datenschutz','admin']},
+    {page:'dashboard',icon:'🏠',label:'Dashboard',roles:['trainer','mitarbeiter','schueler','redaktion','oea','datenschutz','admin']},
     {section:'Meldungen',roles:['trainer','mitarbeiter','schueler','redaktion','admin']},
     {page:'neue-meldung',icon:'➕',label:'Neue Meldung',roles:['trainer','mitarbeiter','schueler','redaktion','admin']},
     {page:'meine-meldungen',icon:'📋',label:'Meine Meldungen',roles:['trainer','mitarbeiter','schueler','redaktion','admin']},
     {page:'rueckfragen',icon:'💬',label:'Rückfragen',badge:'rueckfragen',roles:['trainer','mitarbeiter','schueler','redaktion','admin']},
-    {page:'import',icon:'📥',label:'Import',roles:['trainer','mitarbeiter','redaktion','admin']},
+    {page:'import',icon:'📥',label:'Excel-Import',roles:['trainer','mitarbeiter','redaktion','admin']},
+    {page:'kalender',icon:'📅',label:'Veranstaltungskalender',roles:['trainer','mitarbeiter','schueler','redaktion','oea','datenschutz','admin']},
     {section:'Redaktion',roles:['redaktion','oea','admin']},
     {page:'redaktion',icon:'✏️',label:'Redaktionsübersicht',badge:'redaktion',roles:['redaktion','admin']},
-    {page:'ausgaben',icon:'📤',label:'Ausgaben & Freigaben',badge:'freigabe',roles:['redaktion','oea','admin']},
+    {page:'ausgaben',icon:'✅',label:'Freigaben & Ausgaben',badge:'freigabe',roles:['redaktion','oea','admin']},
+    {page:'archiv',icon:'🗄️',label:'Archiv & Suche',roles:['redaktion','oea','admin']},
+    {page:'jahreschronik',icon:'📊',label:'Chronik & Diashow',roles:['redaktion','oea','admin']},
+    {section:'Poster & Social Media',roles:['mitarbeiter','redaktion','oea','admin']},
     {page:'highlights',icon:'🎠',label:'Highlights-Karussell',roles:['mitarbeiter','redaktion','oea','admin']},
-    {page:'voting',icon:'🏆',label:'Sportler/in des Monats',roles:['schueler','mitarbeiter','redaktion','oea','admin']},
-    {page:'nachwuchswahl',icon:'🏆',label:'Nachwuchssportler-Wahl',roles:['mitarbeiter','redaktion','oea','admin']},
-    {page:'countdown',icon:'⏳',label:'Countdown-Poster',roles:['mitarbeiter','redaktion','oea','admin']},
-    {page:'jubilaeum',icon:'🏅',label:'Jubiläums-Poster',roles:['mitarbeiter','redaktion','oea','admin']},
-    {page:'schulnachrichten',icon:'📰',label:'Schulnachrichten-Poster',roles:['mitarbeiter','redaktion','oea','admin']},
-    {page:'archiv',icon:'🗄️',label:'Archiv',roles:['redaktion','oea','admin']},
-    {section:'Auswertung',roles:['redaktion','oea','admin']},
-    {page:'kalender',icon:'📅',label:'Veranstaltungskalender',roles:['trainer','redaktion','oea','datenschutz','admin']},
-    {page:'jahreschronik',icon:'📅',label:'Jahreschronik',roles:['redaktion','oea','admin']},
+    {page:'schulnachrichten',icon:'📸',label:'Foto-Karussell & Poster',roles:['mitarbeiter','redaktion','oea','admin']},
+    {page:'countdown',icon:'⏳',label:'Countdown & Events',roles:['mitarbeiter','redaktion','oea','admin']},
+    {page:'voting',icon:'🏆',label:'Sportler des Monats',roles:['schueler','mitarbeiter','redaktion','oea','admin']},
     {section:'Datenschutz',roles:['datenschutz','admin']},
     {page:'einwilligungen',icon:'🔒',label:'Einwilligungen',roles:['datenschutz','admin']},
-    {page:'datenschutz_import',icon:'📋',label:'Negativliste importieren',roles:['datenschutz','admin']},
+    {page:'datenschutz_import',icon:'📋',label:'Negativliste',roles:['datenschutz','admin']},
     {section:'Administration',roles:['admin']},
     {page:'stammdaten',icon:'⚙️',label:'Stammdaten',roles:['admin']},
     {page:'nutzerverwaltung',icon:'👥',label:'Nutzerverwaltung',roles:['admin']},
     {page:'diagnose',icon:'🔍',label:'Diagnose',roles:['admin']},
     {page:'papierkorb',icon:'🗑️',label:'Papierkorb',roles:['admin']},
-    {section:'Mein Konto',roles:['trainer','redaktion','oea','datenschutz','admin']},
-    {page:'mein-profil',icon:'👤',label:'Mein Profil',roles:['trainer','redaktion','oea','datenschutz','admin']},
+    {section:'Mein Konto',roles:['trainer','mitarbeiter','schueler','redaktion','oea','datenschutz','admin']},
+    {page:'mein-profil',icon:'👤',label:'Mein Profil',roles:['trainer','mitarbeiter','schueler','redaktion','oea','datenschutz','admin']},
   ];
   let navHtml = '';
   navDef.forEach(item=>{
@@ -339,6 +337,51 @@ async function renderDashboard() {
       <div class="stat-card clickable" style="cursor:pointer" onclick="navigateTo('rueckfragen')"><div class="stat-icon purple">💬</div><div><div class="stat-value">${rueck}</div><div class="stat-label">Rückfragen</div></div></div>
       <div class="stat-card clickable" style="cursor:pointer" onclick="navigateTo('ausgaben')"><div class="stat-icon gold">🏆</div><div><div class="stat-value">${frg}</div><div class="stat-label">Warten auf ÖA</div></div></div>
     </div>
+    <!-- Rollenspezifische Quick-Actions -->
+    <div class="card mb-4">
+      <div class="card-header"><h2>⚡ Schnellzugriff</h2></div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px">
+          ${Auth.canDo('erfassen') ? `
+            <button class="btn btn-primary" onclick="navigateTo('neue-meldung')" style="height:64px;flex-direction:column;gap:4px">
+              <span style="font-size:1.4rem">➕</span>
+              <span style="font-size:.8rem">Neue Meldung</span>
+            </button>` : ''}
+          ${Auth.canDo('erfassen') ? `
+            <button class="btn btn-outline" onclick="navigateTo('kalender')" style="height:64px;flex-direction:column;gap:4px">
+              <span style="font-size:1.4rem">📅</span>
+              <span style="font-size:.8rem">Kalender</span>
+            </button>` : ''}
+          ${Auth.canDo('redaktion') ? `
+            <button class="btn btn-outline" onclick="navigateTo('redaktion')" style="height:64px;flex-direction:column;gap:4px;position:relative">
+              <span style="font-size:1.4rem">✏️</span>
+              <span style="font-size:.8rem">Redaktion</span>
+              ${offen > 0 ? `<span style="position:absolute;top:4px;right:4px;background:#E2001A;color:#fff;border-radius:50%;width:18px;height:18px;font-size:.65rem;display:flex;align-items:center;justify-content:center">${offen}</span>` : ''}
+            </button>` : ''}
+          ${Auth.canDo('redaktion') ? `
+            <button class="btn btn-outline" onclick="navigateTo('ausgaben')" style="height:64px;flex-direction:column;gap:4px;position:relative">
+              <span style="font-size:1.4rem">✅</span>
+              <span style="font-size:.8rem">Freigaben</span>
+              ${frg > 0 ? `<span style="position:absolute;top:4px;right:4px;background:#E2001A;color:#fff;border-radius:50%;width:18px;height:18px;font-size:.65rem;display:flex;align-items:center;justify-content:center">${frg}</span>` : ''}
+            </button>` : ''}
+          ${Auth.canDo('redaktion') ? `
+            <button class="btn btn-outline" onclick="navigateTo('ausgaben-events')" style="height:64px;flex-direction:column;gap:4px">
+              <span style="font-size:1.4rem">🎯</span>
+              <span style="font-size:.8rem">Event-Poster</span>
+            </button>` : ''}
+          ${Auth.canDo('redaktion') ? `
+            <button class="btn btn-outline" onclick="navigateTo('jahreschronik')" style="height:64px;flex-direction:column;gap:4px">
+              <span style="font-size:1.4rem">📊</span>
+              <span style="font-size:.8rem">Chronik</span>
+            </button>` : ''}
+          <button class="btn btn-ghost" onclick="zeigeWochenvorschau()" style="height:64px;flex-direction:column;gap:4px">
+            <span style="font-size:1.4rem">📅</span>
+            <span style="font-size:.8rem">Wochenvorschau</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     ${Auth.canDo('erfassen') ? `<div class="card mb-4">
       <div class="card-header"><h2>➕ Schnellerfassung</h2></div>
       <div class="card-body">
