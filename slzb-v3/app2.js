@@ -7676,7 +7676,10 @@ async function zeigeAthletenVorstellung() {
       <div style=\"margin-top:16px;border-top:1px solid var(--slzb-border);padding-top:12px\">
         <div style=\"font-weight:600;margin-bottom:8px\">📸 Teamfoto (optional – für Deck- und Abschlussfolie):</div>
         <input type=\"file\" id=\"av-teamfoto\" accept=\"image/jpeg,image/png,image/webp\"
-          style=\"width:100%;font-size:.85rem;margin-bottom:6px\">
+          style=\"width:100%;font-size:.85rem;margin-bottom:6px\"
+          onchange=\"avTeamfotoVorschau(this)\">
+        <img id=\"av-teamfoto-preview\" src=\"\" alt=\"Teamfoto-Vorschau\"
+          style=\"display:none;max-height:100px;max-width:100%;margin-top:6px;border-radius:6px;object-fit:cover\">
         <div style=\"font-size:.75rem;color:#888\">Erscheint als Hintergrundbild auf Deckblatt und Abschluss-Slide.</div>
       </div>
     </div>
@@ -7706,6 +7709,24 @@ async function zeigeAthletenVorstellung() {
 let _avCounter = 0;
 
 // Bild-Vorschau im Athleten-Formular
+
+// Teamfoto-Vorschau
+function avTeamfotoVorschau(input) {
+  const file = input?.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const preview = document.getElementById('av-teamfoto-preview');
+    if (preview) {
+      preview.src = ev.target.result;
+      preview.style.display = 'block';
+    }
+    // DataURL für spätere Verwendung cachen
+    window._avTeamfotoDataUrl = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
 function avBildVorschau(id, input) {
   const file = input?.files?.[0];
   if (!file) return;
@@ -7801,6 +7822,16 @@ function zeigeAthletenVorstellungMitDaten() {
     if (formatEl && gespeichert.format) formatEl.value = gespeichert.format;
 
     // Athleten wiederherstellen
+    // Teamfoto-Vorschau wiederherstellen
+    if (gespeichert.teamfotoUrl) {
+      const tfPreview = document.getElementById('av-teamfoto-preview');
+      if (tfPreview) {
+        tfPreview.src = gespeichert.teamfotoUrl;
+        tfPreview.style.display = 'block';
+      }
+      window._avTeamfotoDataUrl = gespeichert.teamfotoUrl;
+    }
+
     if (gespeichert.athleten?.length) {
       // Bestehende Athleten-Divs entfernen
       const liste = document.getElementById('av-athleten-liste');
@@ -7894,6 +7925,7 @@ async function erstelleAthletenVorstellung() {
     veranstaltung,
     sportart,
     format,
+    teamfotoUrl: teamfoto?.src || null,  // DataURL des Teamfotos
     athleten: athleten.map((a, i) => ({
       ...a,
       erfolgeStr: a.erfolge?.join(', ') || '',
@@ -7910,9 +7942,26 @@ async function erstelleAthletenVorstellung() {
   let teamfoto = null;
   const teamfotoInput = document.getElementById('av-teamfoto');
   if (teamfotoInput?.files?.[0]) {
-    const url = URL.createObjectURL(teamfotoInput.files[0]);
+    // Als DataURL laden (dauerhaft gültig, kein Revoke-Problem)
     teamfoto = await new Promise(res => {
-      const img = new Image(); img.onload = () => res(img); img.onerror = () => res(null); img.src = url;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => res(img);
+        img.onerror = () => res(null);
+        img.src = ev.target.result;
+      };
+      reader.onerror = () => res(null);
+      reader.readAsDataURL(teamfotoInput.files[0]);
+    });
+  } else if (window._avTeamfotoDataUrl || window._avGespeicherteDaten?.teamfotoUrl) {
+    // Teamfoto aus gecachter DataURL laden (nach Zurück-Navigation)
+    const dataUrl = window._avTeamfotoDataUrl || window._avGespeicherteDaten.teamfotoUrl;
+    teamfoto = await new Promise(res => {
+      const img = new Image();
+      img.onload = () => res(img);
+      img.onerror = () => res(null);
+      img.src = dataUrl;
     });
   }
 
