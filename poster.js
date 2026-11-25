@@ -3882,19 +3882,46 @@ async function zeichneFotoKarussellFolie(ctx, W, H, opts) {
   // Header (transparent über Foto)
   zeichneSlzbHeader(ctx, W, H, 'SLZB BERLIN', '', akzent);
 
-  // Caption wenn vorhanden
+  // Caption wenn vorhanden – mit automatischem Zeilenumbruch
   if (opts.caption) {
-    const MARGIN = Math.round(W * 0.055);
-    const captionY = H * 0.84;
+    const MARGIN = Math.round(W * 0.07);
+    const maxWidth = W - MARGIN * 2;
+    const fontSize = Math.round(W * 0.026);
     ctx.save();
+    ctx.font = `${fontSize}px Montserrat, Arial, sans-serif`;
     ctx.fillStyle = 'rgba(255,255,255,0.92)';
-    ctx.font = `${Math.round(W*0.028)}px Montserrat, Arial, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    // Schatten für Lesbarkeit
-    ctx.shadowColor = 'rgba(0,0,0,0.8)';
-    ctx.shadowBlur = 8;
-    ctx.fillText(opts.caption, W/2, captionY);
+    ctx.shadowColor = 'rgba(0,0,0,0.85)';
+    ctx.shadowBlur = 10;
+
+    // Text in Zeilen aufteilen
+    const worte = opts.caption.split(' ');
+    const zeilen = [];
+    let zeile = '';
+    for (const wort of worte) {
+      const test = zeile ? zeile + ' ' + wort : wort;
+      if (ctx.measureText(test).width > maxWidth && zeile) {
+        zeilen.push(zeile);
+        zeile = wort;
+      } else {
+        zeile = test;
+      }
+    }
+    if (zeile) zeilen.push(zeile);
+
+    // Maximal 2 Zeilen anzeigen, Rest mit … kürzen
+    const anzZeilen = Math.min(zeilen.length, 2);
+    if (zeilen.length > 2) zeilen[1] = zeilen[1].replace(/\s\S+$/, '…');
+
+    const zeilenAbstand = fontSize * 1.35;
+    const gesamtHoehe = anzZeilen * zeilenAbstand;
+    const startY = H * 0.845 - gesamtHoehe / 2;
+
+    zeilen.slice(0, 2).forEach((z, i) => {
+      ctx.fillText(z, W/2, startY + i * zeilenAbstand);
+    });
+
     ctx.shadowBlur = 0;
     ctx.restore();
   }

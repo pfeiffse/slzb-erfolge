@@ -3349,9 +3349,14 @@ async function zeigeFotoKarussellVorschau() {
           </label>
           <input type="text" id="fkv-caption-einzeln"
             placeholder="z.B. Ehrengäste beim Frühstück der Champions"
+            maxlength="80"
             style="width:100%;background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:7px 10px;font-size:.85rem"
-            oninput="fkvCaptionSpeichern()">
-          <div style="font-size:.72rem;color:#666;margin-top:3px">Leer lassen = Standard-Bildunterschrift verwenden</div>
+            oninput="fkvCaptionSpeichern();fkvCaptionZaehler(this)">
+          <div style="display:flex;justify-content:space-between;margin-top:3px">
+            <span style="font-size:.72rem;color:#666">Leer lassen = Standard-Bildunterschrift verwenden</span>
+            <span id="fkv-caption-zaehler" style="font-size:.72rem;color:#666">0/80</span>
+          </div>
+          <div id="fkv-caption-hinweis" style="font-size:.72rem;margin-top:2px;display:none"></div>
         </div>
       </div>
     </div>
@@ -3392,10 +3397,39 @@ async function zeigeFotoKarussellVorschau() {
 
   window.fkvCaptionSpeichern = () => {
     const idx = window._fkvAktuellerIdx;
-    if (idx === 0) return; // Deckblatt hat keine individuelle Caption
+    if (idx === 0) return;
     const val = document.getElementById('fkv-caption-einzeln')?.value || '';
     if (!window._fkCaptions) window._fkCaptions = [];
     window._fkCaptions[idx-1] = val;
+  };
+
+  window.fkvCaptionZaehler = (input) => {
+    const len = input.value.length;
+    const zaehler = document.getElementById('fkv-caption-zaehler');
+    const hinweis = document.getElementById('fkv-caption-hinweis');
+    if (!zaehler) return;
+    zaehler.textContent = `${len}/80`;
+    // Farbliche Warnung
+    if (len > 70) {
+      zaehler.style.color = '#E2001A';
+      if (hinweis) {
+        hinweis.style.display = 'block';
+        hinweis.style.color = '#E2001A';
+        hinweis.textContent = len > 50
+          ? '⚠️ Langer Text wird auf 2 Zeilen umgebrochen – Lesbarkeit prüfen'
+          : '';
+      }
+    } else if (len > 50) {
+      zaehler.style.color = '#C9A227';
+      if (hinweis) {
+        hinweis.style.display = 'block';
+        hinweis.style.color = '#C9A227';
+        hinweis.textContent = '💡 Text wird auf 2 Zeilen umgebrochen';
+      }
+    } else {
+      zaehler.style.color = '#4caf50';
+      if (hinweis) hinweis.style.display = 'none';
+    }
   };
 
   window.fkvAktualisiere = async () => {
