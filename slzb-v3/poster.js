@@ -3762,9 +3762,6 @@ async function zeichneFotoKarussellDeckblatt(ctx, W, H, opts) {
 
   // Hintergrund
   if (opts.bild) {
-    ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H); ctx.clip();
-    drawCover(ctx, opts.bild, 0, 0, W, H); ctx.restore();
-    // Akzentfarbiger Fade (wie bei Erfolgsmeldungen)
     const akzentFarbenD = {
       rot:   { r:226, g:0,   b:26  },
       blau:  { r:11,  g:99,  b:206 },
@@ -3773,6 +3770,26 @@ async function zeichneFotoKarussellDeckblatt(ctx, W, H, opts) {
       gold:  { r:201, g:162, b:39  },
     };
     const afD = akzentFarbenD[akzent] || akzentFarbenD.grau;
+    const zoomD = window._bildZoom || 1.0;
+
+    // Blur-Backdrop wenn Bild nicht vollflächig (Querformat)
+    if (zoomD < 0.99) {
+      ctx.save();
+      ctx.filter = 'blur(18px) brightness(0.40) saturate(1.4)';
+      const savedOff = window._bildOffset, savedZ = window._bildZoom;
+      window._bildOffset = { x:0.5, y:0.5 }; window._bildZoom = 1.0;
+      drawCover(ctx, opts.bild, 0, 0, W, H);
+      window._bildOffset = savedOff; window._bildZoom = savedZ;
+      ctx.filter = 'none';
+      ctx.restore();
+      ctx.fillStyle = `rgba(${afD.r},${afD.g},${afD.b},0.12)`;
+      ctx.fillRect(0,0,W,H);
+    }
+
+    ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H); ctx.clip();
+    drawCover(ctx, opts.bild, 0, 0, W, H); ctx.restore();
+
+    // Akzentfarbiger Fade
     const grad = ctx.createLinearGradient(0,0,0,H);
     grad.addColorStop(0,'rgba(0,0,0,0.25)');
     grad.addColorStop(0.40,'rgba(0,0,0,0.15)');
@@ -3815,7 +3832,33 @@ async function zeichneFotoKarussellFolie(ctx, W, H, opts) {
   const af = akzentFarben[akzent] || akzentFarben.grau;
 
   if (opts.bild) {
-    // Foto vollflächig
+    const zoom = window._bildZoom || 1.0;
+
+    // Wenn Zoom < 1: verschwommener Hintergrund (Blur-Backdrop)
+    if (zoom < 0.99) {
+      // Schritt 1: Bild vollflächig (stark vergrößert) als Hintergrund zeichnen
+      ctx.save();
+      ctx.filter = 'blur(18px) brightness(0.45) saturate(1.4)';
+      // Hintergrund immer vollflächig (ignoriert zoom/offset)
+      const savedOffset = window._bildOffset;
+      const savedZoom   = window._bildZoom;
+      window._bildOffset = { x: 0.5, y: 0.5 };
+      window._bildZoom   = 1.0;
+      drawCover(ctx, opts.bild, 0, 0, W, H);
+      window._bildOffset = savedOffset;
+      window._bildZoom   = savedZoom;
+      ctx.filter = 'none';
+      ctx.restore();
+
+      // Schritt 2: Akzentfarbe leicht drüberlegen für Markenkonsistenz
+      ctx.fillStyle = `rgba(${af.r},${af.g},${af.b},0.15)`;
+      ctx.fillRect(0,0,W,H);
+    } else {
+      // Kein Blur nötig – Bild füllt die Folie
+      zeichneSlzbHintergrund(ctx, W, H, null, akzent);
+    }
+
+    // Schritt 3: Eigentliches Foto mit Zoom/Offset zeichnen
     ctx.save(); ctx.beginPath(); ctx.rect(0,0,W,H); ctx.clip();
     drawCover(ctx, opts.bild, 0, 0, W, H); ctx.restore();
 
