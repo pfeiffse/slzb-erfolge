@@ -3318,7 +3318,7 @@ async function zeigeFotoKarussellVorschau() {
           <label style="font-weight:600;display:flex;justify-content:space-between;margin-bottom:4px;font-size:.82rem">
             <span>🔍 Zoom</span><span id="fkv-zoom-lbl" style="color:#E2001A">100%</span>
           </label>
-          <input type="range" id="fkv-zoom" min="100" max="300" step="5" value="100"
+          <input type="range" id="fkv-zoom" min="30" max="300" step="5" value="100"
             style="width:100%;accent-color:#E2001A" oninput="fkvAktualisiere()">
         </div>
         <div style="margin-bottom:10px">
@@ -3336,6 +3336,7 @@ async function zeigeFotoKarussellVorschau() {
             style="width:100%;accent-color:#003366" oninput="fkvAktualisiere()">
         </div>
         <div class="flex gap-2" style="flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="fkvEinpassen()">⊡ Einpassen</button>
           <button class="btn btn-ghost btn-sm" onclick="fkvPreset(50,20,100)">↑ Gesicht oben</button>
           <button class="btn btn-ghost btn-sm" onclick="fkvPreset(50,50,100)">⊙ Zentrieren</button>
           <button class="btn btn-ghost btn-sm" onclick="fkvPreset(50,30,150)">🔍 Zoom Gesicht</button>
@@ -3381,6 +3382,31 @@ async function zeigeFotoKarussellVorschau() {
     document.getElementById('fkv-ox').value   = ox;
     document.getElementById('fkv-oy').value   = oy;
     document.getElementById('fkv-zoom').value = zoom;
+    await fkvAktualisiere();
+  };
+
+  window.fkvEinpassen = async () => {
+    // Berechne optimalen Zoom damit das Bild vollständig sichtbar ist
+    const idx  = window._fkvAktuellerIdx;
+    const bild = idx === 0 ? window._fkDeckbild : window._fkFotoImgs?.[idx-1];
+    if (!bild) return;
+    const canvas = document.getElementById('fkv-canvas');
+    if (!canvas) return;
+    const W = canvas.width, H = canvas.height;
+    const bildRatio   = bild.width / bild.height;
+    const canvasRatio = W / H;
+    let fitZoom;
+    if (bildRatio > canvasRatio) {
+      // Querformat: Breite passt, Höhe wird abgeschnitten → rauszoomen
+      fitZoom = Math.round(canvasRatio / bildRatio * 100);
+    } else {
+      // Hochformat: passt bereits bei 100%
+      fitZoom = 100;
+    }
+    fitZoom = Math.max(30, Math.min(300, fitZoom));
+    document.getElementById('fkv-ox').value   = 50;
+    document.getElementById('fkv-oy').value   = 50;
+    document.getElementById('fkv-zoom').value = fitZoom;
     await fkvAktualisiere();
   };
 
@@ -3430,8 +3456,32 @@ async function fkvRenderVorschau(idx) {
     ? (window._fkDeckbildSettings || { x:0.5, y:0.5, zoom:1.0 })
     : (window._fkBildSettings?.[idx-1] || { x:0.5, y:0.5, zoom:1.0 });
 
+  // Automatisch "Fit"-Zoom berechnen wenn Bild Querformat ist
+  // und noch kein manueller Zoom gesetzt wurde
+  const bild = idx === 0 ? window._fkDeckbild : fotos[idx-1];
+  let zoom = s.zoom;
+  if (bild && zoom === 1.0) {
+    const bildRatio = bild.width / bild.height;
+    const canvasRatio = W / H; // 1080/1350 = 0.8
+    if (bildRatio > canvasRatio) {
+      // Querformat: Zoom so setzen dass Bild vollständig sichtbar ist
+      zoom = canvasRatio / bildRatio;
+      // Settings aktualisieren
+      if (idx === 0) {
+        window._fkDeckbildSettings = { ...s, zoom };
+      } else {
+        window._fkBildSettings[idx-1] = { ...s, zoom };
+      }
+      // Regler aktualisieren
+      const zoomEl = document.getElementById('fkv-zoom');
+      const zoomLbl = document.getElementById('fkv-zoom-lbl');
+      if (zoomEl) zoomEl.value = Math.round(zoom*100);
+      if (zoomLbl) zoomLbl.textContent = Math.round(zoom*100)+'%';
+    }
+  }
+
   window._bildOffset = { x: s.x, y: s.y };
-  window._bildZoom   = s.zoom;
+  window._bildZoom   = zoom;
 
   if (idx === 0) {
     await zeichneFotoKarussellDeckblatt(ctx, W, H, {
@@ -8417,7 +8467,7 @@ async function zeigeAthletenVorschau(athleten, opts_base, format) {
           <label style="font-weight:600;display:flex;justify-content:space-between;margin-bottom:4px;font-size:.82rem">
             <span>🔍 Zoom</span><span id="av-zoom-lbl" style="color:#E2001A">100%</span>
           </label>
-          <input type="range" id="av-zoom" min="100" max="300" step="5" value="100"
+          <input type="range" id="av-zoom" min="30" max="300" step="5" value="100"
             style="width:100%;accent-color:#E2001A" oninput="avAktualisiere()">
         </div>
         <div style="margin-bottom:10px">
@@ -9466,7 +9516,7 @@ function zeigeBildPositionEditor() {
           <span>🔍 Zoom</span>
           <span id="bild-zoom-label" style="color:#E2001A;font-size:.85rem">${zoomPct}%</span>
         </label>
-        <input type="range" id="bild-zoom" min="100" max="300" step="5" value="${zoomPct}"
+        <input type="range" id="bild-zoom" min="30" max="300" step="5" value="${zoomPct}"
           style="width:100%;accent-color:#E2001A" oninput="aktualisiereBildOffset()">
         <div style="display:flex;justify-content:space-between;font-size:.72rem;color:#888">
           <span>Normal (100%)</span><span>Mittel (200%)</span><span>Max (300%)</span>
