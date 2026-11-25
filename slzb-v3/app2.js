@@ -7697,11 +7697,39 @@ async function zeigeAthletenVorstellung() {
   overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
   document.body.appendChild(overlay);
 
+  // Bild-Cache leeren (außer wenn Zurück-Navigation)
+  if (!window._avGespeicherteDaten) avResetBildCache();
   // Ersten Athleten direkt hinzufügen
   avAthletHinzu();
 }
 
 let _avCounter = 0;
+
+// Bild-Vorschau im Athleten-Formular
+function avBildVorschau(id, input) {
+  const file = input?.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const preview = document.getElementById(`av-bild-preview-${id}`);
+    if (preview) {
+      preview.src = ev.target.result;
+      preview.style.display = 'block';
+    }
+    // Bild-Objekt sofort laden und cachen
+    const img = new Image();
+    img.onload = () => { window[`_avBildObj_${id}`] = img; };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function avResetBildCache() {
+  // Alle gespeicherten Bild-Objekte löschen
+  for (let i = 1; i <= _avCounter + 10; i++) {
+    delete window[`_avBildObj_${i}`];
+  }
+}
 function avAthletHinzu() {
   const liste = document.getElementById('av-athleten-liste');
   if (!liste) return;
@@ -7744,7 +7772,11 @@ function avAthletHinzu() {
       </div>
       <div class="form-group" style="grid-column:1/-1">
         <label style="font-size:.8rem">Bild (aus Meldung wählen oder hochladen)</label>
-        <input type="file" id="av-bild-${id}" accept="image/jpeg,image/png,image/webp" style="width:100%;font-size:.8rem">
+        <input type="file" id="av-bild-${id}" accept="image/jpeg,image/png,image/webp"
+          style="width:100%;font-size:.8rem"
+          onchange="avBildVorschau(${id}, this)">
+        <img id="av-bild-preview-${id}" src="" alt="Vorschau"
+          style="display:none;max-height:80px;max-width:100%;margin-top:6px;border-radius:6px;object-fit:cover">
       </div>
     </div>`;
   liste.appendChild(div);
@@ -7789,15 +7821,17 @@ function zeigeAthletenVorstellungMitDaten() {
         setVal(`av-erfolge-${id}`, athlet.erfolgeStr);
         setVal(`av-starts-${id}`, athlet.startsStr);
 
-        // Bild-Vorschau wiederherstellen (als Blob-URL)
+        // Bild aus DataURL wiederherstellen (DataURL ist dauerhaft gültig)
         if (athlet.bildUrl) {
           const preview = document.getElementById(`av-bild-preview-${id}`);
           if (preview) {
             preview.src = athlet.bildUrl;
             preview.style.display = 'block';
           }
-          // Bild-Objekt für spätere Verwendung speichern
-          window[`_avBildObj_${id}`] = athlet.bildObj;
+          // Bild-Objekt aus DataURL neu laden (sicher und dauerhaft)
+          const imgEl = new Image();
+          imgEl.onload = () => { window[`_avBildObj_${id}`] = imgEl; };
+          imgEl.src = athlet.bildUrl;
         }
       }
     }
@@ -7830,11 +7864,25 @@ async function erstelleAthletenVorstellung() {
     const starts   = startsStr ? startsStr.split('\n').map(s=>s.trim()).filter(Boolean) : [];
     const bildInput = document.getElementById(`av-bild-${id}`);
     let bild = null;
-    if (bildInput?.files?.[0]) {
-      const url = URL.createObjectURL(bildInput.files[0]);
+    // Prüfe zuerst ob ein gespeichertes Bild-Objekt vorhanden ist (nach Zurück-Navigation)
+    if (window[`_avBildObj_${id}`]) {
+      bild = window[`_avBildObj_${id}`];
+    } else if (bildInput?.files?.[0]) {
+      // Neues Bild laden - als DataURL speichern (bleibt dauerhaft gültig)
+      const file = bildInput.files[0];
       bild = await new Promise(res => {
-        const img = new Image(); img.onload = () => res(img); img.onerror = () => res(null); img.src = url;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const img = new Image();
+          img.onload = () => res(img);
+          img.onerror = () => res(null);
+          img.src = ev.target.result; // DataURL - dauerhaft gültig
+        };
+        reader.onerror = () => res(null);
+        reader.readAsDataURL(file);
       });
+      // Bild-Objekt für spätere Verwendung (Zurück-Navigation) speichern
+      if (bild) window[`_avBildObj_${id}`] = bild;
     }
     athleten.push({ vorname, nachname, name: `${vorname} ${nachname}`.trim(), kader, ziel, erfolge, starts, bild });
   }
@@ -7850,7 +7898,7 @@ async function erstelleAthletenVorstellung() {
       ...a,
       erfolgeStr: a.erfolge?.join(', ') || '',
       startsStr: a.starts?.join('\n') || '',
-      bildUrl: a.bild ? (a.bild.src || null) : null,
+      bildUrl: a.bild?.src || null,  // DataURL - dauerhaft gültig
       bildObj: a.bild || null,
     }))
   };

@@ -3654,8 +3654,7 @@ async function zeichneCarouselAbschluss(ctx, W, H, opts) {
     _g.addColorStop(0,'rgba(0,0,0,0.1)'); _g.addColorStop(0.4,'rgba(0,0,0,0.15)');
     _g.addColorStop(0.7,'rgba(0,30,90,0.60)'); _g.addColorStop(1,'rgba(0,51,153,0.92)');
     ctx.fillStyle=_g; ctx.fillRect(0,0,W,H);
-    // Goldene Akzentlinie (Abschluss = Erfolg)
-    ctx.fillStyle='#C9A227'; ctx.fillRect(0, Math.round(H*0.42), W, 3);
+    // Keine Akzentlinie - würde als störender Strich erscheinen
   }
   zeichneSlzbDeko(ctx, W, H);
   zeichneSlzbHeader(ctx, W, H, opts.sportart||'SLZB', '', akzent);
