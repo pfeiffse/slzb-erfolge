@@ -1806,13 +1806,13 @@ async function renderRueckfragen() {
 // ── Redaktionsübersicht ──────────────────────────────────────
 async function renderRedaktion() {
   const alle = await ladeErfolge();
-  const gruppen=[
-    {label:'Neu eingegangen',status:['Eingereicht'],icon:'📥',farbe:'#0B63CE'},
-    {label:'Unvollständig',status:['Unvollständig'],icon:'⚠️',farbe:'#E07000'},
-    {label:'Dublettenverdacht',status:['Dublettenverdacht'],icon:'🔄',farbe:'#E07000'},
-    {label:'Einwilligungsprüfung',status:['Einwilligungsprüfung'],icon:'🔒',farbe:'#8A9BB0'},
-    {label:'In Redaktion',status:['Redaktion','Datenprüfung'],icon:'✏️',farbe:'#003366'},
-    {label:'Freigabe ÖA',status:['Freigabe Öffentlichkeitsarbeit'],icon:'📢',farbe:'#C9A227'},
+  const gruppen = [
+    {id:'eingereicht',  label:'Neu eingegangen',  status:['Eingereicht'],                          icon:'📥', farbe:'#0B63CE'},
+    {id:'unvollstaendig',label:'Unvollständig',   status:['Unvollständig'],                        icon:'⚠️', farbe:'#E07000'},
+    {id:'dublette',     label:'Dublettenverdacht', status:['Dublettenverdacht'],                    icon:'🔄', farbe:'#E07000'},
+    {id:'einwilligung', label:'Einwilligung',      status:['Einwilligungsprüfung'],                 icon:'🔒', farbe:'#8A9BB0'},
+    {id:'redaktion',    label:'In Redaktion',      status:['Redaktion','Datenprüfung'],             icon:'✏️', farbe:'#003366'},
+    {id:'freigabe',     label:'Freigabe ÖA',       status:['Freigabe Öffentlichkeitsarbeit'],       icon:'📢', farbe:'#C9A227'},
   ];
   const gesamt = gruppen.reduce((s,g) => s + alle.filter(e=>g.status.includes(e.status)).length, 0);
 
@@ -1820,37 +1820,67 @@ async function renderRedaktion() {
     <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
       <div>
         <h1>✏️ Redaktionsübersicht</h1>
-        <p class="text-muted">${gesamt} Meldung(en) in Bearbeitung</p>
+        <p class="text-muted">${gesamt} Meldung(en) in Bearbeitung · <span style="font-size:.8rem;color:#888">Drag & Drop zum Verschieben</span></p>
       </div>
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-ghost btn-sm" onclick="ladeErfolge(true).then(()=>navigateTo('redaktion'))">↻ Aktualisieren</button>
-      </div>
+      <button class="btn btn-ghost btn-sm" onclick="ladeErfolge(true).then(()=>navigateTo('redaktion'))">↻ Aktualisieren</button>
     </div>
 
-    <!-- Kanban-Übersicht -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:24px">
+    <!-- Drag & Drop Kanban -->
+    <div id="kanban-board" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin-bottom:24px">
       ${gruppen.map(g => {
         const items = alle.filter(e => g.status.includes(e.status));
-        return `<div style="border:1px solid var(--slzb-border);border-radius:10px;overflow:hidden;
-          border-top:3px solid ${g.farbe}">
-          <div style="padding:10px 14px;background:var(--slzb-bg-secondary);display:flex;justify-content:space-between;align-items:center">
-            <span style="font-weight:700;font-size:.88rem">${g.icon} ${esc(g.label)}</span>
-            <span style="background:${g.farbe};color:#fff;border-radius:12px;padding:2px 10px;font-size:.75rem;font-weight:700">${items.length}</span>
+        return `<div
+          class="kanban-spalte"
+          data-gruppe="${g.id}"
+          data-ziel-status="${g.status[0]}"
+          style="border:1px solid var(--slzb-border);border-radius:10px;overflow:hidden;
+            border-top:3px solid ${g.farbe};min-height:120px;transition:background .2s,box-shadow .2s"
+          ondragover="kanbanDragOver(event,this)"
+          ondragleave="kanbanDragLeave(this)"
+          ondrop="kanbanDrop(event,this,'${g.status[0]}')">
+
+          <!-- Spalten-Header -->
+          <div style="padding:10px 14px;background:var(--slzb-bg-secondary);
+            display:flex;justify-content:space-between;align-items:center;
+            border-bottom:1px solid var(--slzb-border)">
+            <span style="font-weight:700;font-size:.85rem">${g.icon} ${esc(g.label)}</span>
+            <span style="background:${g.farbe};color:#fff;border-radius:12px;
+              padding:2px 9px;font-size:.72rem;font-weight:700">${items.length}</span>
           </div>
-          ${items.length === 0
-            ? `<div style="padding:12px 14px;color:#888;font-size:.82rem;font-style:italic">Keine Meldungen</div>`
-            : items.slice(0,3).map(e => `
-              <div style="padding:10px 14px;border-top:1px solid var(--slzb-border);cursor:pointer;transition:background .15s"
-                onmouseover="this.style.background='var(--slzb-bg-secondary)'"
-                onmouseout="this.style.background=''"
-                onclick="navigateTo('erfolg-detail',{currentErfolgId:'${e.id}'})">
-                <div style="font-weight:600;font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.titel||'–')}</div>
-                <div style="font-size:.75rem;color:#888;margin-top:2px">${esc(e.sportart||'–')} · ${fmt(e.datum)}</div>
-                <div style="font-size:.72rem;color:#888">${esc(e.athletenName||'–')}</div>
-              </div>`).join('')}
-          ${items.length > 3 ? `<div style="padding:8px 14px;border-top:1px solid var(--slzb-border);font-size:.78rem;color:#888;text-align:center">
-            +${items.length-3} weitere
-          </div>` : ''}
+
+          <!-- Karten -->
+          <div class="kanban-karten" style="padding:8px;min-height:60px">
+            ${items.length === 0
+              ? `<div class="kanban-leer" style="padding:12px;color:#888;font-size:.78rem;
+                  text-align:center;font-style:italic;border:2px dashed var(--slzb-border);
+                  border-radius:8px;margin:4px">Hierher ziehen</div>`
+              : items.map(e => `
+                <div
+                  class="kanban-karte"
+                  draggable="true"
+                  data-id="${e.id}"
+                  data-status="${esc(e.status)}"
+                  data-titel="${esc(e.titel||'')}"
+                  style="background:var(--slzb-bg);border:1px solid var(--slzb-border);
+                    border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:grab;
+                    transition:transform .15s,box-shadow .15s,opacity .15s;user-select:none"
+                  ondragstart="kanbanDragStart(event,this)"
+                  ondragend="kanbanDragEnd(this)"
+                  onclick="navigateTo('erfolg-detail',{currentErfolgId:'${e.id}'})">
+                  <div style="font-weight:600;font-size:.83rem;white-space:nowrap;
+                    overflow:hidden;text-overflow:ellipsis;margin-bottom:3px">
+                    ${esc(e.titel||'–')}
+                  </div>
+                  <div style="font-size:.72rem;color:#888">
+                    ${esc(e.sportart||'–')} · ${fmt(e.datum)}
+                  </div>
+                  ${e.athletenName ? `<div style="font-size:.72rem;color:#888">${esc(e.athletenName)}</div>` : ''}
+                  <div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap">
+                    ${e.bilder?.length ? `<span style="font-size:.65rem;background:rgba(11,99,206,.15);color:#0B63CE;padding:1px 6px;border-radius:8px">📷 ${e.bilder.length}</span>` : ''}
+                    <span style="font-size:.65rem;background:var(--slzb-bg-secondary);color:#888;padding:1px 6px;border-radius:8px">${esc(e.erfolgNr||'–')}</span>
+                  </div>
+                </div>`).join('')}
+          </div>
         </div>`;
       }).join('')}
     </div>

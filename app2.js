@@ -19,6 +19,341 @@ function teilnehmerRollenOptionen(aktuell='Athlet') {
 // ── Erfolg-Detail ────────────────────────────────────────────
 async 
 // ── Status-Fortschrittsbalken ─────────────────────────────────
+
+// ══════════════════════════════════════════════════════════════
+// KANBAN DRAG & DROP
+// ══════════════════════════════════════════════════════════════
+
+// State
+let _dndKarte = null;        // Aktuell gezogene Karte
+let _dndUndo = null;         // Letzter Undo-State
+let _dndUndoTimer = null;    // Undo-Toast-Timer
+
+// CSS für Drag & Drop (einmalig injizieren)
+function injectKanbanStyles() {
+  if (document.getElementById('kanban-dnd-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'kanban-dnd-styles';
+  style.textContent = `
+    .kanban-karte {
+      transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease !important;
+    }
+    .kanban-karte:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,.2);
+    }
+    .kanban-karte.dragging {
+      opacity: 0.45;
+      transform: scale(0.97);
+      cursor: grabbing !important;
+      box-shadow: none !important;
+    }
+    .kanban-karte.drag-ghost {
+      opacity: 0.9;
+      transform: rotate(2deg) scale(1.03);
+      box-shadow: 0 8px 24px rgba(0,0,0,.35) !important;
+      cursor: grabbing !important;
+    }
+    .kanban-spalte.drag-over {
+      background: rgba(11,99,206,0.06) !important;
+      box-shadow: inset 0 0 0 2px #0B63CE;
+    }
+    .kanban-spalte.drag-over-invalid {
+      background: rgba(226,0,26,0.06) !important;
+      box-shadow: inset 0 0 0 2px #E2001A;
+    }
+    .kanban-drop-indicator {
+      height: 3px;
+      background: #0B63CE;
+      border-radius: 2px;
+      margin: 4px 0;
+      animation: kanban-pulse .6s ease infinite alternate;
+    }
+    @keyframes kanban-pulse {
+      from { opacity: 0.5; }
+      to   { opacity: 1; }
+    }
+    .kanban-karte-moved {
+      animation: kanban-land .3s ease;
+    }
+    @keyframes kanban-land {
+      0%   { transform: scale(1.05); background: rgba(11,99,206,0.15); }
+      100% { transform: scale(1);    background: var(--slzb-bg); }
+    }
+    .undo-toast {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1B1C1F;
+      color: #fff;
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 10px;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 9999;
+      box-shadow: 0 8px 24px rgba(0,0,0,.4);
+      animation: undo-slide .25s ease;
+      white-space: nowrap;
+    }
+    @keyframes undo-slide {
+      from { transform: translateX(-50%) translateY(20px); opacity: 0; }
+      to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
+    }
+    .undo-progress {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 3px;
+      background: #0B63CE;
+      border-radius: 0 0 10px 10px;
+      animation: undo-countdown 8s linear forwards;
+    }
+    @keyframes undo-countdown {
+      from { width: 100%; }
+      to   { width: 0%; }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+// ── Drag-Start ────────────────────────────────────────────────
+function kanbanDragStart(event, el) {
+  injectKanbanStyles();
+  _dndKarte = {
+    id:          el.dataset.id,
+    altStatus:   el.dataset.status,
+    titel:       el.dataset.titel,
+    element:     el,
+    spalte:      el.closest('.kanban-spalte'),
+  };
+
+  // Ghost-Image: leicht rotiert
+  el.classList.add('drag-ghost');
+  setTimeout(() => el.classList.remove('drag-ghost'), 0);
+  el.classList.add('dragging');
+
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/plain', el.dataset.id);
+}
+
+// ── Drag-End ──────────────────────────────────────────────────
+function kanbanDragEnd(el) {
+  el.classList.remove('dragging', 'drag-ghost');
+  // Alle Spalten-Highlights entfernen
+  document.querySelectorAll('.kanban-spalte').forEach(s => {
+    s.classList.remove('drag-over', 'drag-over-invalid');
+  });
+  document.querySelectorAll('.kanban-drop-indicator').forEach(i => i.remove());
+  _dndKarte = null;
+}
+
+// ── Drag-Over ─────────────────────────────────────────────────
+function kanbanDragOver(event, spalte) {
+  event.preventDefault();
+  if (!_dndKarte) return;
+
+  const zielStatus = spalte.dataset.zielStatus;
+  const istGleiche = spalte === _dndKarte.spalte;
+
+  // Visuelles Feedback
+  document.querySelectorAll('.kanban-spalte').forEach(s => {
+    s.classList.remove('drag-over', 'drag-over-invalid');
+  });
+
+  if (istGleiche) {
+    // Gleiche Spalte: kein Highlight
+    event.dataTransfer.dropEffect = 'none';
+  } else {
+    spalte.classList.add('drag-over');
+    event.dataTransfer.dropEffect = 'move';
+
+    // Drop-Indikator positionieren
+    document.querySelectorAll('.kanban-drop-indicator').forEach(i => i.remove());
+    const karten = spalte.querySelectorAll('.kanban-karte');
+    const indicator = document.createElement('div');
+    indicator.className = 'kanban-drop-indicator';
+
+    // Finde Position basierend auf Maus-Y
+    let eingefuegt = false;
+    for (const karte of karten) {
+      const rect = karte.getBoundingClientRect();
+      if (event.clientY < rect.top + rect.height / 2) {
+        karte.parentNode.insertBefore(indicator, karte);
+        eingefuegt = true;
+        break;
+      }
+    }
+    if (!eingefuegt) {
+      const kartenContainer = spalte.querySelector('.kanban-karten');
+      if (kartenContainer) kartenContainer.appendChild(indicator);
+    }
+  }
+}
+
+// ── Drag-Leave ────────────────────────────────────────────────
+function kanbanDragLeave(spalte) {
+  // Nur entfernen wenn wirklich die Spalte verlassen wird
+  setTimeout(() => {
+    if (!spalte.matches(':hover')) {
+      spalte.classList.remove('drag-over', 'drag-over-invalid');
+      spalte.querySelectorAll('.kanban-drop-indicator').forEach(i => i.remove());
+    }
+  }, 50);
+}
+
+// ── Drop ──────────────────────────────────────────────────────
+async function kanbanDrop(event, spalte, neuerStatus) {
+  event.preventDefault();
+  document.querySelectorAll('.kanban-drop-indicator').forEach(i => i.remove());
+  spalte.classList.remove('drag-over', 'drag-over-invalid');
+
+  if (!_dndKarte) return;
+  const { id, altStatus, titel } = _dndKarte;
+
+  // Gleiche Spalte: nichts tun
+  if (altStatus === neuerStatus || _dndKarte.spalte === spalte) return;
+
+  // Undo-State speichern
+  _dndUndo = { id, altStatus, neuerStatus, titel };
+
+  // Optimistisches UI-Update: Karte sofort verschieben
+  const karte = document.querySelector(`.kanban-karte[data-id="${id}"]`);
+  if (karte) {
+    const kartenContainer = spalte.querySelector('.kanban-karten');
+    // Leere-Platzhalter entfernen
+    kartenContainer?.querySelector('.kanban-leer')?.remove();
+    // Karte verschieben
+    karte.dataset.status = neuerStatus;
+    kartenContainer?.appendChild(karte);
+    karte.classList.add('kanban-karte-moved');
+    setTimeout(() => karte.classList.remove('kanban-karte-moved'), 300);
+    // Badge-Zähler aktualisieren
+    kanbanAktualisiereBadges();
+  }
+
+  // Undo-Toast anzeigen
+  zeigeUndoToast(titel, altStatus, neuerStatus);
+
+  // Status in Supabase speichern
+  try {
+    await DB.statusWechsel(id, neuerStatus, `Kanban: ${altStatus} → ${neuerStatus}`);
+  } catch(e) {
+    toast('Fehler beim Speichern: ' + e.message, 'danger');
+    // Rollback
+    kanbanRollback(id, altStatus);
+  }
+}
+
+// ── Undo-Toast ────────────────────────────────────────────────
+function zeigeUndoToast(titel, altStatus, neuerStatus) {
+  // Alten Toast entfernen
+  document.querySelector('.undo-toast')?.remove();
+  clearTimeout(_dndUndoTimer);
+
+  const toast = document.createElement('div');
+  toast.className = 'undo-toast';
+  toast.innerHTML = `
+    <span style="font-size:.85rem">
+      <strong>${esc(titel?.slice(0,30) || 'Meldung')}</strong>
+      → <span style="color:#0B63CE">${esc(neuerStatus)}</span>
+    </span>
+    <button onclick="kanbanUndo()" style="
+      background:#0B63CE;color:#fff;border:none;border-radius:6px;
+      padding:5px 12px;font-size:.8rem;font-weight:700;cursor:pointer;
+      white-space:nowrap">
+      ↩ Rückgängig
+    </button>
+    <button onclick="this.closest('.undo-toast').remove()" style="
+      background:none;border:none;color:#888;cursor:pointer;font-size:1rem;
+      padding:0 4px">✕</button>
+    <div class="undo-progress"></div>`;
+
+  document.body.appendChild(toast);
+
+  // Auto-dismiss nach 8 Sekunden
+  _dndUndoTimer = setTimeout(() => {
+    toast.style.animation = 'undo-slide .25s ease reverse';
+    setTimeout(() => toast.remove(), 250);
+    _dndUndo = null;
+  }, 8000);
+}
+
+// ── Undo ──────────────────────────────────────────────────────
+async function kanbanUndo() {
+  if (!_dndUndo) return;
+  const { id, altStatus, neuerStatus } = _dndUndo;
+  _dndUndo = null;
+  clearTimeout(_dndUndoTimer);
+  document.querySelector('.undo-toast')?.remove();
+
+  // Karte zurückverschieben (optimistisch)
+  const karte = document.querySelector(`.kanban-karte[data-id="${id}"]`);
+  if (karte) {
+    const alteSpalte = document.querySelector(`.kanban-spalte[data-ziel-status="${altStatus}"]`);
+    if (alteSpalte) {
+      const kartenContainer = alteSpalte.querySelector('.kanban-karten');
+      kartenContainer?.querySelector('.kanban-leer')?.remove();
+      karte.dataset.status = altStatus;
+      kartenContainer?.appendChild(karte);
+      karte.classList.add('kanban-karte-moved');
+      setTimeout(() => karte.classList.remove('kanban-karte-moved'), 300);
+      kanbanAktualisiereBadges();
+    }
+  }
+
+  // Status zurücksetzen in Supabase
+  try {
+    await DB.statusWechsel(id, altStatus, `Kanban Undo: ${neuerStatus} → ${altStatus}`);
+    toast('↩ Rückgängig gemacht', 'info');
+  } catch(e) {
+    toast('Fehler beim Rückgängig: ' + e.message, 'danger');
+  }
+}
+
+// ── Rollback bei Fehler ───────────────────────────────────────
+function kanbanRollback(id, altStatus) {
+  const karte = document.querySelector(`.kanban-karte[data-id="${id}"]`);
+  if (!karte) return;
+  const alteSpalte = document.querySelector(`.kanban-spalte[data-ziel-status="${altStatus}"]`);
+  if (alteSpalte) {
+    const kartenContainer = alteSpalte.querySelector('.kanban-karten');
+    kartenContainer?.querySelector('.kanban-leer')?.remove();
+    karte.dataset.status = altStatus;
+    kartenContainer?.appendChild(karte);
+    kanbanAktualisiereBadges();
+  }
+}
+
+// ── Badge-Zähler aktualisieren ────────────────────────────────
+function kanbanAktualisiereBadges() {
+  document.querySelectorAll('.kanban-spalte').forEach(spalte => {
+    const anzahl = spalte.querySelectorAll('.kanban-karte').length;
+    const badge = spalte.querySelector('.card-header span[style*="border-radius:12px"]');
+    if (badge) badge.textContent = anzahl;
+
+    // Leere-Platzhalter ein-/ausblenden
+    const kartenContainer = spalte.querySelector('.kanban-karten');
+    if (!kartenContainer) return;
+    const hatKarten = kartenContainer.querySelectorAll('.kanban-karte').length > 0;
+    let leer = kartenContainer.querySelector('.kanban-leer');
+    if (!hatKarten && !leer) {
+      leer = document.createElement('div');
+      leer.className = 'kanban-leer';
+      leer.style.cssText = 'padding:12px;color:#888;font-size:.78rem;text-align:center;font-style:italic;border:2px dashed var(--slzb-border);border-radius:8px;margin:4px';
+      leer.textContent = 'Hierher ziehen';
+      kartenContainer.appendChild(leer);
+    } else if (hatKarten && leer) {
+      leer.remove();
+    }
+  });
+}
+
+// Kanban-Styles beim Laden der Redaktionsseite initialisieren
+document.addEventListener('DOMContentLoaded', injectKanbanStyles);
+
 function renderStatusFortschritt(status) {
   const schritte = [
     { key: 'Entwurf',       label: 'Entwurf',    icon: '📝' },
