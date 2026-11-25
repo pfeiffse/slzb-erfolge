@@ -4,7 +4,7 @@
 // ============================================================
 
 const CACHE_NAME = 'slzb-erfolge-v3';
-const CACHE_VERSION = '1.1.0';
+const CACHE_VERSION = '1.2.0'; // Logos hinzugefügt, 404-Fehler behoben
 const FULL_CACHE_NAME = `${CACHE_NAME}-${CACHE_VERSION}`;
 
 // Dateien die beim Installieren gecacht werden (App-Shell)
@@ -27,6 +27,11 @@ const APP_SHELL = [
   BASE_URL + 'manifest.json',
   BASE_URL + 'icons/icon-192x192.png',
   BASE_URL + 'icons/icon-512x512.png',
+  BASE_URL + 'slzb-sport-erfolge-logo.png',
+  BASE_URL + 'slzb-logo.png',
+  BASE_URL + 'pdf.js',
+  BASE_URL + 'qrcode.min.js',
+  BASE_URL + 'sw.js',
 ];
 
 // ── Installation ──────────────────────────────────────────────
