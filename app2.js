@@ -3280,6 +3280,8 @@ async function erstelleFotoKarussell() {
   window._fkBildSettings = fotoImgs.map(() => ({ x: 0.5, y: 0.5, zoom: 1.0 }));
   // Deckbild-Settings separat
   window._fkDeckbildSettings = { x: 0.5, y: 0.5, zoom: 1.0 };
+  // Individuelle Captions pro Foto (leer = Standard-Caption)
+  window._fkCaptions = fotoImgs.map(() => '');
 
   // Vorschau-Modal öffnen (0 = Deckblatt, 1..n = Fotos)
   await zeigeFotoKarussellVorschau();
@@ -3341,6 +3343,16 @@ async function zeigeFotoKarussellVorschau() {
           <button class="btn btn-ghost btn-sm" onclick="fkvPreset(50,50,100)">⊙ Zentrieren</button>
           <button class="btn btn-ghost btn-sm" onclick="fkvPreset(50,30,150)">🔍 Zoom Gesicht</button>
         </div>
+        <div id="fkv-caption-wrap" style="margin-top:12px;display:none">
+          <label style="font-weight:600;font-size:.82rem;color:#ccc;display:block;margin-bottom:4px">
+            💬 Bildunterschrift für dieses Foto
+          </label>
+          <input type="text" id="fkv-caption-einzeln"
+            placeholder="z.B. Ehrengäste beim Frühstück der Champions"
+            style="width:100%;background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:7px 10px;font-size:.85rem"
+            oninput="fkvCaptionSpeichern()">
+          <div style="font-size:.72rem;color:#666;margin-top:3px">Leer lassen = Standard-Bildunterschrift verwenden</div>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -3357,14 +3369,33 @@ async function zeigeFotoKarussellVorschau() {
 
   // Globale Editor-Funktionen
   window.fkvWechsle = async (idx) => {
-    // Aktuelle Settings speichern
+    // Aktuelle Settings + Caption speichern
     fkvSpeichereSettings(window._fkvAktuellerIdx);
+    fkvCaptionSpeichern();
     window._fkvAktuellerIdx = idx;
     // Tabs aktualisieren
     document.querySelectorAll('#fkv-tabs .tab-btn').forEach((b,i) => b.classList.toggle('active', i===idx));
     // Regler auf gespeicherte Werte setzen
     fkvLadeSettings(idx);
+    // Caption-Feld: nur bei Fotos (nicht Deckblatt)
+    const captionWrap = document.getElementById('fkv-caption-wrap');
+    const captionInput = document.getElementById('fkv-caption-einzeln');
+    if (captionWrap) captionWrap.style.display = idx === 0 ? 'none' : 'block';
+    if (captionInput && idx > 0) {
+      captionInput.value = window._fkCaptions?.[idx-1] || '';
+      captionInput.placeholder = window._fkOpts?.caption
+        ? `Standard: "${window._fkOpts.caption}"`
+        : 'z.B. Ehrengäste beim Frühstück der Champions';
+    }
     await fkvRenderVorschau(idx);
+  };
+
+  window.fkvCaptionSpeichern = () => {
+    const idx = window._fkvAktuellerIdx;
+    if (idx === 0) return; // Deckblatt hat keine individuelle Caption
+    const val = document.getElementById('fkv-caption-einzeln')?.value || '';
+    if (!window._fkCaptions) window._fkCaptions = [];
+    window._fkCaptions[idx-1] = val;
   };
 
   window.fkvAktualisiere = async () => {
@@ -3414,6 +3445,10 @@ async function zeigeFotoKarussellVorschau() {
     fkvSpeichereSettings(window._fkvAktuellerIdx);
     await fkvDownloadAlle();
   };
+
+  // Caption-Feld initial ausblenden (Deckblatt hat keine Caption)
+  const captionWrapInit = document.getElementById('fkv-caption-wrap');
+  if (captionWrapInit) captionWrapInit.style.display = 'none';
 
   await fkvRenderVorschau(0);
 }
@@ -3488,8 +3523,9 @@ async function fkvRenderVorschau(idx) {
       ...opts, bild: window._fkDeckbild, gesamt
     });
   } else {
+    const vorschauCaption = window._fkCaptions?.[idx-1] || opts.caption || '';
     await zeichneFotoKarussellFolie(ctx, W, H, {
-      bild: fotos[idx-1], akzent: opts.akzent, caption: opts.caption,
+      bild: fotos[idx-1], akzent: opts.akzent, caption: vorschauCaption,
       nr: idx+1, gesamt
     });
   }
@@ -3522,8 +3558,10 @@ async function fkvDownloadAlle() {
     const s = window._fkBildSettings?.[i] || { x:0.5, y:0.5, zoom:1.0 };
     window._bildOffset = { x: s.x, y: s.y };
     window._bildZoom   = s.zoom;
+    // Individuelle Caption oder Standard-Caption
+    const fotoCaption = window._fkCaptions?.[i] || opts.caption || '';
     await zeichneFotoKarussellFolie(ctx, W, H, {
-      bild: fotos[i], akzent: opts.akzent, caption: opts.caption,
+      bild: fotos[i], akzent: opts.akzent, caption: fotoCaption,
       nr: i+2, gesamt
     });
     const nr = String(i+2).padStart(2,'0');
