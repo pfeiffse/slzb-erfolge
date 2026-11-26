@@ -337,7 +337,7 @@ async function renderDashboard() {
       <div><h1>Dashboard</h1>
       <p>Willkommen, ${esc(Auth.name())}. <span class="text-muted text-sm">v3 · Supabase Auth</span></p></div>
       <button class=\"btn btn-primary\" onclick=\"zeigeWochenvorschau()\" style=\"white-space:nowrap;flex-shrink:0\">\xf0\x9f\x93\x85 Wochenvorschau</button>\n    </div>\n    <div class=\"grid grid-4 mb-4\">
-      <div class="stat-card clickable" style="cursor:pointer" onclick="navigateTo('archiv')"><div class="stat-icon blue">📋</div><div><div class="stat-value">${alle.length}</div><div class="stat-label">Meldungen gesamt</div></div></div>
+      <div class="stat-card clickable" style="cursor:pointer" onclick=\"navigateTo('meine-meldungen')\"><div class=\"stat-icon blue\">📋</div><div><div class="stat-value">${alle.length}</div><div class="stat-label">Meldungen gesamt</div></div></div>
       <div class="stat-card clickable" style="cursor:pointer" onclick="navigateTo('ausgaben')"><div class="stat-icon green">✅</div><div><div class="stat-value">${freigegeben}</div><div class="stat-label">Freigegeben</div></div></div>
       <div class="stat-card clickable" style="cursor:pointer" onclick="navigateTo('redaktion')"><div class="stat-icon orange">⏳</div><div><div class="stat-value">${offen}</div><div class="stat-label">In Bearbeitung</div></div></div>
       <div class="stat-card clickable" style="cursor:pointer" onclick="navigateTo('einwilligungen')"><div class="stat-icon red">🔒</div><div><div class="stat-value">${gesperrt}</div><div class="stat-label">Gesperrt</div></div></div>
@@ -423,7 +423,7 @@ async function renderDashboard() {
       </div></div></div>` : ''}
     <div class="card">
       <div class="card-header"><h2>🕐 Letzte Meldungen</h2>
-        <button class="btn btn-ghost btn-sm" onclick="navigateTo('archiv')">Alle →</button></div>
+        <button class="btn btn-ghost btn-sm" onclick=\"navigateTo('meine-meldungen')\">Alle →</button></div>
       <div class="table-wrap"><table>
         <thead><tr><th>Nr.</th><th>Titel</th><th>Sportart</th><th>Datum</th><th>Status</th><th>Melder</th><th></th></tr></thead>
         <tbody>${recent.length===0?'<tr><td colspan="7" class="text-center text-muted" style="padding:30px">Noch keine Meldungen.</td></tr>':
