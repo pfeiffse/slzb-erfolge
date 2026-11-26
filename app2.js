@@ -17,7 +17,7 @@ function teilnehmerRollenOptionen(aktuell='Athlet') {
 }
 
 // ── Erfolg-Detail ────────────────────────────────────────────
-async 
+
 // ── Status-Fortschrittsbalken ─────────────────────────────────
 
 // ══════════════════════════════════════════════════════════════
@@ -8942,13 +8942,13 @@ async function speichereVotingBearbeitung(kampagneId) {
 // ══════════════════════════════════════════════════════════════
 async 
 
+let _avCounter = 0;
 function avResetBildCache() {
   // Alle gespeicherten Bild-Objekte löschen
   for (let i = 1; i <= _avCounter + 10; i++) {
     delete window[`_avBildObj_${i}`];
   }
 }
-let _avCounter = 0;
 function avAthletHinzu() {
   const liste = document.getElementById('av-athleten-liste');
   if (!liste) return;
