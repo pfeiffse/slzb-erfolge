@@ -9335,7 +9335,9 @@ async function zeigeAthletenProfileVerwaltung() {
                   <div style="font-weight:700;font-size:.9rem">${esc(p.name)}</div>
                   <div style="font-size:.78rem;color:#888;margin-top:2px">${esc(p.sportart||'–')}${p.klasse?' · '+esc(p.klasse):''}</div>
                   ${p.kader ? `<div style="font-size:.72rem;color:#666">${esc(p.kader)}</div>` : ''}
-                  <div style="display:flex;gap:6px;margin-top:8px">
+                  <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+                    <button class="btn btn-primary btn-sm" style="font-size:.72rem;width:100%;margin-bottom:4px"
+                      onclick="event.stopPropagation();apZurVeranstaltungHinzu(${JSON.stringify(p).replace(/\"/g,'&quot;')})">➕ Zur Veranstaltung</button>
                     <button class="btn btn-ghost btn-sm" style="font-size:.72rem;flex:1"
                       onclick="event.stopPropagation();zeigeAthletProfilFormular(${JSON.stringify(p).replace(/"/g,'&quot;')})">✏️ Bearbeiten</button>
                     <button class="btn btn-ghost btn-sm" style="font-size:.72rem;color:#E2001A"
