@@ -235,7 +235,8 @@
     <div class="cfg-group" style="margin-bottom:14px">
       <label>Vertretungsplan-Quelle</label>
       <select id="cfg-vplan-quelle" onchange="vplanQuelleWechseln(this.value)">
-        <option value="upload">📁 HTML-Dateien hochladen (itslearning)</option>
+        <option value="upload">📁 HTML-Dateien hochladen (itslearning/manuell)</option>
+        <option value="github">🔄 Automatisch von GitHub (AccessSchule-Skript)</option>
         <option value="url">🔗 URL eingeben (eigener Server)</option>
       </select>
     </div>
@@ -283,6 +284,39 @@
                   font-size:.75rem;color:rgba(255,255,255,.5);margin-bottom:4px">
         💡 <strong>So geht's:</strong> HTML-Datei aus itslearning herunterladen → hier hochladen → fertig.
         Die Datei wird lokal im Browser gespeichert und bleibt bis zum nächsten Upload erhalten.
+      </div>
+    </div>
+
+    <!-- GitHub-Variante (AccessSchule-Skript) -->
+    <div id="vplan-github-bereich" style="display:none">
+      <div class="cfg-group" style="margin-bottom:12px">
+        <label>GitHub Repository</label>
+        <input type="text" id="cfg-github-repo"
+          placeholder="pfeiffse/slzb-erfolge" value="pfeiffse/slzb-erfolge">
+      </div>
+      <div style="background:rgba(255,255,255,.06);border-radius:8px;padding:12px 14px;
+                  font-size:.75rem;color:rgba(255,255,255,.5);margin-bottom:12px;line-height:1.7">
+        🔄 <strong>Automatischer Modus:</strong> Das AccessSchule-Skript lädt die Vplan-Dateien
+        direkt nach dem Export zu GitHub hoch. Die Anzeige lädt sie automatisch alle 5 Minuten neu.<br>
+        📁 Erwartet werden: <code>slzb-v3/vplan-heute.html</code> und <code>slzb-v3/vplan-morgen.html</code>
+      </div>
+      <div class="cfg-row">
+        <div class="cfg-group">
+          <label>Vplan-Tab wechseln alle</label>
+          <select id="cfg-tab-wechsel-github">
+            <option value="0">Nicht wechseln</option>
+            <option value="30000" selected>30 Sekunden</option>
+            <option value="60000">60 Sekunden</option>
+          </select>
+        </div>
+        <div class="cfg-group">
+          <label>Neu laden alle</label>
+          <select id="cfg-reload-interval">
+            <option value="300000" selected>5 Minuten</option>
+            <option value="600000">10 Minuten</option>
+            <option value="1800000">30 Minuten</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -394,8 +428,9 @@ function ladeVplanDatei(tab, input) {
 }
 
 function vplanQuelleWechseln(quelle) {
-  document.getElementById('vplan-upload-bereich').style.display = quelle === 'upload' ? '' : 'none';
-  document.getElementById('vplan-url-bereich').style.display = quelle === 'url' ? '' : 'none';
+  document.getElementById('vplan-upload-bereich').style.display  = quelle === 'upload'  ? '' : 'none';
+  document.getElementById('vplan-github-bereich').style.display  = quelle === 'github'  ? '' : 'none';
+  document.getElementById('vplan-url-bereich').style.display     = quelle === 'url'     ? '' : 'none';
 }
 
 // Gespeicherte Vplan-HTMLs laden
@@ -459,9 +494,33 @@ function starteAnzeige() {
   const diashowUrl = `diashow.html?autostart=1&speed=${speed}`;
   document.getElementById('diashow-frame').src = diashowUrl;
 
-  // Vplan laden (HTML-Inhalt oder URL)
+  // Vplan laden (HTML-Inhalt, GitHub oder URL)
   const quelle = document.getElementById('cfg-vplan-quelle')?.value || 'upload';
-  if (quelle === 'upload' && _vplanHtml.heute) {
+
+  if (quelle === 'github') {
+    const repo = document.getElementById('cfg-github-repo')?.value || 'pfeiffse/slzb-erfolge';
+    const baseUrl = `https://${repo.split('/')[0]}.github.io/${repo.split('/')[1]}/slzb-v3`;
+    _vplanUrls = {
+      heute:      `${baseUrl}/vplan-heute.html`,
+      morgen:     `${baseUrl}/vplan-morgen.html`,
+      uebersicht: `${baseUrl}/vplan-index.html`,
+    };
+    // Cache-Busting damit immer die neueste Version geladen wird
+    document.getElementById('vplan-frame').src = _vplanUrls.heute + '?t=' + Date.now();
+
+    // Auto-Reload
+    const reloadInterval = parseInt(document.getElementById('cfg-reload-interval')?.value || '300000');
+    setInterval(() => {
+      const frame = document.getElementById('vplan-frame');
+      const currentTab = _aktuellerTab;
+      if (_vplanUrls[currentTab]) {
+        frame.src = _vplanUrls[currentTab] + '?t=' + Date.now();
+        document.getElementById('ctrl-status').textContent = '🔄 Vplan aktualisiert ' +
+          new Date().toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+      }
+    }, reloadInterval);
+
+  } else if (quelle === 'upload' && _vplanHtml.heute) {
     document.getElementById('vplan-frame').srcdoc = _vplanHtml.heute;
   } else if (quelle === 'url' && _vplanUrls.heute) {
     document.getElementById('vplan-frame').src = _vplanUrls.heute;
@@ -471,7 +530,7 @@ function starteAnzeige() {
                   font-family:Arial;color:#888;flex-direction:column;gap:12px;background:#f5f5f5">
         <div style="font-size:2rem">📋</div>
         <div style="font-weight:700">Kein Vertretungsplan geladen</div>
-        <div style="font-size:.85rem">HTML-Datei in den Einstellungen hochladen</div>
+        <div style="font-size:.85rem">Quelle in den Einstellungen konfigurieren</div>
       </div>`;
   }
 
