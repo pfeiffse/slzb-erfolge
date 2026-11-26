@@ -9611,9 +9611,12 @@ async function apFuegeAuswahlZuVeranstaltungHinzu(veranstaltungsId) {
   };
   zeigeAthletenVorstellungMitDaten();
   setTimeout(async () => {
-    for (const p of profile) { await apProfilWaehlen(p); await new Promise(r=>setTimeout(r,200)); }
+    for (const p of profile) {
+      await apProfilWaehlen(p, false); // false = Modal nicht schließen
+      await new Promise(r=>setTimeout(r,250));
+    }
     toast('✅ '+profile.length+' Athlet(en) zu "'+v.veranstaltung+'" hinzugefügt', 'success');
-  }, 400);
+  }, 600);
 }
 
 async function apFuegeAuswahlZuNeuerVeranstaltung() {
@@ -9622,14 +9625,27 @@ async function apFuegeAuswahlZuNeuerVeranstaltung() {
   document.querySelectorAll('.modal-overlay').forEach(o => o.remove());
   window._avGespeicherteDaten = null;
   zeigeAthletenVorstellung();
+  // Warte bis Modal vollständig geöffnet ist, dann Profile hinzufügen
   setTimeout(async () => {
-    for (const p of profile) { await apProfilWaehlen(p); await new Promise(r=>setTimeout(r,200)); }
+    for (const p of profile) {
+      await apProfilWaehlen(p, false); // false = Modal nicht schließen
+      await new Promise(r=>setTimeout(r,250));
+    }
     toast('✅ '+profile.length+' Athlet(en) hinzugefügt – bitte Veranstaltungsname eingeben', 'info');
-  }, 400);
+  }, 600);
 }
 
-async function apProfilWaehlen(profil) {
-  document.querySelector('.modal-overlay')?.remove();
+async function apProfilWaehlen(profil, schliesseModal = true) {
+  // Nur das Profil-Auswahl-Modal schließen, nicht das Athletenvorstellungs-Modal
+  if (schliesseModal) {
+    // Schließe nur das oberste Modal (Profil-Auswahl), nicht alle
+    const modals = document.querySelectorAll('.modal-overlay');
+    if (modals.length > 1) {
+      modals[modals.length - 1].remove(); // Nur das letzte (Profil-Auswahl)
+    } else if (modals.length === 1) {
+      modals[0].remove();
+    }
+  }
   // Finde den nächsten freien Athleten-Slot oder füge neuen hinzu
   const liste = document.getElementById('av-athleten-liste');
   if (!liste) { toast('Bitte zuerst das Athletenvorstellungs-Formular öffnen', 'warning'); return; }
