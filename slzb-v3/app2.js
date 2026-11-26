@@ -10082,18 +10082,27 @@ async function euErstellePoster(veranstaltungsId, mitMeldung) {
     toast('✅ Poster heruntergeladen! Meldung wird eingereicht...', 'success');
     try {
       // Direkt als Meldung speichern
+      // Sportart-ID aus Name ermitteln
+      const sportartObj = (typeof SLZB_DB !== 'undefined')
+        ? SLZB_DB.sportarten.find(s => s.name === v.sportart || s.id === v.sportart)
+        : null;
+      const sportartId = sportartObj?.id || null;
+
       const meldungsDaten = {
-        meldungsart: 'Einzelerfolg',
-        titel: `${platz}. Platz${disziplin?' – '+disziplin:''} bei ${v.veranstaltung}`,
-        sportartText: v.sportart || '',
+        meldungsart:    'Einzelerfolg',
+        titel:          `${platz}. Platz${disziplin?' – '+disziplin:''} bei ${v.veranstaltung}`,
+        sportartId:     sportartId,          // ← korrekte ID für DB
+        sportartText:   v.sportart || '',    // ← Anzeigename
+        disziplin:      disziplin || '',     // ← Disziplin (z.B. "1000m")
         wettbewerbText: v.veranstaltung,
-        datum: new Date().toISOString().slice(0,10),
-        ort: v.ort || '',
-        platzierung: platz,
-        medaille: platz===1?'Gold':platz===2?'Silber':platz===3?'Bronze':'keine',
-        ergebnisText: ergebnis || '',
-        kurzinfo: zusatz || '',
-        status: 'Eingereicht',
+        datum:          new Date().toISOString().slice(0,10),
+        ort:            v.ort || '',
+        ebene:          'Bundesebene',       // Standard für Wettkampf-Updates
+        platzierung:    platz,
+        medaille:       platz===1?'Gold':platz===2?'Silber':platz===3?'Bronze':'keine',
+        ergebnisText:   ergebnis ? `${platz}. Platz – ${disziplin||''} ${ergebnis}`.trim() : '',
+        kurzinfo:       zusatz || '',
+        status:         'Eingereicht',
       };
       const beteiligte = athlet.name && athlet.name !== v.veranstaltung
         ? [{ schuelerId: null, anzeigename: athlet.name, rolle: 'Athlet', einwilligungsstatus: 'Nicht geprüft' }]
