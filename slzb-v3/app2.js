@@ -9510,6 +9510,124 @@ async function apLoeschen(id) {
 }
 
 // Profil in Athletenvorstellung laden
+
+// ── Profil zu Veranstaltung hinzufügen (Mehrfachauswahl) ─────
+function apZurVeranstaltungHinzu(erstesProfilJson) {
+  ladeAthletenProfile().then(alleProfile => {
+    const veranstaltungen = ladeGespeicherteVeranstaltungen();
+    const erstesProfilObj = typeof erstesProfilJson === 'string'
+      ? JSON.parse(erstesProfilJson.replace(/&quot;/g,'"'))
+      : erstesProfilJson;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.style.maxWidth = '540px';
+
+    window._apAuswahl = new Set([erstesProfilObj.id]);
+    window._apAlleProfile = alleProfile;
+
+    modal.innerHTML = `
+      <div class="modal-header">
+        <h3>➕ Profile zu Veranstaltung</h3>
+        <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="font-size:.78rem;font-weight:700;color:var(--slzb-text-muted);
+                    text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">
+          Athleten auswählen <span style="font-weight:400;text-transform:none">(Mehrfachauswahl)</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+          ${alleProfile.map(p => `
+            <div onclick="apToggleAuswahl('${p.id}',this)"
+              style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;
+                     border:2px solid ${p.id===erstesProfilObj.id?'#003366':'var(--slzb-border)'};
+                     background:${p.id===erstesProfilObj.id?'rgba(0,51,102,.1)':'var(--slzb-bg-secondary)'};
+                     cursor:pointer;transition:all .15s;user-select:none" data-selected="${p.id===erstesProfilObj.id?'1':'0'}">
+              ${p.bild_url
+                ? `<img src="${esc(p.bild_url)}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0">`
+                : `<div style="width:32px;height:32px;border-radius:50%;background:#003366;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.8rem;flex-shrink:0">${esc(p.name.slice(0,2).toUpperCase())}</div>`}
+              <div>
+                <div style="font-weight:700;font-size:.85rem">${esc(p.name)}</div>
+                <div style="font-size:.72rem;color:var(--slzb-text-muted)">${esc(p.sportart||'–')}</div>
+              </div>
+              <div id="ap-check-${p.id}" style="margin-left:auto;font-size:1.1rem">${p.id===erstesProfilObj.id?'✅':'○'}</div>
+            </div>`).join('')}
+        </div>
+        <div style="font-size:.78rem;font-weight:700;color:var(--slzb-text-muted);
+                    text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Ziel-Veranstaltung</div>
+        ${veranstaltungen.map(v => `
+          <div onclick="apFuegeAuswahlZuVeranstaltungHinzu('${v.id}')"
+            style="border:1px solid var(--slzb-border);border-radius:8px;padding:10px 14px;
+                   margin-bottom:6px;cursor:pointer;transition:border-color .15s"
+            onmouseover="this.style.borderColor='#003366'" onmouseout="this.style.borderColor='var(--slzb-border)'">
+            <div style="font-weight:700;font-size:.88rem">${esc(v.veranstaltung)}</div>
+            <div style="font-size:.75rem;color:var(--slzb-text-muted)">${v.sportart?esc(v.sportart)+' · ':''}${(v.athleten||[]).length} Athlet(en)</div>
+          </div>`).join('')}
+        <button class="btn btn-outline" style="width:100%;margin-top:8px"
+          onclick="apFuegeAuswahlZuNeuerVeranstaltung()">✨ Neue Veranstaltung erstellen</button>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
+        <span id="ap-auswahl-count" style="font-size:.82rem;color:var(--slzb-text-muted);align-self:center">1 ausgewählt</span>
+      </div>`;
+
+    overlay.appendChild(modal);
+    overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+  });
+}
+
+function apToggleAuswahl(profilId, el) {
+  if (!window._apAuswahl) window._apAuswahl = new Set();
+  const check = document.getElementById('ap-check-'+profilId);
+  if (window._apAuswahl.has(profilId)) {
+    window._apAuswahl.delete(profilId);
+    el.style.borderColor = 'var(--slzb-border)';
+    el.style.background = 'var(--slzb-bg-secondary)';
+    if (check) check.textContent = '○';
+  } else {
+    window._apAuswahl.add(profilId);
+    el.style.borderColor = '#003366';
+    el.style.background = 'rgba(0,51,102,.1)';
+    if (check) check.textContent = '✅';
+  }
+  const cnt = document.getElementById('ap-auswahl-count');
+  if (cnt) cnt.textContent = window._apAuswahl.size + ' ausgewählt';
+}
+
+async function apFuegeAuswahlZuVeranstaltungHinzu(veranstaltungsId) {
+  const profile = (window._apAlleProfile||[]).filter(p => (window._apAuswahl||new Set()).has(p.id));
+  if (!profile.length) { toast('Bitte mindestens ein Profil auswählen', 'warning'); return; }
+  document.querySelectorAll('.modal-overlay').forEach(o => o.remove());
+  const liste = ladeGespeicherteVeranstaltungen();
+  const v = liste.find(x => x.id === veranstaltungsId);
+  if (!v) return;
+  window._avGespeicherteDaten = {
+    veranstaltung: v.veranstaltung, ort: v.ort||'', sportart: v.sportart||'',
+    format: v.format||'carousel', teamfotoUrl: v.teamfotoUrl||null,
+    athleten: (v.athleten||[]).map(a => ({...a, erfolgeStr: a.erfolge?.join(', ')||'', startsStr: a.starts?.join('\n')||'', bildUrl: a.bildUrl||null, bildObj: null}))
+  };
+  zeigeAthletenVorstellungMitDaten();
+  setTimeout(async () => {
+    for (const p of profile) { await apProfilWaehlen(p); await new Promise(r=>setTimeout(r,200)); }
+    toast('✅ '+profile.length+' Athlet(en) zu "'+v.veranstaltung+'" hinzugefügt', 'success');
+  }, 400);
+}
+
+async function apFuegeAuswahlZuNeuerVeranstaltung() {
+  const profile = (window._apAlleProfile||[]).filter(p => (window._apAuswahl||new Set()).has(p.id));
+  if (!profile.length) { toast('Bitte mindestens ein Profil auswählen', 'warning'); return; }
+  document.querySelectorAll('.modal-overlay').forEach(o => o.remove());
+  window._avGespeicherteDaten = null;
+  zeigeAthletenVorstellung();
+  setTimeout(async () => {
+    for (const p of profile) { await apProfilWaehlen(p); await new Promise(r=>setTimeout(r,200)); }
+    toast('✅ '+profile.length+' Athlet(en) hinzugefügt – bitte Veranstaltungsname eingeben', 'info');
+  }, 400);
+}
+
 async function apProfilWaehlen(profil) {
   document.querySelector('.modal-overlay')?.remove();
   // Finde den nächsten freien Athleten-Slot oder füge neuen hinzu
@@ -9523,6 +9641,9 @@ async function apProfilWaehlen(profil) {
     setVal(`av-vorname-${id}`, profil.vorname || profil.name.split(' ')[0]);
     setVal(`av-nachname-${id}`, profil.nachname || profil.name.split(' ').slice(1).join(' '));
     setVal(`av-kader-${id}`, profil.kader);
+    // Profil-ID für spätere Aktualisierung speichern
+    const profilIdEl = document.getElementById(`av-athlet-${id}`);
+    if (profilIdEl && profil.id) profilIdEl.dataset.profilId = profil.id;
     if (profil.bild_url) {
       const preview = document.getElementById(`av-bild-preview-${id}`);
       if (preview) { preview.src = profil.bild_url; preview.style.display = 'block'; }
