@@ -404,5 +404,32 @@ function installPWA() {
   }
 }
 </script>
+
+<script>
+// Auto data-label für Mobile-Karten-Layout
+// Wird nach jedem Seitenrender aufgerufen
+function autoDataLabel() {
+  document.querySelectorAll('.table-wrap table').forEach(table => {
+    const headers = [...table.querySelectorAll('thead th')].map(th => th.textContent.trim());
+    if (!headers.length) return;
+    table.querySelectorAll('tbody tr').forEach(row => {
+      [...row.querySelectorAll('td')].forEach((td, i) => {
+        if (headers[i] && !td.dataset.label) {
+          td.dataset.label = headers[i];
+        }
+      });
+    });
+  });
+}
+// Nach DOM-Änderungen automatisch ausführen
+const _observer = new MutationObserver(() => autoDataLabel());
+document.addEventListener('DOMContentLoaded', () => {
+  autoDataLabel();
+  _observer.observe(document.getElementById('main-page') || document.body, {
+    childList: true, subtree: true
+  });
+});
+</script>
+
 </body>
 </html>
