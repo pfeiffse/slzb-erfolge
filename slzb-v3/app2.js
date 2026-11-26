@@ -8945,6 +8945,7 @@ function avResetBildCache() {
     delete window[`_avBildObj_${i}`];
   }
 }
+let _avCounter = 0;
 function avAthletHinzu() {
   const liste = document.getElementById('av-athleten-liste');
   if (!liste) return;
@@ -9064,7 +9065,6 @@ function zeigeAthletenVorstellung() {
   avAthletHinzu();
 }
 
-let _avCounter = 0;
 
 // Bild-Vorschau im Athleten-Formular
 
