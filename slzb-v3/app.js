@@ -351,7 +351,7 @@ async function renderDashboard() {
     <div class="card mb-4">
       <div class="card-header"><h2>⚡ Schnellzugriff</h2></div>
       <div class="card-body">
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px">
+        <div id="quick-actions-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px">
           ${Auth.canDo('erfassen') ? `
             <button class="btn btn-primary" onclick="navigateTo('neue-meldung')" style="height:64px;flex-direction:column;gap:4px">
               <span style="font-size:1.4rem">➕</span>
@@ -1894,14 +1894,14 @@ async function renderRedaktion() {
           <h2>${g.icon} ${esc(g.label)}</h2>
           <span class="badge badge-info">${items.length}</span>
         </div>
-        <div class="table-wrap"><table>
+        <div class="table-wrap mobile-cards"><table>
           <thead><tr><th>Nr.</th><th>Titel</th><th>Sportart</th><th>Datum</th><th>Athlet</th><th>Aktionen</th></tr></thead>
           <tbody>${items.map(e=>`<tr style="cursor:pointer" onclick="navigateTo('erfolg-detail',{currentErfolgId:'${e.id}'})">
-            <td class="text-sm text-muted">${esc(e.erfolgNr||'–')}</td>
-            <td><strong>${esc(e.titel||'–')}</strong></td>
-            <td class="text-sm">${esc(e.sportart||'–')}</td>
-            <td class="text-sm">${fmt(e.datum)}</td>
-            <td class="text-sm">${esc(e.athletenName||'–')}</td>
+            <td data-label="Nr." class="text-sm text-muted">${esc(e.erfolgNr||'–')}</td>
+            <td data-label="Titel"><strong>${esc(e.titel||'–')}</strong></td>
+            <td data-label="Sportart" class="text-sm">${esc(e.sportart||'–')}</td>
+            <td data-label="Datum" class="text-sm">${fmt(e.datum)}</td>
+            <td data-label="Athlet" class="text-sm">${esc(e.athletenName||'–')}</td>
             <td onclick="event.stopPropagation()">
               <button class="btn btn-primary btn-sm" onclick="navigateTo('erfolg-detail',{currentErfolgId:'${e.id}'})">Prüfen →</button>
             </td>

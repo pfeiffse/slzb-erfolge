@@ -985,3 +985,267 @@ tbody tr.clickable { cursor: pointer; }
   .nav-item:active { background: rgba(255,255,255,.15) !important; }
   .meldungsart-card:active { transform: scale(0.97) !important; }
 }
+
+
+/* ══════════════════════════════════════════════════════════════
+   MODERNE UX-VERBESSERUNGEN & MOBILE-OPTIMIERUNG
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Modal-Footer: Flexbox mit wrap ─────────────────────────── */
+.modal-footer {
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+}
+.modal-footer .btn-ghost:first-child {
+  margin-right: auto; /* Sekundär-Buttons links, Primär rechts */
+}
+
+/* ── Karten-Layout für Tabellen auf Mobile ───────────────────── */
+@media (max-width: 640px) {
+
+  /* Tabellen → Karten-Transformation */
+  .table-wrap.mobile-cards table,
+  .table-wrap.mobile-cards thead,
+  .table-wrap.mobile-cards tbody,
+  .table-wrap.mobile-cards th,
+  .table-wrap.mobile-cards td,
+  .table-wrap.mobile-cards tr {
+    display: block;
+  }
+  .table-wrap.mobile-cards thead tr {
+    display: none; /* Header ausblenden */
+  }
+  .table-wrap.mobile-cards tbody tr {
+    background: var(--slzb-bg);
+    border: 1px solid var(--slzb-border);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    padding: 12px;
+    position: relative;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+  }
+  .table-wrap.mobile-cards tbody tr:hover {
+    border-color: var(--slzb-primary);
+    box-shadow: 0 2px 8px rgba(0,51,102,.12);
+  }
+  .table-wrap.mobile-cards td {
+    padding: 3px 0;
+    border: none;
+    font-size: .85rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .table-wrap.mobile-cards td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    font-size: .72rem;
+    color: var(--slzb-text-muted);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    min-width: 80px;
+    flex-shrink: 0;
+    padding-top: 1px;
+  }
+  .table-wrap.mobile-cards td:first-child {
+    font-weight: 700;
+    font-size: .92rem;
+    color: var(--slzb-text);
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--slzb-border);
+    margin-bottom: 4px;
+  }
+  .table-wrap.mobile-cards td:first-child::before {
+    display: none;
+  }
+  /* Aktions-Buttons in Karten */
+  .table-wrap.mobile-cards td:last-child {
+    padding-top: 8px;
+    margin-top: 4px;
+    border-top: 1px solid var(--slzb-border);
+    justify-content: flex-end;
+  }
+  .table-wrap.mobile-cards td:last-child::before {
+    display: none;
+  }
+
+  /* Dashboard KPI-Karten: 2 Spalten */
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+  .stat-card {
+    padding: 12px !important;
+  }
+  .stat-value {
+    font-size: 1.6rem !important;
+  }
+
+  /* Quick-Actions: 3 Spalten auf Mobile */
+  #quick-actions-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+  }
+  #quick-actions-grid .btn {
+    height: 56px !important;
+    font-size: .72rem !important;
+    padding: 4px !important;
+  }
+  #quick-actions-grid .btn span:first-child {
+    font-size: 1.2rem !important;
+  }
+
+  /* Kanban: Horizontal scrollbar statt Grid */
+  #kanban-board {
+    display: flex !important;
+    overflow-x: auto !important;
+    gap: 12px !important;
+    padding-bottom: 12px !important;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  .kanban-spalte {
+    min-width: 240px !important;
+    flex-shrink: 0 !important;
+    scroll-snap-align: start;
+  }
+
+  /* Modal: Vollbild auf Mobile */
+  .modal {
+    margin: 0 !important;
+    border-radius: 16px 16px 0 0 !important;
+    max-height: 92vh !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+  .modal-overlay {
+    align-items: flex-end !important;
+  }
+  .modal-body {
+    max-height: 65vh !important;
+    overflow-y: auto !important;
+  }
+
+  /* Page-Header: Stack auf Mobile */
+  .page-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+  }
+
+  /* Ausgaben-Kacheln: 1 Spalte */
+  .ausgaben-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Form-Row: immer 1 Spalte */
+  .form-row.cols-2,
+  .form-row.cols-3 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── Moderne Karten-Hover-Effekte ────────────────────────────── */
+.card {
+  transition: box-shadow .2s ease, transform .15s ease;
+}
+.card.clickable:hover {
+  box-shadow: 0 4px 16px rgba(0,51,102,.12);
+  transform: translateY(-1px);
+}
+
+/* ── Verbesserte Badge-Darstellung ───────────────────────────── */
+.badge {
+  font-size: .7rem;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-weight: 700;
+  letter-spacing: .03em;
+}
+
+/* ── Smooth Scroll ───────────────────────────────────────────── */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ── Bessere Fokus-Indikatoren ───────────────────────────────── */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--slzb-primary);
+  outline-offset: 2px;
+}
+
+/* ── Skeleton Loading ────────────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg,
+    var(--slzb-bg-secondary) 25%,
+    var(--slzb-border) 50%,
+    var(--slzb-bg-secondary) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+  border-radius: 6px;
+}
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Toast-Verbesserungen ────────────────────────────────────── */
+.alert[style*="position:fixed"] {
+  border-radius: 10px !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,.2) !important;
+  animation: toast-slide-up .25s ease !important;
+}
+@keyframes toast-slide-up {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* ── Tabellen: Zebra-Streifen ────────────────────────────────── */
+tbody tr:nth-child(even) {
+  background: rgba(0,0,0,.02);
+}
+[data-theme="dark"] tbody tr:nth-child(even) {
+  background: rgba(255,255,255,.02);
+}
+
+/* ── Scrollbar-Styling ───────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--slzb-border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--slzb-text-muted);
+}
+
+/* ── Kanban-Karten: Moderne Optik ────────────────────────────── */
+.kanban-karte {
+  border-left: 3px solid transparent !important;
+  transition: border-color .15s, transform .15s, box-shadow .15s !important;
+}
+.kanban-karte:hover {
+  border-left-color: var(--slzb-primary) !important;
+}
+
+/* ── Status-Fortschrittsbalken ───────────────────────────────── */
+.status-progress-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--slzb-border);
+  overflow: hidden;
+}
+.status-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--slzb-primary), #4caf50);
+  transition: width .5s ease;
+}
+

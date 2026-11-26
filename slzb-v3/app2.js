@@ -1850,15 +1850,15 @@ async function renderAusgabenMeldungen() {
               oninput="ausgabenFilter(this.value)"
               style="max-width:200px;font-size:.85rem">
           </div>
-          <div id="ausgaben-liste" class="table-wrap"><table>
+          <div id="ausgaben-liste" class="table-wrap mobile-cards"><table>
             <thead><tr>
               <th>Titel</th><th>Sportart</th><th>Datum</th><th>Athlet</th><th>Ausgaben</th>
             </tr></thead>
             <tbody>${freigegebene.map(e => `<tr>
-              <td><strong>${esc(e.titel||'–')}</strong></td>
-              <td class="text-sm">${esc(e.sportart||'–')}</td>
-              <td class="text-sm">${fmt(e.datum)}</td>
-              <td class="text-sm">${esc(e.athletenName||'–')}</td>
+              <td data-label="Titel"><strong>${esc(e.titel||'–')}</strong></td>
+              <td data-label="Sportart" class="text-sm">${esc(e.sportart||'–')}</td>
+              <td data-label="Datum" class="text-sm">${fmt(e.datum)}</td>
+              <td data-label="Athlet" class="text-sm">${esc(e.athletenName||'–')}</td>
               <td>
                 <div style="display:flex;gap:4px;flex-wrap:wrap">
                   <button class="btn btn-outline btn-sm" onclick="zeigeA3Vorschau('${e.id}')" title="A3-Aushang">🖨️ A3</button>
