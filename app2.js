@@ -10025,7 +10025,7 @@ async function euErstellePoster(veranstaltungsId, mitMeldung) {
   document.querySelector('.modal-overlay')?.remove();
   toast('⏳ Poster wird erstellt...', 'info');
 
-  // Bild laden
+  // Bild laden: zuerst hochgeladenes Foto, dann Bild aus Workspace-Athlet
   let bild = null;
   if (window._euBildDataUrl) {
     bild = await new Promise(res => {
@@ -10039,6 +10039,14 @@ async function euErstellePoster(veranstaltungsId, mitMeldung) {
   const athlet = athletName === '__alle__'
     ? { name: v.veranstaltung, vorname: '', nachname: '' }
     : (v.athleten||[]).find(a => (a.name||a.vorname+' '+a.nachname) === athletName) || { name: athletName };
+
+  // Bild aus Workspace-Athlet laden wenn kein Foto hochgeladen
+  if (!bild && athlet.bildUrl) {
+    bild = await new Promise(res => {
+      const img = new Image(); img.onload = () => res(img); img.onerror = () => res(null);
+      img.src = athlet.bildUrl;
+    });
+  }
 
   // Poster erstellen
   const W = 1080, H = 1350;
@@ -10061,7 +10069,7 @@ async function euErstellePoster(veranstaltungsId, mitMeldung) {
       ...(zusatz ? [zusatz] : []),
     ],
     bild,
-    akzent: 'rot',
+    akzent: 'rot',  // Immer rot für Sporterfolge
   });
 
   // Download
@@ -10069,20 +10077,50 @@ async function euErstellePoster(veranstaltungsId, mitMeldung) {
   a.download = `SLZB_Update_${(athlet.name||'').replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.png`;
   canvas.toBlob(blob => { a.href = URL.createObjectURL(blob); a.click(); }, 'image/png');
 
-  // Optional: Meldung erstellen
+  // Meldung direkt einreichen (nicht nur Formular öffnen)
   if (mitMeldung && platz) {
-    toast('✅ Poster heruntergeladen! Meldung wird vorbereitet...', 'success');
-    setTimeout(() => {
-      navigateTo('neue-meldung');
+    toast('✅ Poster heruntergeladen! Meldung wird eingereicht...', 'success');
+    try {
+      // Direkt als Meldung speichern
+      const meldungsDaten = {
+        meldungsart: 'Einzelerfolg',
+        titel: `${platz}. Platz${disziplin?' – '+disziplin:''} bei ${v.veranstaltung}`,
+        sportartText: v.sportart || '',
+        wettbewerbText: v.veranstaltung,
+        datum: new Date().toISOString().slice(0,10),
+        ort: v.ort || '',
+        platzierung: platz,
+        medaille: platz===1?'Gold':platz===2?'Silber':platz===3?'Bronze':'keine',
+        ergebnisText: ergebnis || '',
+        kurzinfo: zusatz || '',
+        status: 'Eingereicht',
+      };
+      const beteiligte = athlet.name && athlet.name !== v.veranstaltung
+        ? [{ schuelerId: null, anzeigename: athlet.name, rolle: 'Athlet', einwilligungsstatus: 'Nicht geprüft' }]
+        : [];
+      const result = await DB.erstelleErfolg(meldungsDaten, beteiligte);
+      if (result.ok) {
+        toast(`✅ Meldung ${result.nr} eingereicht!`, 'success');
+        // Cache leeren damit Meldung in "Meine Meldungen" erscheint
+        APP._erfolgeCache = null;
+      } else {
+        throw new Error(result.fehler || 'Unbekannter Fehler');
+      }
+    } catch(err) {
+      // Fallback: Formular öffnen
+      toast('⚠️ Direkt-Einreichung fehlgeschlagen – Formular wird geöffnet', 'warning');
       setTimeout(() => {
-        const titelEl = document.getElementById('f-titel');
-        const sportEl = document.getElementById('f-sportart-text');
-        const schuelerEl = document.getElementById('f-schueler-text');
-        if (titelEl) titelEl.value = `${platz}. Platz${disziplin?' – '+disziplin:''} bei ${v.veranstaltung}`;
-        if (sportEl) sportEl.value = v.sportart || '';
-        if (schuelerEl) schuelerEl.value = athlet.name || '';
-      }, 300);
-    }, 1000);
+        navigateTo('neue-meldung');
+        setTimeout(() => {
+          const titelEl = document.getElementById('f-titel');
+          const sportEl = document.getElementById('f-sportart-text');
+          const schuelerEl = document.getElementById('f-schueler-text');
+          if (titelEl) titelEl.value = `${platz}. Platz${disziplin?' – '+disziplin:''} bei ${v.veranstaltung}`;
+          if (sportEl) sportEl.value = v.sportart || '';
+          if (schuelerEl) schuelerEl.value = athlet.name || '';
+        }, 300);
+      }, 500);
+    }
   } else {
     toast('✅ Poster heruntergeladen!', 'success');
   }
