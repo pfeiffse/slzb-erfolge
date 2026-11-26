@@ -1015,77 +1015,106 @@ tbody tr.clickable { cursor: pointer; }
   .table-wrap thead tr {
     display: none;
   }
+  /* ── Kompakte Karten ──────────────────────────────────────── */
   .table-wrap tbody tr {
     background: var(--slzb-bg);
     border: 1px solid var(--slzb-border);
-    border-radius: 12px;
-    margin-bottom: 10px;
-    padding: 14px;
+    border-left: 3px solid var(--slzb-primary); /* Farbiger linker Rand */
+    border-radius: 8px;
+    margin-bottom: 8px;
+    padding: 10px 12px;
     position: relative;
-    box-shadow: 0 1px 6px rgba(0,0,0,.07);
-    transition: box-shadow .2s, border-color .2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    transition: box-shadow .15s, border-color .15s;
+    display: grid;
+    grid-template-columns: 1fr auto; /* Inhalt links, Buttons rechts */
+    gap: 0;
   }
-  .table-wrap tbody tr:hover {
-    border-color: var(--slzb-primary);
-    box-shadow: 0 3px 12px rgba(0,51,102,.12);
+  .table-wrap tbody tr:active {
+    background: rgba(0,51,102,.04);
   }
   .table-wrap tbody tr:nth-child(even) {
     background: var(--slzb-bg) !important;
   }
   .table-wrap td {
-    padding: 4px 0;
+    padding: 2px 0;
     border: none !important;
-    font-size: .85rem;
+    font-size: .82rem;
     display: flex;
-    align-items: flex-start;
-    gap: 8px;
+    align-items: center;
+    gap: 6px;
     min-height: 0;
+    grid-column: 1;
   }
   .table-wrap td::before {
     content: attr(data-label);
-    font-weight: 700;
-    font-size: .7rem;
+    font-size: .68rem;
     color: var(--slzb-text-muted);
     text-transform: uppercase;
-    letter-spacing: .06em;
-    min-width: 72px;
+    letter-spacing: .05em;
+    min-width: 60px;
     flex-shrink: 0;
-    padding-top: 2px;
-    line-height: 1.3;
+    font-weight: 600;
   }
-  /* Erste Zelle = Titel der Karte */
+  /* Erste Zelle = Haupttitel (kompakt) */
   .table-wrap td:first-child {
     font-weight: 700;
-    font-size: .95rem;
+    font-size: .88rem;
     color: var(--slzb-text);
-    padding-bottom: 8px;
-    margin-bottom: 4px;
-    border-bottom: 1px solid var(--slzb-border) !important;
+    padding-bottom: 4px;
+    margin-bottom: 2px;
+    border-bottom: 1px solid rgba(0,0,0,.06) !important;
     display: block;
+    grid-column: 1 / -1; /* Volle Breite */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .table-wrap td:first-child::before {
-    display: none;
+  .table-wrap td:first-child::before { display: none; }
+
+  /* Zweite + dritte Zelle: inline nebeneinander */
+  .table-wrap td:nth-child(2),
+  .table-wrap td:nth-child(3) {
+    display: inline-flex;
+    margin-right: 10px;
+    font-size: .78rem;
+    color: var(--slzb-text-muted);
   }
-  /* Letzte Zelle = Aktions-Buttons */
+  .table-wrap td:nth-child(2)::before,
+  .table-wrap td:nth-child(3)::before {
+    display: none; /* Kein Label für kompakte Infos */
+  }
+
+  /* Vierte Zelle: Badge/Status */
+  .table-wrap td:nth-child(4) {
+    font-size: .75rem;
+  }
+  .table-wrap td:nth-child(4)::before { display: none; }
+
+  /* Letzte Zelle = Aktions-Buttons (rechts oben) */
   .table-wrap td:last-child {
-    padding-top: 10px;
-    margin-top: 6px;
-    border-top: 1px solid var(--slzb-border) !important;
-    justify-content: flex-end;
-    flex-wrap: wrap;
-    gap: 6px;
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    padding: 0;
+    border: none !important;
+    display: flex;
+    gap: 4px;
+    align-items: center;
   }
-  .table-wrap td:last-child::before {
-    display: none;
+  .table-wrap td:last-child::before { display: none; }
+  .table-wrap td:last-child .btn {
+    padding: 4px 8px !important;
+    font-size: .72rem !important;
+    min-height: 28px !important;
   }
+
   /* Leere Zellen ausblenden */
-  .table-wrap td:empty {
-    display: none;
-  }
-  /* Tabellen ohne data-label: kompakter */
-  .table-wrap td:not([data-label])::before {
-    display: none;
-  }
+  .table-wrap td:empty { display: none; }
+  .table-wrap td:not([data-label])::before { display: none; }
+
+  /* Zebra-Streifen deaktivieren auf Mobile */
+  tbody tr:nth-child(even) { background: var(--slzb-bg) !important; }
 
   /* Dashboard KPI-Karten: 2 Spalten */
   .stats-grid {
@@ -1128,24 +1157,64 @@ tbody tr.clickable { cursor: pointer; }
     scroll-snap-align: start;
   }
 
-  /* Modal: Vollbild auf Mobile */
-  .modal {
-    margin: 0 !important;
-    border-radius: 16px 16px 0 0 !important;
-    max-height: 92vh !important;
-    position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    max-width: 100% !important;
-    width: 100% !important;
-  }
+  /* ── Modal als Bottom-Sheet ──────────────────────────────── */
   .modal-overlay {
     align-items: flex-end !important;
+    padding: 0 !important;
+  }
+  .modal {
+    margin: 0 !important;
+    border-radius: 20px 20px 0 0 !important;
+    max-height: 92dvh !important;
+    max-height: 92vh !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    animation: bottom-sheet-up .25s cubic-bezier(.32,1,.23,1) !important;
+    /* Drag-Handle */
+    padding-top: 8px;
+  }
+  /* Drag-Handle Indikator */
+  .modal::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 4px;
+    background: var(--slzb-border);
+    border-radius: 2px;
+    margin: 0 auto 4px;
+    flex-shrink: 0;
+  }
+  @keyframes bottom-sheet-up {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+  .modal-header {
+    padding: 12px 16px !important;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--slzb-bg);
   }
   .modal-body {
-    max-height: 65vh !important;
     overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    padding: 12px 16px !important;
+    /* Verhindert dass Tastatur das Modal verdeckt */
+    padding-bottom: env(keyboard-inset-height, 16px) !important;
+  }
+  .modal-footer {
+    padding: 10px 16px !important;
+    padding-bottom: max(10px, env(safe-area-inset-bottom)) !important;
+    position: sticky;
+    bottom: 0;
+    background: var(--slzb-bg);
+    border-top: 1px solid var(--slzb-border);
+  }
+  /* Overlay: Tap-to-close Bereich oben */
+  .modal-overlay::before {
+    content: '';
+    flex: 1;
+    min-height: 40px;
   }
 
   /* Page-Header: Stack auf Mobile */
