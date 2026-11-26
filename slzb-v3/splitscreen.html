@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SLZB – Sportliche Erfolge & Vertretungsplan</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body {
+    width: 100vw; height: 100vh;
+    overflow: hidden;
+    background: #0a0c1a;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+  }
+
+  /* ── Layout ──────────────────────────────────────────────── */
+  #layout {
+    display: grid;
+    width: 100vw;
+    height: 100vh;
+    /* Standard: 60% Diashow | 40% Vertretungsplan */
+    grid-template-columns: 60fr 40fr;
+    grid-template-rows: 1fr;
+    gap: 0;
+  }
+
+  /* Hochformat-Layout (z.B. 9:16 Bildschirm) */
+  #layout.hochformat {
+    grid-template-columns: 1fr;
+    grid-template-rows: 55fr 45fr;
+  }
+
+  /* Vollbild-Modi */
+  #layout.vollbild-diashow { grid-template-columns: 1fr 0fr; }
+  #layout.vollbild-vplan   { grid-template-columns: 0fr 1fr; }
+
+  /* ── Diashow-Panel ───────────────────────────────────────── */
+  #panel-diashow {
+    position: relative;
+    overflow: hidden;
+    background: #000;
+  }
+  #diashow-frame {
+    width: 100%; height: 100%;
+    border: none;
+    display: block;
+  }
+
+  /* ── Vertretungsplan-Panel ───────────────────────────────── */
+  #panel-vplan {
+    position: relative;
+    overflow: hidden;
+    background: #fff;
+    border-left: 3px solid #E2001A;
+  }
+  #vplan-frame {
+    width: 100%; height: 100%;
+    border: none;
+    display: block;
+    /* Skalierung für lesbare Darstellung */
+    transform-origin: top left;
+  }
+
+  /* ── Trennlinie ──────────────────────────────────────────── */
+  #divider {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 3px;
+    background: linear-gradient(to bottom, #E2001A, #003366, #E2001A);
+    cursor: col-resize;
+    z-index: 100;
+    transition: background .2s;
+  }
+  #divider:hover { background: #E2001A; width: 5px; }
+
+  /* ── Steuerleiste ────────────────────────────────────────── */
+  #controls {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 36px;
+    background: rgba(0,0,0,.85);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    z-index: 200;
+    opacity: 0;
+    transition: opacity .3s;
+  }
+  body:hover #controls { opacity: 1; }
+  .ctrl-btn {
+    background: rgba(255,255,255,.1);
+    border: 1px solid rgba(255,255,255,.2);
+    color: #fff;
+    border-radius: 4px;
+    padding: 3px 10px;
+    font-size: .72rem;
+    cursor: pointer;
+    white-space: nowrap;
+    font-family: inherit;
+    transition: background .15s;
+  }
+  .ctrl-btn:hover { background: rgba(226,0,26,.5); }
+  .ctrl-btn.aktiv { background: #E2001A; border-color: #E2001A; }
+  .ctrl-sep {
+    width: 1px; height: 20px;
+    background: rgba(255,255,255,.2);
+    margin: 0 4px;
+  }
+  #ctrl-uhr {
+    margin-left: auto;
+    color: rgba(255,255,255,.6);
+    font-size: .75rem;
+    font-variant-numeric: tabular-nums;
+  }
+  #ctrl-status {
+    color: rgba(255,255,255,.4);
+    font-size: .7rem;
+  }
+
+  /* ── Vplan-Tabs ──────────────────────────────────────────── */
+  #vplan-tabs {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 36px;
+    background: #003366;
+    display: flex;
+    z-index: 10;
+  }
+  .vplan-tab {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: rgba(255,255,255,.6);
+    font-size: .75rem;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background .15s, color .15s;
+    border-bottom: 2px solid transparent;
+  }
+  .vplan-tab.aktiv {
+    color: #fff;
+    border-bottom-color: #E2001A;
+    background: rgba(255,255,255,.08);
+  }
+  .vplan-tab:hover { background: rgba(255,255,255,.1); }
+  #vplan-frame-wrap {
+    position: absolute;
+    top: 36px; left: 0; right: 0; bottom: 0;
+    overflow: hidden;
+  }
+
+  /* ── Konfigurationsscreen ────────────────────────────────── */
+  #config-screen {
+    position: fixed; inset: 0;
+    background: linear-gradient(135deg, #003366, #001F4D);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 999;
+  }
+  .config-card {
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 20px;
+    padding: 36px;
+    max-width: 600px;
+    width: 90%;
+    color: #fff;
+  }
+  .config-card h1 { font-size: 1.5rem; margin-bottom: 4px; }
+  .config-card .sub { color: rgba(255,255,255,.6); font-size: .85rem; margin-bottom: 24px; }
+  .cfg-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+  .cfg-group label {
+    display: block; font-size: .75rem; font-weight: 700;
+    color: rgba(255,255,255,.6); text-transform: uppercase;
+    letter-spacing: .05em; margin-bottom: 5px;
+  }
+  .cfg-group input, .cfg-group select {
+    width: 100%;
+    background: rgba(255,255,255,.1);
+    border: 1px solid rgba(255,255,255,.2);
+    border-radius: 7px;
+    padding: 9px 12px;
+    color: #fff;
+    font-size: .88rem;
+    font-family: inherit;
+  }
+  .cfg-group select option { background: #003366; }
+  .cfg-group input::placeholder { color: rgba(255,255,255,.3); }
+  .btn-start {
+    width: 100%; background: #E2001A; color: #fff;
+    border: none; border-radius: 10px; padding: 13px;
+    font-size: .95rem; font-weight: 700; cursor: pointer;
+    font-family: inherit; margin-top: 8px;
+    transition: background .15s;
+  }
+  .btn-start:hover { background: #c0001a; }
+  .hint {
+    font-size: .75rem; color: rgba(255,255,255,.4);
+    margin-top: 10px; text-align: center; line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+<!-- Konfigurationsscreen -->
+<div id="config-screen">
+  <div class="config-card">
+    <h1>🖥️ Splitscreen-Anzeige</h1>
+    <p class="sub">Sportliche Erfolge + Vertretungsplan für Digital Signage</p>
+
+    <div class="cfg-row">
+      <div class="cfg-group">
+        <label>Layout</label>
+        <select id="cfg-layout">
+          <option value="60-40">60% Diashow | 40% Vplan</option>
+          <option value="50-50">50% | 50%</option>
+          <option value="70-30">70% Diashow | 30% Vplan</option>
+          <option value="hochformat">Hochformat (oben/unten)</option>
+          <option value="nur-diashow">Nur Diashow</option>
+          <option value="nur-vplan">Nur Vertretungsplan</option>
+        </select>
+      </div>
+      <div class="cfg-group">
+        <label>Diashow-Geschwindigkeit</label>
+        <select id="cfg-speed">
+          <option value="8000" selected>8 Sekunden</option>
+          <option value="12000">12 Sekunden</option>
+          <option value="20000">20 Sekunden</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="cfg-row">
+      <div class="cfg-group">
+        <label>Vertretungsplan URL (Heute)</label>
+        <input type="url" id="cfg-vplan-heute"
+          placeholder="https://schule.de/vplan/heute.html"
+          value="">
+      </div>
+      <div class="cfg-group">
+        <label>Vertretungsplan URL (Morgen)</label>
+        <input type="url" id="cfg-vplan-morgen"
+          placeholder="https://schule.de/vplan/morgen.html"
+          value="">
+      </div>
+    </div>
+
+    <div class="cfg-row">
+      <div class="cfg-group">
+        <label>Vertretungsplan URL (Übersicht)</label>
+        <input type="url" id="cfg-vplan-uebersicht"
+          placeholder="https://schule.de/vplan/index.html"
+          value="">
+      </div>
+      <div class="cfg-group">
+        <label>Vplan-Tab wechseln alle</label>
+        <select id="cfg-tab-wechsel">
+          <option value="0">Nicht wechseln</option>
+          <option value="30000" selected>30 Sekunden</option>
+          <option value="60000">60 Sekunden</option>
+          <option value="120000">2 Minuten</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="btn-start" onclick="starteAnzeige()">▶️ Anzeige starten</button>
+    <p class="hint">
+      Einstellungen werden im Browser gespeichert.<br>
+      Tastatur: F = Vollbild | D = Nur Diashow | V = Nur Vplan | S = Splitscreen | Esc = Konfiguration
+    </p>
+  </div>
+</div>
+
+<!-- Hauptlayout -->
+<div id="layout" style="display:none">
+  <!-- Diashow -->
+  <div id="panel-diashow">
+    <iframe id="diashow-frame"
+      src="diashow.html?autostart=1"
+      allow="autoplay; fullscreen"
+      title="SLZB Sportliche Erfolge">
+    </iframe>
+  </div>
+
+  <!-- Vertretungsplan -->
+  <div id="panel-vplan">
+    <div id="vplan-tabs">
+      <button class="vplan-tab aktiv" onclick="zeigeVplanTab('heute', this)">📅 Heute</button>
+      <button class="vplan-tab" onclick="zeigeVplanTab('morgen', this)">📅 Morgen</button>
+      <button class="vplan-tab" onclick="zeigeVplanTab('uebersicht', this)">📋 Übersicht</button>
+    </div>
+    <div id="vplan-frame-wrap">
+      <iframe id="vplan-frame"
+        src="about:blank"
+        title="Vertretungsplan"
+        sandbox="allow-same-origin allow-scripts allow-forms">
+      </iframe>
+    </div>
+  </div>
+</div>
+
+<!-- Steuerleiste -->
+<div id="controls">
+  <button class="ctrl-btn" onclick="setzeLayout('60-40')">60/40</button>
+  <button class="ctrl-btn" onclick="setzeLayout('50-50')">50/50</button>
+  <button class="ctrl-btn" onclick="setzeLayout('70-30')">70/30</button>
+  <div class="ctrl-sep"></div>
+  <button class="ctrl-btn" onclick="setzeLayout('nur-diashow')">🏅 Nur Erfolge</button>
+  <button class="ctrl-btn" onclick="setzeLayout('nur-vplan')">📋 Nur Vplan</button>
+  <div class="ctrl-sep"></div>
+  <button class="ctrl-btn" onclick="vollbild()">⛶ Vollbild</button>
+  <button class="ctrl-btn" onclick="zeigeKonfig()">⚙️ Einstellungen</button>
+  <div class="ctrl-sep"></div>
+  <span id="ctrl-status"></span>
+  <span id="ctrl-uhr"></span>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────
+let _vplanUrls = { heute: '', morgen: '', uebersicht: '' };
+let _aktuellerTab = 'heute';
+let _tabTimer = null;
+let _tabReihenfolge = ['heute', 'morgen'];
+
+// ── Konfiguration laden/speichern ─────────────────────────────
+function ladeKonfig() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('slzb_splitscreen') || '{}');
+    if (saved.vplanHeute)      document.getElementById('cfg-vplan-heute').value = saved.vplanHeute;
+    if (saved.vplanMorgen)     document.getElementById('cfg-vplan-morgen').value = saved.vplanMorgen;
+    if (saved.vplanUebersicht) document.getElementById('cfg-vplan-uebersicht').value = saved.vplanUebersicht;
+    if (saved.layout)          document.getElementById('cfg-layout').value = saved.layout;
+    if (saved.speed)           document.getElementById('cfg-speed').value = saved.speed;
+    if (saved.tabWechsel)      document.getElementById('cfg-tab-wechsel').value = saved.tabWechsel;
+  } catch(e) {}
+}
+
+function speichereKonfig() {
+  localStorage.setItem('slzb_splitscreen', JSON.stringify({
+    vplanHeute:      document.getElementById('cfg-vplan-heute').value,
+    vplanMorgen:     document.getElementById('cfg-vplan-morgen').value,
+    vplanUebersicht: document.getElementById('cfg-vplan-uebersicht').value,
+    layout:          document.getElementById('cfg-layout').value,
+    speed:           document.getElementById('cfg-speed').value,
+    tabWechsel:      document.getElementById('cfg-tab-wechsel').value,
+  }));
+}
+
+// ── Anzeige starten ───────────────────────────────────────────
+function starteAnzeige() {
+  _vplanUrls = {
+    heute:      document.getElementById('cfg-vplan-heute').value,
+    morgen:     document.getElementById('cfg-vplan-morgen').value,
+    uebersicht: document.getElementById('cfg-vplan-uebersicht').value,
+  };
+  const layout    = document.getElementById('cfg-layout').value;
+  const speed     = document.getElementById('cfg-speed').value;
+  const tabWechsel = parseInt(document.getElementById('cfg-tab-wechsel').value);
+
+  speichereKonfig();
+
+  // Diashow-URL mit Speed
+  const diashowUrl = `diashow.html?autostart=1&speed=${speed}`;
+  document.getElementById('diashow-frame').src = diashowUrl;
+
+  // Vplan laden
+  if (_vplanUrls.heute) {
+    document.getElementById('vplan-frame').src = _vplanUrls.heute;
+  } else {
+    document.getElementById('vplan-frame').srcdoc = `
+      <div style="display:flex;align-items:center;justify-content:center;height:100vh;
+                  font-family:Arial;color:#888;flex-direction:column;gap:12px;background:#f5f5f5">
+        <div style="font-size:2rem">📋</div>
+        <div style="font-weight:700">Kein Vertretungsplan konfiguriert</div>
+        <div style="font-size:.85rem">URL in den Einstellungen hinterlegen</div>
+      </div>`;
+  }
+
+  // Tabs ausblenden wenn keine URLs
+  const tabs = document.getElementById('vplan-tabs');
+  const hatMorgen = !!_vplanUrls.morgen;
+  const hatUebersicht = !!_vplanUrls.uebersicht;
+  document.querySelectorAll('.vplan-tab')[1].style.display = hatMorgen ? '' : 'none';
+  document.querySelectorAll('.vplan-tab')[2].style.display = hatUebersicht ? '' : 'none';
+
+  // Tab-Wechsel-Timer
+  if (tabWechsel > 0) {
+    clearInterval(_tabTimer);
+    _tabReihenfolge = ['heute'];
+    if (hatMorgen) _tabReihenfolge.push('morgen');
+    if (hatUebersicht) _tabReihenfolge.push('uebersicht');
+    let tabIdx = 0;
+    _tabTimer = setInterval(() => {
+      tabIdx = (tabIdx + 1) % _tabReihenfolge.length;
+      const tab = _tabReihenfolge[tabIdx];
+      const tabBtn = document.querySelectorAll('.vplan-tab')[
+        ['heute','morgen','uebersicht'].indexOf(tab)];
+      zeigeVplanTab(tab, tabBtn);
+    }, tabWechsel);
+  }
+
+  // Layout setzen
+  document.getElementById('config-screen').style.display = 'none';
+  document.getElementById('layout').style.display = 'grid';
+  setzeLayout(layout);
+
+  // Uhr starten
+  setInterval(aktualisiereUhr, 1000);
+  aktualisiereUhr();
+
+  // Vplan-Reload alle 5 Minuten
+  setInterval(() => {
+    const frame = document.getElementById('vplan-frame');
+    if (frame.src && frame.src !== 'about:blank') {
+      frame.src = frame.src;
+    }
+  }, 5 * 60 * 1000);
+}
+
+// ── Layout setzen ─────────────────────────────────────────────
+function setzeLayout(layout) {
+  const el = document.getElementById('layout');
+  el.className = '';
+  el.style.gridTemplateColumns = '';
+  el.style.gridTemplateRows = '';
+
+  const panelD = document.getElementById('panel-diashow');
+  const panelV = document.getElementById('panel-vplan');
+
+  switch(layout) {
+    case '60-40': el.style.gridTemplateColumns = '60fr 40fr'; break;
+    case '50-50': el.style.gridTemplateColumns = '50fr 50fr'; break;
+    case '70-30': el.style.gridTemplateColumns = '70fr 30fr'; break;
+    case 'hochformat':
+      el.style.gridTemplateColumns = '1fr';
+      el.style.gridTemplateRows = '55fr 45fr';
+      break;
+    case 'nur-diashow':
+      el.style.gridTemplateColumns = '1fr 0fr';
+      panelV.style.display = 'none';
+      break;
+    case 'nur-vplan':
+      el.style.gridTemplateColumns = '0fr 1fr';
+      panelD.style.display = 'none';
+      break;
+    default: el.style.gridTemplateColumns = '60fr 40fr';
+  }
+
+  if (layout !== 'nur-diashow') panelV.style.display = '';
+  if (layout !== 'nur-vplan')   panelD.style.display = '';
+
+  document.getElementById('ctrl-status').textContent = 'Layout: ' + layout;
+}
+
+// ── Vplan-Tab wechseln ────────────────────────────────────────
+function zeigeVplanTab(tab, btn) {
+  _aktuellerTab = tab;
+  const url = _vplanUrls[tab];
+  if (url) {
+    document.getElementById('vplan-frame').src = url;
+  }
+  document.querySelectorAll('.vplan-tab').forEach(b => b.classList.remove('aktiv'));
+  if (btn) btn.classList.add('aktiv');
+}
+
+// ── Uhr ───────────────────────────────────────────────────────
+function aktualisiereUhr() {
+  const jetzt = new Date();
+  document.getElementById('ctrl-uhr').textContent =
+    jetzt.toLocaleDateString('de-DE', {weekday:'short', day:'2-digit', month:'2-digit'}) +
+    ' ' + jetzt.toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+}
+
+// ── Vollbild ──────────────────────────────────────────────────
+function vollbild() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen();
+  }
+}
+
+// ── Konfiguration anzeigen ────────────────────────────────────
+function zeigeKonfig() {
+  clearInterval(_tabTimer);
+  document.getElementById('config-screen').style.display = 'flex';
+  document.getElementById('layout').style.display = 'none';
+}
+
+// ── Tastatur-Steuerung ────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (document.getElementById('config-screen').style.display !== 'none') return;
+  switch(e.key) {
+    case 'f': case 'F': vollbild(); break;
+    case 'd': case 'D': setzeLayout('nur-diashow'); break;
+    case 'v': case 'V': setzeLayout('nur-vplan'); break;
+    case 's': case 'S': setzeLayout('60-40'); break;
+    case 'Escape': zeigeKonfig(); break;
+    case '1': setzeLayout('60-40'); break;
+    case '2': setzeLayout('50-50'); break;
+    case '3': setzeLayout('70-30'); break;
+  }
+});
+
+// ── Auto-Start wenn URL-Parameter ────────────────────────────
+const params = new URLSearchParams(window.location.search);
+if (params.get('autostart') === '1') {
+  ladeKonfig();
+  setTimeout(starteAnzeige, 300);
+} else {
+  ladeKonfig();
+}
+</script>
+</body>
+</html>
