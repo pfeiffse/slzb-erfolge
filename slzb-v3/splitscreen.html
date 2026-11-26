@@ -231,36 +231,90 @@
       </div>
     </div>
 
-    <div class="cfg-row">
-      <div class="cfg-group">
-        <label>Vertretungsplan URL (Heute)</label>
-        <input type="url" id="cfg-vplan-heute"
-          placeholder="https://schule.de/vplan/heute.html"
-          value="">
+    <!-- Vplan-Quelle wählen -->
+    <div class="cfg-group" style="margin-bottom:14px">
+      <label>Vertretungsplan-Quelle</label>
+      <select id="cfg-vplan-quelle" onchange="vplanQuelleWechseln(this.value)">
+        <option value="upload">📁 HTML-Dateien hochladen (itslearning)</option>
+        <option value="url">🔗 URL eingeben (eigener Server)</option>
+      </select>
+    </div>
+
+    <!-- Upload-Variante -->
+    <div id="vplan-upload-bereich">
+      <div class="cfg-row">
+        <div class="cfg-group">
+          <label>📅 Heute (HTML-Datei)</label>
+          <input type="file" id="cfg-vplan-heute-file" accept=".html,.htm"
+            onchange="ladeVplanDatei('heute', this)"
+            style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+                   border-radius:7px;padding:7px 10px;color:#fff;width:100%;font-family:inherit;font-size:.82rem">
+          <div id="heute-status" style="font-size:.7rem;color:rgba(255,255,255,.4);margin-top:3px"></div>
+        </div>
+        <div class="cfg-group">
+          <label>📅 Morgen (HTML-Datei)</label>
+          <input type="file" id="cfg-vplan-morgen-file" accept=".html,.htm"
+            onchange="ladeVplanDatei('morgen', this)"
+            style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+                   border-radius:7px;padding:7px 10px;color:#fff;width:100%;font-family:inherit;font-size:.82rem">
+          <div id="morgen-status" style="font-size:.7rem;color:rgba(255,255,255,.4);margin-top:3px"></div>
+        </div>
       </div>
-      <div class="cfg-group">
-        <label>Vertretungsplan URL (Morgen)</label>
-        <input type="url" id="cfg-vplan-morgen"
-          placeholder="https://schule.de/vplan/morgen.html"
-          value="">
+      <div class="cfg-row">
+        <div class="cfg-group">
+          <label>📋 Übersicht (HTML-Datei, optional)</label>
+          <input type="file" id="cfg-vplan-uebersicht-file" accept=".html,.htm"
+            onchange="ladeVplanDatei('uebersicht', this)"
+            style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+                   border-radius:7px;padding:7px 10px;color:#fff;width:100%;font-family:inherit;font-size:.82rem">
+          <div id="uebersicht-status" style="font-size:.7rem;color:rgba(255,255,255,.4);margin-top:3px"></div>
+        </div>
+        <div class="cfg-group">
+          <label>Vplan-Tab wechseln alle</label>
+          <select id="cfg-tab-wechsel">
+            <option value="0">Nicht wechseln</option>
+            <option value="30000" selected>30 Sekunden</option>
+            <option value="60000">60 Sekunden</option>
+            <option value="120000">2 Minuten</option>
+          </select>
+        </div>
+      </div>
+      <div style="background:rgba(255,255,255,.06);border-radius:8px;padding:10px 14px;
+                  font-size:.75rem;color:rgba(255,255,255,.5);margin-bottom:4px">
+        💡 <strong>So geht's:</strong> HTML-Datei aus itslearning herunterladen → hier hochladen → fertig.
+        Die Datei wird lokal im Browser gespeichert und bleibt bis zum nächsten Upload erhalten.
       </div>
     </div>
 
-    <div class="cfg-row">
-      <div class="cfg-group">
-        <label>Vertretungsplan URL (Übersicht)</label>
-        <input type="url" id="cfg-vplan-uebersicht"
-          placeholder="https://schule.de/vplan/index.html"
-          value="">
+    <!-- URL-Variante -->
+    <div id="vplan-url-bereich" style="display:none">
+      <div class="cfg-row">
+        <div class="cfg-group">
+          <label>Vertretungsplan URL (Heute)</label>
+          <input type="url" id="cfg-vplan-heute"
+            placeholder="https://schule.de/vplan/heute.html" value="">
+        </div>
+        <div class="cfg-group">
+          <label>Vertretungsplan URL (Morgen)</label>
+          <input type="url" id="cfg-vplan-morgen"
+            placeholder="https://schule.de/vplan/morgen.html" value="">
+        </div>
       </div>
-      <div class="cfg-group">
-        <label>Vplan-Tab wechseln alle</label>
-        <select id="cfg-tab-wechsel">
-          <option value="0">Nicht wechseln</option>
-          <option value="30000" selected>30 Sekunden</option>
-          <option value="60000">60 Sekunden</option>
-          <option value="120000">2 Minuten</option>
-        </select>
+      <div class="cfg-row">
+        <div class="cfg-group">
+          <label>Vertretungsplan URL (Übersicht)</label>
+          <input type="url" id="cfg-vplan-uebersicht"
+            placeholder="https://schule.de/vplan/index.html" value="">
+        </div>
+        <div class="cfg-group">
+          <label>Vplan-Tab wechseln alle</label>
+          <select id="cfg-tab-wechsel-url">
+            <option value="0">Nicht wechseln</option>
+            <option value="30000" selected>30 Sekunden</option>
+            <option value="60000">60 Sekunden</option>
+            <option value="120000">2 Minuten</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -319,6 +373,45 @@
 <script>
 // ── State ─────────────────────────────────────────────────────
 let _vplanUrls = { heute: '', morgen: '', uebersicht: '' };
+let _vplanHtml = { heute: null, morgen: null, uebersicht: null };
+
+// ── Vplan-Datei laden ─────────────────────────────────────────
+function ladeVplanDatei(tab, input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    _vplanHtml[tab] = ev.target.result;
+    // In localStorage speichern (für Neustart)
+    try {
+      localStorage.setItem(`slzb_vplan_${tab}`, ev.target.result);
+    } catch(e) { /* localStorage voll */ }
+    const status = document.getElementById(`${tab}-status`);
+    if (status) status.textContent = `✅ ${file.name} geladen (${Math.round(file.size/1024)}kb)`;
+    status.style.color = '#4caf50';
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function vplanQuelleWechseln(quelle) {
+  document.getElementById('vplan-upload-bereich').style.display = quelle === 'upload' ? '' : 'none';
+  document.getElementById('vplan-url-bereich').style.display = quelle === 'url' ? '' : 'none';
+}
+
+// Gespeicherte Vplan-HTMLs laden
+function ladeGespeicherteVplans() {
+  ['heute', 'morgen', 'uebersicht'].forEach(tab => {
+    const saved = localStorage.getItem(`slzb_vplan_${tab}`);
+    if (saved) {
+      _vplanHtml[tab] = saved;
+      const status = document.getElementById(`${tab}-status`);
+      if (status) {
+        status.textContent = `✅ Gespeicherter Vplan geladen`;
+        status.style.color = '#4caf50';
+      }
+    }
+  });
+}
 let _aktuellerTab = 'heute';
 let _tabTimer = null;
 let _tabReihenfolge = ['heute', 'morgen'];
@@ -327,13 +420,15 @@ let _tabReihenfolge = ['heute', 'morgen'];
 function ladeKonfig() {
   try {
     const saved = JSON.parse(localStorage.getItem('slzb_splitscreen') || '{}');
-    if (saved.vplanHeute)      document.getElementById('cfg-vplan-heute').value = saved.vplanHeute;
-    if (saved.vplanMorgen)     document.getElementById('cfg-vplan-morgen').value = saved.vplanMorgen;
-    if (saved.vplanUebersicht) document.getElementById('cfg-vplan-uebersicht').value = saved.vplanUebersicht;
+    if (saved.vplanHeute)      { const el = document.getElementById('cfg-vplan-heute'); if(el) el.value = saved.vplanHeute; }
+    if (saved.vplanMorgen)     { const el = document.getElementById('cfg-vplan-morgen'); if(el) el.value = saved.vplanMorgen; }
+    if (saved.vplanUebersicht) { const el = document.getElementById('cfg-vplan-uebersicht'); if(el) el.value = saved.vplanUebersicht; }
     if (saved.layout)          document.getElementById('cfg-layout').value = saved.layout;
     if (saved.speed)           document.getElementById('cfg-speed').value = saved.speed;
-    if (saved.tabWechsel)      document.getElementById('cfg-tab-wechsel').value = saved.tabWechsel;
+    if (saved.tabWechsel)      { const el = document.getElementById('cfg-tab-wechsel'); if(el) el.value = saved.tabWechsel; }
+    if (saved.quelle)          { const el = document.getElementById('cfg-vplan-quelle'); if(el) { el.value = saved.quelle; vplanQuelleWechseln(saved.quelle); } }
   } catch(e) {}
+  ladeGespeicherteVplans();
 }
 
 function speichereKonfig() {
@@ -364,16 +459,19 @@ function starteAnzeige() {
   const diashowUrl = `diashow.html?autostart=1&speed=${speed}`;
   document.getElementById('diashow-frame').src = diashowUrl;
 
-  // Vplan laden
-  if (_vplanUrls.heute) {
+  // Vplan laden (HTML-Inhalt oder URL)
+  const quelle = document.getElementById('cfg-vplan-quelle')?.value || 'upload';
+  if (quelle === 'upload' && _vplanHtml.heute) {
+    document.getElementById('vplan-frame').srcdoc = _vplanHtml.heute;
+  } else if (quelle === 'url' && _vplanUrls.heute) {
     document.getElementById('vplan-frame').src = _vplanUrls.heute;
   } else {
     document.getElementById('vplan-frame').srcdoc = `
       <div style="display:flex;align-items:center;justify-content:center;height:100vh;
                   font-family:Arial;color:#888;flex-direction:column;gap:12px;background:#f5f5f5">
         <div style="font-size:2rem">📋</div>
-        <div style="font-weight:700">Kein Vertretungsplan konfiguriert</div>
-        <div style="font-size:.85rem">URL in den Einstellungen hinterlegen</div>
+        <div style="font-weight:700">Kein Vertretungsplan geladen</div>
+        <div style="font-size:.85rem">HTML-Datei in den Einstellungen hochladen</div>
       </div>`;
   }
 
@@ -456,9 +554,12 @@ function setzeLayout(layout) {
 // ── Vplan-Tab wechseln ────────────────────────────────────────
 function zeigeVplanTab(tab, btn) {
   _aktuellerTab = tab;
-  const url = _vplanUrls[tab];
-  if (url) {
-    document.getElementById('vplan-frame').src = url;
+  const quelle = document.getElementById('cfg-vplan-quelle')?.value || 'upload';
+  if (quelle === 'upload' && _vplanHtml[tab]) {
+    document.getElementById('vplan-frame').srcdoc = _vplanHtml[tab];
+  } else if (quelle === 'url') {
+    const url = _vplanUrls[tab];
+    if (url) document.getElementById('vplan-frame').src = url;
   }
   document.querySelectorAll('.vplan-tab').forEach(b => b.classList.remove('aktiv'));
   if (btn) btn.classList.add('aktiv');
