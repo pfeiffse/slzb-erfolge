@@ -1142,7 +1142,7 @@ async function zeigeA3Vorschau(erfolgId) {
       </div>` : ''}
       <div class="modal-footer">
         <button class="btn btn-ghost close-btn">Schließen</button>
-        <button class="btn btn-outline dl-png">🖼️ PNG herunterladen</button>
+        <button class="btn btn-outline dl-png">🖼️ PNG herunterladen</button>\n        <button class=\"btn btn-primary ig-share\" style=\"background:#E1306C;border-color:#E1306C\">\xf0\x9f\x93\xb1 Instagram teilen</button>
         <button class="btn btn-primary print-btn">🖨️ Drucken</button>
       </div>`;
     modal.querySelector('.close-x').onclick = ()=>overlay.remove();
@@ -1308,6 +1308,9 @@ async function zeigeSocialModal(erfolgId) {
     modal.querySelector('.close-x').onclick = ()=>overlay.remove();
     modal.querySelector('.close-btn').onclick = ()=>overlay.remove();
     modal.querySelector('.dl-png').onclick = ()=>exportPosterPNG(e,'social-canvas');
+    // Instagram-Teilen-Button
+    const igBtn = modal.querySelector('.ig-share');
+    if (igBtn) igBtn.onclick = ()=>teileAufInstagram('social-canvas');
     overlay.appendChild(modal);
     overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
     document.body.appendChild(overlay);
@@ -9551,47 +9554,93 @@ function zeigeErgebnisUpdateModal(veranstaltungsId) {
   overlay.className = 'modal-overlay';
   const modal = document.createElement('div');
   modal.className = 'modal';
-  modal.style.maxWidth = '600px';
+  modal.style.maxWidth = '560px';
+
+  // Schnell-Platz-Buttons
+  const platzButtons = [1,2,3,4,5,6,7,8].map(p => {
+    const farben = {1:'#C9A227',2:'#8A9BB0',3:'#C2783A'};
+    const emojis = {1:'🥇',2:'🥈',3:'🥉'};
+    return `<button onclick="euSetPlatz(${p})" id="eu-platz-btn-${p}"
+      style="flex:1;min-width:48px;padding:12px 4px;border-radius:8px;border:2px solid var(--slzb-border);
+             background:var(--slzb-bg-secondary);color:var(--slzb-text);font-size:1rem;font-weight:800;
+             cursor:pointer;transition:all .15s;font-family:inherit"
+      onmouseover="this.style.borderColor='${farben[p]||'#003366'}'"
+      onmouseout="if(window._euPlatz!==${p})this.style.borderColor='var(--slzb-border)'">
+      ${emojis[p]||p+'.'}</button>`;
+  }).join('');
 
   modal.innerHTML = `
-    <div class="modal-header">
-      <h3>🏆 Ergebnis-Update: ${esc(v.veranstaltung)}</h3>
-      <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="alert alert-info mb-3"><span class="alert-icon">ℹ️</span>
-        <span>Trage das aktuelle Ergebnis ein. Ein neues Poster wird sofort generiert.</span>
+    <div class="modal-header" style="background:linear-gradient(135deg,#003366,#001F4D);color:#fff;border-radius:14px 14px 0 0">
+      <div>
+        <h3 style="color:#fff;margin-bottom:2px">🏆 Ergebnis-Update</h3>
+        <div style="font-size:.78rem;color:rgba(255,255,255,.6)">${esc(v.veranstaltung)}${v.ort?' · '+esc(v.ort):''}</div>
       </div>
-      <div class="form-row cols-2">
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()" style="color:#fff">✕</button>
+    </div>
+    <div class="modal-body" style="padding:16px">
+
+      <!-- Athlet wählen -->
+      <div class="form-group mb-3">
+        <label style="font-weight:700;font-size:.82rem;text-transform:uppercase;letter-spacing:.05em;color:var(--slzb-text-muted)">Athlet</label>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+          ${(v.athleten||[]).map(a => {
+            const name = a.name || (a.vorname+' '+a.nachname).trim();
+            return `<button onclick="euWaehleAthlet('${esc(name)}',this)"
+              style="padding:8px 14px;border-radius:20px;border:2px solid var(--slzb-border);
+                     background:var(--slzb-bg-secondary);cursor:pointer;font-size:.85rem;
+                     font-weight:600;font-family:inherit;transition:all .15s"
+              onmouseover="this.style.borderColor='#003366'"
+              onmouseout="if(window._euAthlet!=='${esc(name)}')this.style.borderColor='var(--slzb-border)'">
+              ${esc(name)}</button>`;
+          }).join('')}
+          <button onclick="euWaehleAthlet('__alle__',this)"
+            style="padding:8px 14px;border-radius:20px;border:2px solid var(--slzb-border);
+                   background:var(--slzb-bg-secondary);cursor:pointer;font-size:.85rem;
+                   font-weight:600;font-family:inherit">
+            👥 Alle</button>
+        </div>
+      </div>
+
+      <!-- Platz wählen (große Buttons) -->
+      <div class="form-group mb-3">
+        <label style="font-weight:700;font-size:.82rem;text-transform:uppercase;letter-spacing:.05em;color:var(--slzb-text-muted)">Platzierung</label>
+        <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+          ${platzButtons}
+        </div>
+      </div>
+
+      <!-- Disziplin + Ergebnis (kompakt) -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
         <div class="form-group">
-          <label>Athlet <span class="required">*</span></label>
-          <select id="eu-athlet" style="width:100%">
-            ${(v.athleten||[]).map(a => `<option value="${esc(a.name||a.vorname+' '+a.nachname)}">${esc(a.name||a.vorname+' '+a.nachname)}</option>`).join('')}
-            <option value="__alle__">Alle Athleten (Gesamtbilanz)</option>
-          </select>
+          <label style="font-size:.78rem;font-weight:700;color:var(--slzb-text-muted)">Disziplin</label>
+          <input type="text" id="eu-disziplin" placeholder="z.B. 500m Sprint"
+            style="width:100%;margin-top:4px" oninput="euAktualisierePoster()">
         </div>
         <div class="form-group">
-          <label>Disziplin</label>
-          <input type="text" id="eu-disziplin" placeholder="z.B. 500m Sprint">
+          <label style="font-size:.78rem;font-weight:700;color:var(--slzb-text-muted)">Zeit / Ergebnis</label>
+          <input type="text" id="eu-ergebnis" placeholder="z.B. 38,42 Sek."
+            style="width:100%;margin-top:4px" oninput="euAktualisierePoster()">
         </div>
-        <div class="form-group">
-          <label>Platzierung</label>
-          <input type="number" id="eu-platz" min="1" max="999" placeholder="z.B. 3">
-        </div>
-        <div class="form-group">
-          <label>Ergebnis / Zeit</label>
-          <input type="text" id="eu-ergebnis" placeholder="z.B. 38,42 Sek.">
-        </div>
-        <div class="form-group" style="grid-column:1/-1">
-          <label>Zusatzinfo</label>
-          <input type="text" id="eu-zusatz" placeholder="z.B. Neuer Schulrekord · Qualifikation für WM">
-        </div>
-        <div class="form-group" style="grid-column:1/-1">
-          <label>Foto (optional)</label>
-          <input type="file" id="eu-bild" accept="image/jpeg,image/png,image/webp"
-            onchange="euBildVorschau(this)">
-          <img id="eu-bild-preview" src="" style="display:none;max-height:80px;margin-top:6px;border-radius:6px">
-        </div>
+      </div>
+
+      <!-- Zusatzinfo -->
+      <div class="form-group mb-3">
+        <input type="text" id="eu-zusatz" placeholder="💬 Zusatzinfo (optional): z.B. Neuer Schulrekord"
+          style="width:100%" oninput="euAktualisierePoster()">
+      </div>
+
+      <!-- Foto -->
+      <div class="form-group mb-3">
+        <label style="font-size:.78rem;font-weight:700;color:var(--slzb-text-muted)">📸 Foto (optional)</label>
+        <input type="file" id="eu-bild" accept="image/jpeg,image/png,image/webp"
+          onchange="euBildVorschau(this)" style="width:100%;margin-top:4px">
+        <img id="eu-bild-preview" src="" style="display:none;max-height:70px;margin-top:6px;border-radius:6px">
+      </div>
+
+      <!-- Live-Vorschau -->
+      <div id="eu-vorschau" style="background:var(--slzb-bg-secondary);border-radius:8px;padding:10px 14px;
+           font-size:.82rem;color:var(--slzb-text-muted);min-height:36px;border:1px solid var(--slzb-border)">
+        ← Athlet und Platz wählen für Vorschau
       </div>
     </div>
     <div class="modal-footer">
@@ -9600,6 +9649,177 @@ function zeigeErgebnisUpdateModal(veranstaltungsId) {
       <button class="btn btn-primary" onclick="euErstellePoster('${veranstaltungsId}', true)">📤 Poster + Meldung</button>
     </div>`;
 
+  // State
+  window._euPlatz = null;
+  window._euAthlet = null;
+  window._euVeranstaltungsId = veranstaltungsId;
+
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+
+  // Keyboard-Shortcuts: 1-8 für Platz
+  const keyHandler = e => {
+    if (!document.querySelector('.modal-overlay')) { document.removeEventListener('keydown', keyHandler); return; }
+    const n = parseInt(e.key);
+    if (n >= 1 && n <= 8) {
+      const btn = document.getElementById(`eu-platz-btn-${n}`);
+      if (btn) btn.click();
+    }
+  };
+  document.addEventListener('keydown', keyHandler);
+}
+
+// Athlet wählen
+function euWaehleAthlet(name, btn) {
+  window._euAthlet = name;
+  document.querySelectorAll('[onclick^="euWaehleAthlet"]').forEach(b => {
+    b.style.borderColor = 'var(--slzb-border)';
+    b.style.background = 'var(--slzb-bg-secondary)';
+    b.style.color = 'var(--slzb-text)';
+  });
+  btn.style.borderColor = '#003366';
+  btn.style.background = '#003366';
+  btn.style.color = '#fff';
+  euAktualisierePoster();
+}
+
+// Platz wählen
+function euSetPlatz(platz) {
+  window._euPlatz = platz;
+  const farben = {1:'#C9A227',2:'#8A9BB0',3:'#C2783A'};
+  document.querySelectorAll('[id^="eu-platz-btn-"]').forEach(b => {
+    b.style.borderColor = 'var(--slzb-border)';
+    b.style.background = 'var(--slzb-bg-secondary)';
+    b.style.color = 'var(--slzb-text)';
+  });
+  const btn = document.getElementById(`eu-platz-btn-${platz}`);
+  if (btn) {
+    const f = farben[platz] || '#003366';
+    btn.style.borderColor = f;
+    btn.style.background = f;
+    btn.style.color = platz <= 3 ? '#000' : '#fff';
+  }
+  euAktualisierePoster();
+}
+
+// Live-Vorschau aktualisieren
+function euAktualisierePoster() {
+  const vorschau = document.getElementById('eu-vorschau');
+  if (!vorschau) return;
+  const athlet = window._euAthlet;
+  const platz = window._euPlatz;
+  const disziplin = document.getElementById('eu-disziplin')?.value.trim();
+  const ergebnis = document.getElementById('eu-ergebnis')?.value.trim();
+  const zusatz = document.getElementById('eu-zusatz')?.value.trim();
+
+  if (!athlet || !platz) {
+    vorschau.textContent = '← Athlet und Platz wählen für Vorschau';
+    return;
+  }
+
+  const mi = {1:'🥇',2:'🥈',3:'🥉'};
+  const platzText = `${mi[platz]||''} ${platz}. Platz`;
+  const parts = [
+    athlet !== '__alle__' ? `<strong>${esc(athlet)}</strong>` : '<strong>Alle Athleten</strong>',
+    platzText,
+    disziplin ? `in ${esc(disziplin)}` : '',
+    ergebnis ? `(${esc(ergebnis)})` : '',
+    zusatz ? `· ${esc(zusatz)}` : '',
+  ].filter(Boolean);
+
+  vorschau.innerHTML = `✅ Poster: ${parts.join(' ')}`;
+  vorschau.style.color = 'var(--slzb-text)';
+  vorschau.style.borderColor = '#4caf50';
+}
+
+
+
+// ── Instagram Teilen ──────────────────────────────────────────
+async function teileAufInstagram(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) { toast('Kein Poster gefunden', 'warning'); return; }
+
+  // Poster als Blob
+  const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+  const dateiname = `SLZB_${new Date().toISOString().slice(0,10)}.png`;
+
+  // Methode 1: Web Share API (Mobile - öffnet direkt Instagram)
+  if (navigator.share && navigator.canShare?.({ files: [new File([blob], dateiname, {type:'image/png'})] })) {
+    try {
+      await navigator.share({
+        files: [new File([blob], dateiname, { type: 'image/png' })],
+        title: 'SLZB-Erfolge',
+      });
+      toast('✅ Teilen-Dialog geöffnet', 'success');
+      return;
+    } catch(e) {
+      if (e.name !== 'AbortError') console.warn('Share:', e.message);
+    }
+  }
+
+  // Methode 2: Clipboard API (Desktop)
+  if (navigator.clipboard?.write) {
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'image/png': blob })
+      ]);
+      toast('📋 Bild in Zwischenablage kopiert! Jetzt Instagram öffnen und einfügen.', 'success', 6000);
+      // Instagram öffnen
+      setTimeout(() => {
+        window.open('https://www.instagram.com/', '_blank');
+      }, 1500);
+      return;
+    } catch(e) {
+      console.warn('Clipboard:', e.message);
+    }
+  }
+
+  // Methode 3: Download + Instagram-Link
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = dateiname;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 300);
+
+  // Instagram-Hinweis
+  zeigeInstagramHinweis(dateiname);
+}
+
+function zeigeInstagramHinweis(dateiname) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.maxWidth = '400px';
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>📱 Auf Instagram teilen</h3>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="text-align:center;padding:8px 0">
+        <div style="font-size:3rem;margin-bottom:12px">📥</div>
+        <p style="font-weight:700;margin-bottom:8px">Bild wurde heruntergeladen!</p>
+        <p style="font-size:.85rem;color:var(--slzb-text-muted);line-height:1.6;margin-bottom:16px">
+          <strong>Auf dem Smartphone:</strong><br>
+          1. Instagram App öffnen<br>
+          2. Neuer Beitrag → Bild aus Galerie wählen<br>
+          3. „${esc(dateiname)}" auswählen
+        </p>
+        <p style="font-size:.85rem;color:var(--slzb-text-muted);line-height:1.6">
+          <strong>Auf dem Desktop:</strong><br>
+          1. instagram.com öffnen<br>
+          2. Neuer Beitrag → Bild hochladen
+        </p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Schließen</button>
+      <button class="btn btn-primary" onclick="window.open('https://www.instagram.com/','_blank');this.closest('.modal-overlay').remove()">
+        📱 Instagram öffnen
+      </button>
+    </div>`;
   overlay.appendChild(modal);
   overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
   document.body.appendChild(overlay);
