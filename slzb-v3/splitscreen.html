@@ -352,6 +352,32 @@
       </div>
     </div>
 
+    <!-- Zeitplan -->
+    <div style="border-top:1px solid rgba(255,255,255,.1);margin:16px 0 14px;padding-top:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <label style="font-size:.75rem;font-weight:700;color:rgba(255,255,255,.6);
+                      text-transform:uppercase;letter-spacing:.05em">
+          ⏰ Automatischer Zeitplan
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+          <input type="checkbox" id="cfg-zeitplan-aktiv" onchange="zeitplanToggle(this.checked)"
+            style="width:16px;height:16px;accent-color:#E2001A">
+          <span style="font-size:.8rem;color:rgba(255,255,255,.6)">Aktivieren</span>
+        </label>
+      </div>
+      <div id="zeitplan-bereich" style="display:none">
+        <div id="zeitplan-slots" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
+          <!-- Slots werden per JS generiert -->
+        </div>
+        <button onclick="zeitplanSlotHinzu()" style="
+          background:rgba(255,255,255,.08);border:1px dashed rgba(255,255,255,.2);
+          color:rgba(255,255,255,.6);border-radius:7px;padding:7px 14px;
+          font-size:.78rem;cursor:pointer;width:100%;font-family:inherit">
+          + Zeitraum hinzufügen
+        </button>
+      </div>
+    </div>
+
     <button class="btn-start" onclick="starteAnzeige()">▶️ Anzeige starten</button>
     <p class="hint">
       Einstellungen werden im Browser gespeichert.<br>
@@ -462,22 +488,156 @@ function ladeKonfig() {
     if (saved.speed)           document.getElementById('cfg-speed').value = saved.speed;
     if (saved.tabWechsel)      { const el = document.getElementById('cfg-tab-wechsel'); if(el) el.value = saved.tabWechsel; }
     if (saved.quelle)          { const el = document.getElementById('cfg-vplan-quelle'); if(el) { el.value = saved.quelle; vplanQuelleWechseln(saved.quelle); } }
+    if (saved.githubRepo) { const el = document.getElementById('cfg-github-repo'); if(el) el.value = saved.githubRepo; }
+    if (saved.zeitplanAktiv) {
+      const cb = document.getElementById('cfg-zeitplan-aktiv');
+      if (cb) { cb.checked = true; zeitplanToggle(true); }
+    }
+    if (saved.zeitplan?.length) {
+      _zeitplan = saved.zeitplan;
+      renderZeitplanSlots();
+    }
   } catch(e) {}
   ladeGespeicherteVplans();
 }
 
 function speichereKonfig() {
   localStorage.setItem('slzb_splitscreen', JSON.stringify({
-    vplanHeute:      document.getElementById('cfg-vplan-heute').value,
-    vplanMorgen:     document.getElementById('cfg-vplan-morgen').value,
-    vplanUebersicht: document.getElementById('cfg-vplan-uebersicht').value,
+    vplanHeute:      (document.getElementById('cfg-vplan-heute') || {}).value || '',
+    vplanMorgen:     (document.getElementById('cfg-vplan-morgen') || {}).value || '',
+    vplanUebersicht: (document.getElementById('cfg-vplan-uebersicht') || {}).value || '',
     layout:          document.getElementById('cfg-layout').value,
     speed:           document.getElementById('cfg-speed').value,
-    tabWechsel:      document.getElementById('cfg-tab-wechsel').value,
+    tabWechsel:      (document.getElementById('cfg-tab-wechsel') || {}).value || '30000',
+    quelle:          (document.getElementById('cfg-vplan-quelle') || {}).value || 'upload',
+    githubRepo:      (document.getElementById('cfg-github-repo') || {}).value || '',
+    zeitplanAktiv:   document.getElementById('cfg-zeitplan-aktiv')?.checked || false,
+    zeitplan:        _zeitplan,
   }));
 }
 
 // ── Anzeige starten ───────────────────────────────────────────
+
+// ══════════════════════════════════════════════════════════════
+// ZEITPLAN-STEUERUNG
+// ══════════════════════════════════════════════════════════════
+
+// Standard-Zeitplan
+const ZEITPLAN_DEFAULT = [
+  { von: '07:30', bis: '10:30', modus: 'nur-vplan',  vplanTab: 'heute',  label: 'VP Heute komplett' },
+  { von: '10:30', bis: '17:00', modus: '60-40',       vplanTab: 'heute',  label: 'Split: VP Heute + Erfolge' },
+  { von: '17:00', bis: '07:30', modus: 'nur-diashow', vplanTab: 'heute',  label: 'Nur Sportliche Erfolge' },
+];
+
+let _zeitplan = [];
+let _zeitplanTimer = null;
+let _zeitplanAktiv = false;
+
+function zeitplanToggle(aktiv) {
+  _zeitplanAktiv = aktiv;
+  document.getElementById('zeitplan-bereich').style.display = aktiv ? '' : 'none';
+  if (aktiv && _zeitplan.length === 0) {
+    _zeitplan = JSON.parse(JSON.stringify(ZEITPLAN_DEFAULT));
+    renderZeitplanSlots();
+  }
+}
+
+function renderZeitplanSlots() {
+  const container = document.getElementById('zeitplan-slots');
+  if (!container) return;
+
+  const MODI = [
+    { value: 'nur-vplan',   label: '📋 Nur Vertretungsplan' },
+    { value: '60-40',       label: '⬛ Split 60/40 (Erfolge | VP)' },
+    { value: '50-50',       label: '⬛ Split 50/50' },
+    { value: '70-30',       label: '⬛ Split 70/30' },
+    { value: 'nur-diashow', label: '🏅 Nur Sportliche Erfolge' },
+    { value: 'aus',         label: '⚫ Bildschirm aus' },
+  ];
+  const TABS = [
+    { value: 'heute',      label: 'VP Heute' },
+    { value: 'morgen',     label: 'VP Morgen' },
+    { value: 'uebersicht', label: 'VP Übersicht' },
+  ];
+
+  container.innerHTML = _zeitplan.map((slot, i) => `
+    <div style="background:rgba(255,255,255,.06);border-radius:8px;padding:10px 12px;
+                display:grid;grid-template-columns:auto auto 1fr auto auto;gap:8px;align-items:center">
+      <input type="time" value="${slot.von}"
+        onchange="_zeitplan[${i}].von=this.value;speichereKonfig()"
+        style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+               border-radius:6px;padding:5px 8px;color:#fff;font-size:.82rem;font-family:inherit;width:90px">
+      <span style="color:rgba(255,255,255,.4);font-size:.8rem">bis</span>
+      <input type="time" value="${slot.bis}"
+        onchange="_zeitplan[${i}].bis=this.value;speichereKonfig()"
+        style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+               border-radius:6px;padding:5px 8px;color:#fff;font-size:.82rem;font-family:inherit;width:90px">
+      <select onchange="_zeitplan[${i}].modus=this.value;speichereKonfig()"
+        style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+               border-radius:6px;padding:5px 8px;color:#fff;font-size:.78rem;font-family:inherit">
+        ${MODI.map(m => `<option value="${m.value}" ${slot.modus===m.value?'selected':''}>${m.label}</option>`).join('')}
+      </select>
+      <select onchange="_zeitplan[${i}].vplanTab=this.value;speichereKonfig()"
+        style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+               border-radius:6px;padding:5px 8px;color:#fff;font-size:.78rem;font-family:inherit">
+        ${TABS.map(t => `<option value="${t.value}" ${slot.vplanTab===t.value?'selected':''}>${t.label}</option>`).join('')}
+      </select>
+      <button onclick="_zeitplan.splice(${i},1);renderZeitplanSlots();speichereKonfig()"
+        style="background:rgba(226,0,26,.2);border:1px solid rgba(226,0,26,.3);color:#E2001A;
+               border-radius:6px;padding:5px 8px;cursor:pointer;font-size:.8rem;font-family:inherit">✕</button>
+    </div>`).join('');
+}
+
+function zeitplanSlotHinzu() {
+  _zeitplan.push({ von: '08:00', bis: '16:00', modus: '60-40', vplanTab: 'heute', label: 'Neuer Zeitraum' });
+  renderZeitplanSlots();
+  speichereKonfig();
+}
+
+function starteZeitplanTimer() {
+  if (!_zeitplanAktiv || !_zeitplan.length) return;
+  clearInterval(_zeitplanTimer);
+
+  function pruefeZeitplan() {
+    const jetzt = new Date();
+    const jetztMin = jetzt.getHours() * 60 + jetzt.getMinutes();
+
+    let aktiverSlot = null;
+    for (const slot of _zeitplan) {
+      const [vonH, vonM] = slot.von.split(':').map(Number);
+      const [bisH, bisM] = slot.bis.split(':').map(Number);
+      const vonMin = vonH * 60 + vonM;
+      const bisMin = bisH * 60 + bisM;
+
+      // Über Mitternacht (z.B. 17:00 bis 07:30)
+      if (vonMin > bisMin) {
+        if (jetztMin >= vonMin || jetztMin < bisMin) { aktiverSlot = slot; break; }
+      } else {
+        if (jetztMin >= vonMin && jetztMin < bisMin) { aktiverSlot = slot; break; }
+      }
+    }
+
+    if (aktiverSlot) {
+      // Modus anwenden
+      if (aktiverSlot.modus === 'aus') {
+        document.getElementById('layout').style.opacity = '0';
+      } else {
+        document.getElementById('layout').style.opacity = '1';
+        setzeLayout(aktiverSlot.modus);
+        // VP-Tab wechseln
+        const tabBtn = document.querySelectorAll('.vplan-tab')[
+          ['heute','morgen','uebersicht'].indexOf(aktiverSlot.vplanTab)];
+        if (tabBtn) zeigeVplanTab(aktiverSlot.vplanTab, tabBtn);
+      }
+      document.getElementById('ctrl-status').textContent =
+        `⏰ ${aktiverSlot.von}–${aktiverSlot.bis}: ${aktiverSlot.modus}`;
+    }
+  }
+
+  pruefeZeitplan(); // Sofort prüfen
+  _zeitplanTimer = setInterval(pruefeZeitplan, 60000); // Jede Minute
+}
+
 function starteAnzeige() {
   _vplanUrls = {
     heute:      document.getElementById('cfg-vplan-heute').value,
@@ -491,7 +651,8 @@ function starteAnzeige() {
   speichereKonfig();
 
   // Diashow-URL mit Speed
-  const diashowUrl = `diashow.html?autostart=1&speed=${speed}`;
+  // Diashow: immer letzte 31 Tage
+  const diashowUrl = `diashow.html?autostart=1&speed=${speed}&zeitraum=31tage`;
   document.getElementById('diashow-frame').src = diashowUrl;
 
   // Vplan laden (HTML-Inhalt, GitHub oder URL)
@@ -561,6 +722,10 @@ function starteAnzeige() {
   document.getElementById('config-screen').style.display = 'none';
   document.getElementById('layout').style.display = 'grid';
   setzeLayout(layout);
+
+  // Zeitplan starten
+  _zeitplanAktiv = document.getElementById('cfg-zeitplan-aktiv')?.checked || false;
+  if (_zeitplanAktiv) starteZeitplanTimer();
 
   // Uhr starten
   setInterval(aktualisiereUhr, 1000);

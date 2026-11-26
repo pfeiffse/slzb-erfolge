@@ -344,10 +344,12 @@
     <div class="form-group">
       <label>Zeitraum</label>
       <select id="cfg-zeitraum">
-        <option value="schuljahr" selected>Aktuelles Schuljahr</option>
+        <option value="31tage" selected>Letzte 31 Tage</option>
+        <option value="schuljahr">Aktuelles Schuljahr</option>
         <option value="semester">Aktuelles Semester</option>
         <option value="quartal">Aktuelles Quartal</option>
         <option value="monat">Dieser Monat</option>
+        <option value="14tage">Letzte 14 Tage</option>
         <option value="alle">Alle Zeiten</option>
       </select>
     </div>
@@ -494,6 +496,14 @@ async function ladeMeldungen(sportartId, zeitraum, ebene) {
       ? new Date(jetzt.getFullYear(), 7, 1)
       : new Date(jetzt.getFullYear()-1, 7, 1);
     query = query.gte('event_date', sjStart.toISOString().slice(0,10));
+  } else if (zeitraum === '31tage') {
+    const vor31 = new Date(jetzt);
+    vor31.setDate(vor31.getDate() - 31);
+    query = query.gte('event_date', vor31.toISOString().slice(0,10));
+  } else if (zeitraum === '14tage') {
+    const vor14 = new Date(jetzt);
+    vor14.setDate(vor14.getDate() - 14);
+    query = query.gte('event_date', vor14.toISOString().slice(0,10));
   }
 
   if (ebene === 'Bundesebene') {
