@@ -4,7 +4,7 @@
 // ============================================================
 
 const CACHE_NAME = 'slzb-erfolge-v3';
-const CACHE_VERSION = '1.4.0-20261126'; // Logos hinzugefügt, 404-Fehler behoben
+const CACHE_VERSION = '1.5.0-202611260000'; // Logos hinzugefügt, 404-Fehler behoben
 const FULL_CACHE_NAME = `${CACHE_NAME}-${CACHE_VERSION}`;
 
 // Dateien die beim Installieren gecacht werden (App-Shell)
