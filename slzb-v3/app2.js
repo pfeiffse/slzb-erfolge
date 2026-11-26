@@ -8937,7 +8937,67 @@ async function speichereVotingBearbeitung(kampagneId) {
 // ══════════════════════════════════════════════════════════════
 // ATHLETEN-VORSTELLUNG (Weltcup / Turnier)
 // ══════════════════════════════════════════════════════════════
-async function zeigeAthletenVorstellung() {
+async 
+
+function avResetBildCache() {
+  // Alle gespeicherten Bild-Objekte löschen
+  for (let i = 1; i <= _avCounter + 10; i++) {
+    delete window[`_avBildObj_${i}`];
+  }
+}
+function avAthletHinzu() {
+  const liste = document.getElementById('av-athleten-liste');
+  if (!liste) return;
+  const id = ++_avCounter;
+  const div = document.createElement('div');
+  div.id = `av-athlet-${id}`;
+  div.style.cssText = 'border:1px solid var(--slzb-border);border-radius:8px;padding:12px;margin-bottom:10px';
+  div.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-weight:600;color:var(--slzb-primary)">Athlet ${id}</div>
+      <button onclick="document.getElementById('av-athlet-${id}').remove()" style="background:none;border:none;color:#E2001A;cursor:pointer;font-size:1rem">✕</button>
+    </div>
+    <div class="form-row cols-2">
+      <div class="form-group">
+        <label style="font-size:.8rem">Vorname</label>
+        <input type="text" id="av-vorname-${id}" placeholder="Max" style="width:100%;font-size:.85rem">
+      </div>
+      <div class="form-group">
+        <label style="font-size:.8rem">Nachname</label>
+        <input type="text" id="av-nachname-${id}" placeholder="Mustermann" style="width:100%;font-size:.85rem">
+      </div>
+      <div class="form-group">
+        <label style="font-size:.8rem">Kader / Klasse</label>
+        <input type="text" id="av-kader-${id}" placeholder="z.B. Nationalkader U20" style="width:100%;font-size:.85rem">
+      </div>
+      <div class="form-group">
+        <label style="font-size:.8rem">Ziel / Motto</label>
+        <input type="text" id="av-ziel-${id}" placeholder="z.B. Top 5 beim Weltcup" style="width:100%;font-size:.85rem">
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label style="font-size:.8rem">Bisherige Erfolge (kommagetrennt)</label>
+        <input type="text" id="av-erfolge-${id}" placeholder="z.B. 1. Platz DM 2025, 3. Platz EM 2024" style="width:100%;font-size:.85rem">
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label style="font-size:.8rem">🏁 Anstehende Starts / Rennen (ein Eintrag pro Zeile)</label>
+        <textarea id="av-starts-${id}" rows="3"
+          placeholder="z.B. 15.12.2026 – Junioren-Weltcup Innsbruck&#10;22.01.2027 – Deutsche Meisterschaft Berlin"
+          style="width:100%;font-size:.85rem;resize:vertical;padding:6px 8px;border:1px solid var(--slzb-border);border-radius:6px;background:var(--slzb-bg-secondary);color:var(--slzb-text)"></textarea>
+        <div class="form-hint">Format: Datum – Veranstaltung (optional)</div>
+      </div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label style=\"font-size:.8rem;display:flex;justify-content:space-between;align-items:center\">Bild hochladen<button type=\"button\" class=\"btn btn-ghost btn-sm\" style=\"font-size:.72rem;padding:2px 8px\" onclick=\"zeigeAthletenBildarchiv(${id})\">📂 Aus Archiv</button></label>
+        <input type="file" id="av-bild-${id}" accept="image/jpeg,image/png,image/webp"
+          style="width:100%;font-size:.8rem"
+          onchange="avBildVorschau(${id}, this)">
+        <img id="av-bild-preview-${id}" src="" alt="Vorschau"
+          style="display:none;max-height:80px;max-width:100%;margin-top:6px;border-radius:6px;object-fit:cover">
+      </div>
+    </div>`;
+  liste.appendChild(div);
+}
+
+function zeigeAthletenVorstellung() {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   const modal = document.createElement('div');
@@ -9164,63 +9224,27 @@ function avBildVorschau(id, input) {
   reader.readAsDataURL(file);
 }
 
-function avResetBildCache() {
-  // Alle gespeicherten Bild-Objekte löschen
-  for (let i = 1; i <= _avCounter + 10; i++) {
-    delete window[`_avBildObj_${i}`];
-  }
+
+
+function avBildVorschau(id, input) {
+  const file = input?.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const preview = document.getElementById(`av-bild-preview-${id}`);
+    if (preview) {
+      preview.src = ev.target.result;
+      preview.style.display = 'block';
+    }
+    // Bild-Objekt sofort laden und cachen
+    const img = new Image();
+    img.onload = () => { window[`_avBildObj_${id}`] = img; };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
 }
-function avAthletHinzu() {
-  const liste = document.getElementById('av-athleten-liste');
-  if (!liste) return;
-  const id = ++_avCounter;
-  const div = document.createElement('div');
-  div.id = `av-athlet-${id}`;
-  div.style.cssText = 'border:1px solid var(--slzb-border);border-radius:8px;padding:12px;margin-bottom:10px';
-  div.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <div style="font-weight:600;color:var(--slzb-primary)">Athlet ${id}</div>
-      <button onclick="document.getElementById('av-athlet-${id}').remove()" style="background:none;border:none;color:#E2001A;cursor:pointer;font-size:1rem">✕</button>
-    </div>
-    <div class="form-row cols-2">
-      <div class="form-group">
-        <label style="font-size:.8rem">Vorname</label>
-        <input type="text" id="av-vorname-${id}" placeholder="Max" style="width:100%;font-size:.85rem">
-      </div>
-      <div class="form-group">
-        <label style="font-size:.8rem">Nachname</label>
-        <input type="text" id="av-nachname-${id}" placeholder="Mustermann" style="width:100%;font-size:.85rem">
-      </div>
-      <div class="form-group">
-        <label style="font-size:.8rem">Kader / Klasse</label>
-        <input type="text" id="av-kader-${id}" placeholder="z.B. Nationalkader U20" style="width:100%;font-size:.85rem">
-      </div>
-      <div class="form-group">
-        <label style="font-size:.8rem">Ziel / Motto</label>
-        <input type="text" id="av-ziel-${id}" placeholder="z.B. Top 5 beim Weltcup" style="width:100%;font-size:.85rem">
-      </div>
-      <div class="form-group" style="grid-column:1/-1">
-        <label style="font-size:.8rem">Bisherige Erfolge (kommagetrennt)</label>
-        <input type="text" id="av-erfolge-${id}" placeholder="z.B. 1. Platz DM 2025, 3. Platz EM 2024" style="width:100%;font-size:.85rem">
-      </div>
-      <div class="form-group" style="grid-column:1/-1">
-        <label style="font-size:.8rem">🏁 Anstehende Starts / Rennen (ein Eintrag pro Zeile)</label>
-        <textarea id="av-starts-${id}" rows="3"
-          placeholder="z.B. 15.12.2026 – Junioren-Weltcup Innsbruck&#10;22.01.2027 – Deutsche Meisterschaft Berlin"
-          style="width:100%;font-size:.85rem;resize:vertical;padding:6px 8px;border:1px solid var(--slzb-border);border-radius:6px;background:var(--slzb-bg-secondary);color:var(--slzb-text)"></textarea>
-        <div class="form-hint">Format: Datum – Veranstaltung (optional)</div>
-      </div>
-      <div class="form-group" style="grid-column:1/-1">
-        <label style=\"font-size:.8rem;display:flex;justify-content:space-between;align-items:center\">Bild hochladen<button type=\"button\" class=\"btn btn-ghost btn-sm\" style=\"font-size:.72rem;padding:2px 8px\" onclick=\"zeigeAthletenBildarchiv(${id})\">📂 Aus Archiv</button></label>
-        <input type="file" id="av-bild-${id}" accept="image/jpeg,image/png,image/webp"
-          style="width:100%;font-size:.8rem"
-          onchange="avBildVorschau(${id}, this)">
-        <img id="av-bild-preview-${id}" src="" alt="Vorschau"
-          style="display:none;max-height:80px;max-width:100%;margin-top:6px;border-radius:6px;object-fit:cover">
-      </div>
-    </div>`;
-  liste.appendChild(div);
-}
+
+
 
 
 // ── Athletenvorstellung mit gespeicherten Daten wiederherstellen ──
