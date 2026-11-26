@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SLZB-Erfolge – Diashow</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: #000;
+    font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
+    overflow: hidden;
+    width: 100vw; height: 100vh;
+    color: #fff;
+  }
+
+  /* ── Konfigurationsscreen ─────────────────────────────────── */
+  #config-screen {
+    position: fixed; inset: 0;
+    background: linear-gradient(135deg, #003366 0%, #001F4D 100%);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+  }
+  .config-card {
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 20px;
+    padding: 40px;
+    max-width: 520px;
+    width: 90%;
+  }
+  .config-card h1 {
+    font-size: 1.6rem; font-weight: 800;
+    margin-bottom: 6px;
+  }
+  .config-card p {
+    color: rgba(255,255,255,.6);
+    font-size: .88rem;
+    margin-bottom: 28px;
+  }
+  .form-group { margin-bottom: 16px; }
+  .form-group label {
+    display: block;
+    font-size: .8rem; font-weight: 700;
+    color: rgba(255,255,255,.7);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+  .form-group select,
+  .form-group input {
+    width: 100%;
+    background: rgba(255,255,255,.1);
+    border: 1px solid rgba(255,255,255,.2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: #fff;
+    font-size: .9rem;
+    font-family: inherit;
+  }
+  .form-group select option { background: #003366; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .btn-start {
+    width: 100%;
+    background: #E2001A;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 8px;
+    font-family: inherit;
+    transition: background .15s;
+  }
+  .btn-start:hover { background: #c0001a; }
+  .loading-msg {
+    text-align: center;
+    color: rgba(255,255,255,.6);
+    font-size: .85rem;
+    margin-top: 12px;
+    min-height: 20px;
+  }
+
+  /* ── Diashow ──────────────────────────────────────────────── */
+  #diashow {
+    position: fixed; inset: 0;
+    display: none;
+    background: #000;
+  }
+
+  /* Hintergrundbild */
+  #ds-bg {
+    position: absolute; inset: 0;
+    background-size: cover;
+    background-position: center 20%;
+    transition: opacity .8s ease;
+  }
+  #ds-bg-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(
+      to bottom,
+      rgba(0,0,0,.3) 0%,
+      rgba(0,0,0,.1) 40%,
+      rgba(0,0,0,.0) 55%,
+      rgba(226,0,26,.4) 75%,
+      rgba(100,0,10,.92) 100%
+    );
+  }
+
+  /* Kein Bild: Gradient-Hintergrund */
+  #ds-bg.no-image {
+    background: linear-gradient(135deg, #0a0c1a 0%, #1B1C1F 60%, #2a0008 100%);
+  }
+
+  /* Sportart-Silhouette */
+  #ds-silhouette {
+    position: absolute;
+    right: -5%;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: .06;
+    font-size: 45vw;
+    line-height: 1;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  /* Header */
+  #ds-header {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    padding: 28px 40px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: linear-gradient(to bottom, rgba(0,0,0,.6), transparent);
+  }
+  #ds-logo {
+    height: 52px;
+    width: auto;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+  #ds-header-divider {
+    width: 2px; height: 40px;
+    background: #E2001A;
+    flex-shrink: 0;
+  }
+  #ds-header-text { flex: 1; }
+  #ds-sportart-label {
+    font-size: .85rem;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: #fff;
+  }
+  #ds-datum-label {
+    font-size: .72rem;
+    color: #E2001A;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+  #ds-hashtag {
+    font-size: 1.1rem;
+    font-weight: 800;
+    font-style: italic;
+    color: rgba(255,255,255,.7);
+    margin-left: auto;
+  }
+
+  /* Inhalt */
+  #ds-content {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 0 40px 40px;
+  }
+  #ds-glasbox {
+    background: rgba(18,19,21,.55);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 14px;
+    padding: 24px 28px;
+    backdrop-filter: blur(4px);
+    max-width: 900px;
+  }
+  #ds-kategorie {
+    font-size: .78rem;
+    font-weight: 800;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: #E2001A;
+    margin-bottom: 6px;
+  }
+  #ds-titel {
+    font-size: clamp(1.4rem, 3.5vw, 2.4rem);
+    font-weight: 800;
+    font-style: italic;
+    line-height: 1.15;
+    margin-bottom: 10px;
+  }
+  #ds-titel .zeile1 { color: #fff; }
+  #ds-titel .zeile2 { color: #E2001A; }
+  #ds-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  #ds-badge {
+    background: #C9A227;
+    color: #000;
+    border-radius: 30px;
+    padding: 5px 16px;
+    font-size: .85rem;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+  #ds-athlet {
+    font-size: .95rem;
+    font-weight: 700;
+    color: rgba(255,255,255,.9);
+  }
+  #ds-wettbewerb {
+    font-size: .82rem;
+    color: rgba(255,255,255,.6);
+  }
+
+  /* Footer */
+  #ds-footer {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 14px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(to top, rgba(0,0,0,.7), transparent);
+  }
+  #ds-schulname {
+    font-size: .82rem;
+    font-weight: 700;
+    color: rgba(255,255,255,.8);
+  }
+  #ds-fortschritt {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+  }
+  .ds-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.3);
+    transition: background .3s, transform .3s;
+  }
+  .ds-dot.aktiv {
+    background: #E2001A;
+    transform: scale(1.4);
+  }
+  #ds-timer-bar {
+    position: absolute;
+    bottom: 0; left: 0;
+    height: 3px;
+    background: #E2001A;
+    transition: width linear;
+  }
+
+  /* Steuerung */
+  #ds-controls {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 16px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .3s;
+  }
+  #diashow:hover #ds-controls { opacity: 1; }
+  .ds-nav-btn {
+    pointer-events: all;
+    background: rgba(0,0,0,.5);
+    border: 1px solid rgba(255,255,255,.2);
+    color: #fff;
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .15s;
+  }
+  .ds-nav-btn:hover { background: rgba(226,0,26,.7); }
+
+  /* Pause-Overlay */
+  #ds-pause-indicator {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    background: rgba(0,0,0,.7);
+    border-radius: 50%;
+    width: 80px; height: 80px;
+    display: none;
+    align-items: center; justify-content: center;
+    font-size: 2rem;
+  }
+
+  /* Übergangs-Animation */
+  @keyframes ds-fade-in {
+    from { opacity: 0; transform: scale(1.02); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  .ds-animate { animation: ds-fade-in .6s ease; }
+
+  /* Keine Meldungen */
+  #ds-leer {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 16px;
+    background: linear-gradient(135deg, #003366, #001F4D);
+  }
+  #ds-leer h2 { font-size: 1.4rem; opacity: .7; }
+  #ds-leer p { font-size: .9rem; opacity: .5; }
+</style>
+</head>
+<body>
+
+<!-- Konfigurationsscreen -->
+<div id="config-screen">
+  <div class="config-card">
+    <h1>▶️ Diashow starten</h1>
+    <p>Wähle Sportart und Zeitraum für die Anzeige im Schulhaus</p>
+
+    <div class="form-group">
+      <label>Sportart</label>
+      <select id="cfg-sportart">
+        <option value="">Alle Sportarten</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Zeitraum</label>
+      <select id="cfg-zeitraum">
+        <option value="schuljahr" selected>Aktuelles Schuljahr</option>
+        <option value="semester">Aktuelles Semester</option>
+        <option value="quartal">Aktuelles Quartal</option>
+        <option value="monat">Dieser Monat</option>
+        <option value="alle">Alle Zeiten</option>
+      </select>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Anzeigedauer (Sek.)</label>
+        <select id="cfg-speed">
+          <option value="5000">5 Sekunden</option>
+          <option value="8000" selected>8 Sekunden</option>
+          <option value="12000">12 Sekunden</option>
+          <option value="20000">20 Sekunden</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Reihenfolge</label>
+        <select id="cfg-reihenfolge">
+          <option value="neu" selected>Neueste zuerst</option>
+          <option value="alt">Älteste zuerst</option>
+          <option value="zufall">Zufällig</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Nur Meldungen ab Ebene</label>
+      <select id="cfg-ebene">
+        <option value="">Alle Ebenen</option>
+        <option value="Bundesebene">Bundesebene und höher</option>
+        <option value="International">International / WM / Olympia</option>
+      </select>
+    </div>
+
+    <button class="btn-start" onclick="starteDiashow()">▶️ Diashow starten</button>
+    <div class="loading-msg" id="loading-msg"></div>
+  </div>
+</div>
+
+<!-- Diashow -->
+<div id="diashow">
+  <div id="ds-bg"></div>
+  <div id="ds-bg-overlay"></div>
+  <div id="ds-silhouette"></div>
+
+  <div id="ds-header">
+    <img id="ds-logo" src="slzb-logo.png" alt="SLZB" onerror="this.style.display='none'">
+    <div id="ds-header-divider"></div>
+    <div id="ds-header-text">
+      <div id="ds-sportart-label">SLZB Berlin</div>
+      <div id="ds-datum-label">Sportliche Erfolge</div>
+    </div>
+    <div id="ds-hashtag">#SLZBerlin</div>
+  </div>
+
+  <div id="ds-content">
+    <div id="ds-glasbox">
+      <div id="ds-kategorie"></div>
+      <div id="ds-titel">
+        <div class="zeile1" id="ds-titel-z1"></div>
+        <div class="zeile2" id="ds-titel-z2"></div>
+      </div>
+      <div id="ds-meta">
+        <div id="ds-badge"></div>
+        <div id="ds-athlet"></div>
+        <div id="ds-wettbewerb"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="ds-footer">
+    <div id="ds-schulname">Schul- und Leistungssportzentrum Berlin</div>
+    <div id="ds-fortschritt"></div>
+  </div>
+
+  <div id="ds-timer-bar"></div>
+
+  <div id="ds-controls">
+    <button class="ds-nav-btn" onclick="dsNavigiere(-1)">‹</button>
+    <button class="ds-nav-btn" onclick="dsPauseToggle()">⏸</button>
+    <button class="ds-nav-btn" onclick="dsNavigiere(1)">›</button>
+  </div>
+
+  <div id="ds-pause-indicator">⏸</div>
+
+  <div id="ds-leer" style="display:none">
+    <h2>🏅 Keine Meldungen gefunden</h2>
+    <p>Bitte Filter anpassen</p>
+    <button onclick="document.getElementById('config-screen').style.display='flex';document.getElementById('diashow').style.display='none'"
+      style="background:#E2001A;color:#fff;border:none;border-radius:8px;padding:10px 20px;cursor:pointer;font-size:.9rem;margin-top:8px">
+      ← Zurück zur Konfiguration
+    </button>
+  </div>
+</div>
+
+<!-- Supabase -->
+<script src="supabase.min.js"></script>
+<script src="config.js"></script>
+<script>
+// ── Supabase Init ─────────────────────────────────────────────
+const cfg = window.SLZB_CONFIG || {};
+const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+
+// ── Sportarten laden ──────────────────────────────────────────
+async function ladeSportarten() {
+  const { data } = await sb.from('sports').select('id,name').eq('active', true).order('name');
+  const sel = document.getElementById('cfg-sportart');
+  (data||[]).forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.id; opt.textContent = s.name;
+    sel.appendChild(opt);
+  });
+}
+
+// ── Meldungen laden ───────────────────────────────────────────
+async function ladeMeldungen(sportartId, zeitraum, ebene) {
+  let query = sb.from('achievements')
+    .select(`id, title, sport_id, event_date, placement, medal, level,
+             result_text, short_info, article_text,
+             achievement_participants(participant_role),
+             achievement_media(storage_path)`)
+    .in('status', ['Freigegeben', 'Veröffentlicht'])
+    .is('deleted_at', null)
+    .order('event_date', { ascending: false })
+    .limit(100);
+
+  if (sportartId) query = query.eq('sport_id', sportartId);
+
+  // Zeitraum-Filter
+  const jetzt = new Date();
+  if (zeitraum === 'monat') {
+    const von = new Date(jetzt.getFullYear(), jetzt.getMonth(), 1).toISOString().slice(0,10);
+    query = query.gte('event_date', von);
+  } else if (zeitraum === 'quartal') {
+    const q = Math.floor(jetzt.getMonth() / 3);
+    const von = new Date(jetzt.getFullYear(), q*3, 1).toISOString().slice(0,10);
+    query = query.gte('event_date', von);
+  } else if (zeitraum === 'semester') {
+    const von = jetzt.getMonth() < 6
+      ? new Date(jetzt.getFullYear(), 0, 1).toISOString().slice(0,10)
+      : new Date(jetzt.getFullYear(), 6, 1).toISOString().slice(0,10);
+    query = query.gte('event_date', von);
+  } else if (zeitraum === 'schuljahr') {
+    const sjStart = jetzt.getMonth() >= 7
+      ? new Date(jetzt.getFullYear(), 7, 1)
+      : new Date(jetzt.getFullYear()-1, 7, 1);
+    query = query.gte('event_date', sjStart.toISOString().slice(0,10));
+  }
+
+  if (ebene === 'Bundesebene') {
+    query = query.in('level', ['Bundesebene','International','Weltmeisterschaft','Olympia']);
+  } else if (ebene === 'International') {
+    query = query.in('level', ['International','Weltmeisterschaft','Olympia']);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+}
+
+// ── Bild-URL ──────────────────────────────────────────────────
+function getBildUrl(meldung) {
+  const media = meldung.achievement_media;
+  if (!media?.length) return null;
+  const path = media[0].storage_path;
+  if (!path) return null;
+  const { data } = sb.storage.from('achievement-media').getPublicUrl(path);
+  return data?.publicUrl || null;
+}
+
+// ── Sportart-Emoji ────────────────────────────────────────────
+const SPORT_EMOJI = {
+  'Eiskunstlauf': '⛸️', 'Eisschnelllauf': '⛸️', 'Eishockey': '🏒',
+  'Bogenschießen': '🏹', 'Fechten': '🤺', 'Judo': '🥋',
+  'Boxen': '🥊', 'Schwimmen': '🏊', 'Para-Schwimmen': '🏊',
+  'Gerätturnen': '🤸', 'Volleyball': '🏐', 'Basketball': '🏀',
+  'Handball': '🤾', 'Leichtathletik': '🏃', 'Radsport': '🚴',
+};
+function getSportEmoji(sportId) {
+  for (const [name, emoji] of Object.entries(SPORT_EMOJI)) {
+    if (sportId?.toLowerCase().includes(name.toLowerCase())) return emoji;
+  }
+  return '🏅';
+}
+
+// ── Diashow-State ─────────────────────────────────────────────
+let _meldungen = [];
+let _aktuell = 0;
+let _timer = null;
+let _speed = 8000;
+let _pausiert = false;
+let _sportartenMap = {};
+
+// ── Diashow starten ───────────────────────────────────────────
+async function starteDiashow() {
+  const sportartId  = document.getElementById('cfg-sportart').value;
+  const zeitraum    = document.getElementById('cfg-zeitraum').value;
+  const speed       = parseInt(document.getElementById('cfg-speed').value);
+  const reihenfolge = document.getElementById('cfg-reihenfolge').value;
+  const ebene       = document.getElementById('cfg-ebene').value;
+
+  _speed = speed;
+  document.getElementById('loading-msg').textContent = '⏳ Meldungen werden geladen...';
+
+  try {
+    // Sportarten-Map laden
+    const { data: sports } = await sb.from('sports').select('id,name');
+    (sports||[]).forEach(s => { _sportartenMap[s.id] = s.name; });
+
+    let meldungen = await ladeMeldungen(sportartId, zeitraum, ebene);
+
+    if (reihenfolge === 'alt') meldungen.reverse();
+    else if (reihenfolge === 'zufall') meldungen.sort(() => Math.random() - .5);
+
+    _meldungen = meldungen;
+    _aktuell = 0;
+
+    if (!_meldungen.length) {
+      document.getElementById('config-screen').style.display = 'none';
+      document.getElementById('diashow').style.display = 'block';
+      document.getElementById('ds-leer').style.display = 'flex';
+      return;
+    }
+
+    document.getElementById('config-screen').style.display = 'none';
+    document.getElementById('diashow').style.display = 'block';
+    document.getElementById('ds-leer').style.display = 'none';
+
+    // Fortschritts-Dots (max 20)
+    const dots = document.getElementById('ds-fortschritt');
+    const anzDots = Math.min(_meldungen.length, 20);
+    dots.innerHTML = Array.from({length: anzDots}, (_,i) =>
+      `<div class="ds-dot" id="dot-${i}"></div>`).join('');
+
+    zeigeAktuelleFolie();
+    starteTimer();
+
+    // Tastatur-Steuerung
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight' || e.key === ' ') dsNavigiere(1);
+      else if (e.key === 'ArrowLeft') dsNavigiere(-1);
+      else if (e.key === 'Escape') {
+        clearInterval(_timer);
+        document.getElementById('config-screen').style.display = 'flex';
+        document.getElementById('diashow').style.display = 'none';
+      }
+      else if (e.key === 'p' || e.key === 'P') dsPauseToggle();
+    });
+
+    // Klick zum Weiterschalten
+    document.getElementById('diashow').addEventListener('click', e => {
+      if (!e.target.closest('.ds-nav-btn')) dsNavigiere(1);
+    });
+
+  } catch(err) {
+    document.getElementById('loading-msg').textContent = '❌ Fehler: ' + err.message;
+  }
+}
+
+function zeigeAktuelleFolie() {
+  const e = _meldungen[_aktuell];
+  if (!e) return;
+
+  const sportartName = _sportartenMap[e.sport_id] || e.sport_id || 'SLZB';
+  const emoji = getSportEmoji(sportartName);
+  const athlet = (e.achievement_participants||[])
+    .map(b => b.participant_role).filter(Boolean).join(', ');
+  const bildUrl = getBildUrl(e);
+  const mi = {Gold:'🥇',Silber:'🥈',Bronze:'🥉'};
+  const medaille = e.medal && e.medal !== 'keine' ? `${mi[e.medal]||''} ${e.medal}` : '';
+  const platz = e.placement ? `${e.placement}. Platz` : '';
+  const badge = medaille || platz || '';
+
+  // Datum formatieren
+  const datum = e.event_date ? new Date(e.event_date + 'T12:00:00').toLocaleDateString('de-DE', {
+    day: '2-digit', month: 'long', year: 'numeric'
+  }) : '';
+
+  // Titel aufteilen (erste 2 Wörter / Rest)
+  const titelWoerter = (e.title || '').split(' ');
+  const z1 = titelWoerter.slice(0, Math.ceil(titelWoerter.length / 2)).join(' ');
+  const z2 = titelWoerter.slice(Math.ceil(titelWoerter.length / 2)).join(' ');
+
+  // Hintergrund
+  const bg = document.getElementById('ds-bg');
+  if (bildUrl) {
+    bg.style.backgroundImage = `url('${bildUrl}')`;
+    bg.className = '';
+  } else {
+    bg.style.backgroundImage = '';
+    bg.className = 'no-image';
+  }
+
+  // Silhouette
+  document.getElementById('ds-silhouette').textContent = emoji;
+
+  // Header
+  document.getElementById('ds-sportart-label').textContent = sportartName.toUpperCase();
+  document.getElementById('ds-datum-label').textContent = datum;
+
+  // Inhalt
+  document.getElementById('ds-kategorie').textContent =
+    (e.level || '') + (e.level ? ' · ' : '') + sportartName.toUpperCase();
+  document.getElementById('ds-titel-z1').textContent = z1;
+  document.getElementById('ds-titel-z2').textContent = z2;
+  document.getElementById('ds-badge').textContent = badge;
+  document.getElementById('ds-badge').style.display = badge ? 'block' : 'none';
+  document.getElementById('ds-athlet').textContent = athlet;
+  document.getElementById('ds-wettbewerb').textContent = e.result_text || e.short_info || '';
+
+  // Dots aktualisieren
+  document.querySelectorAll('.ds-dot').forEach((dot, i) => {
+    dot.classList.toggle('aktiv', i === _aktuell % 20);
+  });
+
+  // Animation
+  document.getElementById('ds-glasbox').classList.remove('ds-animate');
+  void document.getElementById('ds-glasbox').offsetWidth;
+  document.getElementById('ds-glasbox').classList.add('ds-animate');
+}
+
+function starteTimer() {
+  clearInterval(_timer);
+  // Timer-Bar animieren
+  const bar = document.getElementById('ds-timer-bar');
+  bar.style.transition = 'none';
+  bar.style.width = '100%';
+  setTimeout(() => {
+    bar.style.transition = `width ${_speed}ms linear`;
+    bar.style.width = '0%';
+  }, 50);
+
+  _timer = setInterval(() => {
+    if (!_pausiert) {
+      _aktuell = (_aktuell + 1) % _meldungen.length;
+      zeigeAktuelleFolie();
+      starteTimer();
+    }
+  }, _speed);
+}
+
+function dsNavigiere(richtung) {
+  _aktuell = (_aktuell + richtung + _meldungen.length) % _meldungen.length;
+  zeigeAktuelleFolie();
+  starteTimer();
+}
+
+function dsPauseToggle() {
+  _pausiert = !_pausiert;
+  const ind = document.getElementById('ds-pause-indicator');
+  ind.style.display = _pausiert ? 'flex' : 'none';
+  ind.textContent = _pausiert ? '⏸' : '';
+}
+
+// ── Init ──────────────────────────────────────────────────────
+ladeSportarten();
+
+// Auto-Start wenn URL-Parameter gesetzt
+const params = new URLSearchParams(window.location.search);
+if (params.get('autostart') === '1') {
+  setTimeout(starteDiashow, 500);
+}
+</script>
+</body>
+</html>
