@@ -10012,9 +10012,11 @@ async function euErstellePoster(veranstaltungsId, mitMeldung) {
   const v = liste.find(x => x.id === veranstaltungsId);
   if (!v) return;
 
-  const athletName = document.getElementById('eu-athlet')?.value;
+  // Lese aus window._euAthlet/_euPlatz (neue Button-Eingabe)
+  // ODER aus alten Input-Feldern (Fallback)
+  const athletName = window._euAthlet || document.getElementById('eu-athlet')?.value;
+  const platz      = window._euPlatz  || parseInt(document.getElementById('eu-platz')?.value) || null;
   const disziplin  = document.getElementById('eu-disziplin')?.value.trim();
-  const platz      = parseInt(document.getElementById('eu-platz')?.value) || null;
   const ergebnis   = document.getElementById('eu-ergebnis')?.value.trim();
   const zusatz     = document.getElementById('eu-zusatz')?.value.trim();
 
