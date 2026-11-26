@@ -1833,7 +1833,7 @@ function widerrufEinwilligung(schuelerId,name) {
 }
 
 // ── Ausgaben ─────────────────────────────────────────────────
-async 
+
 // ── Ausgaben: Meldungen-Poster ────────────────────────────────
 async function renderAusgabenMeldungen() {
   const alle = await ladeErfolge();
@@ -8940,7 +8940,7 @@ async function speichereVotingBearbeitung(kampagneId) {
 // ══════════════════════════════════════════════════════════════
 // ATHLETEN-VORSTELLUNG (Weltcup / Turnier)
 // ══════════════════════════════════════════════════════════════
-async 
+
 
 let _avCounter = 0;
 function avResetBildCache() {
