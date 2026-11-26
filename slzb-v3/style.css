@@ -1001,6 +1001,67 @@ tbody tr.clickable { cursor: pointer; }
 }
 
 /* ── Karten-Layout für Tabellen auf Mobile ───────────────────── */
+
+/* ══════════════════════════════════════════════════════════════
+   STATUS-FARBEN FÜR KARTEN-RÄNDER
+   ══════════════════════════════════════════════════════════════ */
+
+/* Tabellen-Zeilen: Status-Farben via data-status Attribut */
+tr[data-status="Freigegeben"],
+tr[data-status="Veröffentlicht"] {
+  border-left-color: #4caf50 !important; /* Grün */
+}
+tr[data-status="Eingereicht"] {
+  border-left-color: #0B63CE !important; /* Blau */
+}
+tr[data-status="Redaktion"],
+tr[data-status="Datenprüfung"] {
+  border-left-color: #003366 !important; /* Dunkelblau */
+}
+tr[data-status="Rückfrage an Melder"],
+tr[data-status="Unvollständig"] {
+  border-left-color: #E07000 !important; /* Orange */
+}
+tr[data-status="Freigabe Öffentlichkeitsarbeit"] {
+  border-left-color: #C9A227 !important; /* Gold */
+}
+tr[data-status="Wegen Einwilligung gesperrt"],
+tr[data-status="Widerrufen"],
+tr[data-status="Zur Löschung vorgemerkt"] {
+  border-left-color: #E2001A !important; /* Rot */
+}
+tr[data-status="Dublettenverdacht"],
+tr[data-status="Einwilligungsprüfung"] {
+  border-left-color: #8A9BB0 !important; /* Grau */
+}
+tr[data-status="Archiviert"],
+tr[data-status="Gelöscht/Anonymisiert"] {
+  border-left-color: #ccc !important; /* Hellgrau */
+}
+tr[data-status="Entwurf"] {
+  border-left-color: #888 !important; /* Mittelgrau */
+}
+
+/* Auf Mobile: Farbiger linker Rand sichtbar */
+@media (max-width: 640px) {
+  tr[data-status] {
+    border-left-width: 4px !important;
+  }
+}
+
+/* Status-Dot in Karten (kleiner farbiger Punkt) */
+tr[data-status]::after {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: -1px;
+  width: 4px;
+  height: calc(100% - 20px);
+  border-radius: 0 2px 2px 0;
+  background: inherit;
+  opacity: 0;
+}
+
 @media (max-width: 640px) {
 
   /* Tabellen → Karten-Transformation (universell für alle .table-wrap) */
@@ -1157,7 +1218,7 @@ tbody tr.clickable { cursor: pointer; }
     scroll-snap-align: start;
   }
 
-  /* ── Modal als Bottom-Sheet ──────────────────────────────── */
+  /* ── Modal als Bottom-Sheet (nur Mobile) ─────────────────── */
   .modal-overlay {
     align-items: flex-end !important;
     padding: 0 !important;
@@ -1170,7 +1231,6 @@ tbody tr.clickable { cursor: pointer; }
     width: 100% !important;
     max-width: 100% !important;
     animation: bottom-sheet-up .25s cubic-bezier(.32,1,.23,1) !important;
-    /* Drag-Handle */
     padding-top: 8px;
   }
   /* Drag-Handle Indikator */
@@ -1199,7 +1259,6 @@ tbody tr.clickable { cursor: pointer; }
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch;
     padding: 12px 16px !important;
-    /* Verhindert dass Tastatur das Modal verdeckt */
     padding-bottom: env(keyboard-inset-height, 16px) !important;
   }
   .modal-footer {
@@ -1210,7 +1269,6 @@ tbody tr.clickable { cursor: pointer; }
     background: var(--slzb-bg);
     border-top: 1px solid var(--slzb-border);
   }
-  /* Overlay: Tap-to-close Bereich oben */
   .modal-overlay::before {
     content: '';
     flex: 1;

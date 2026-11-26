@@ -406,23 +406,59 @@ function installPWA() {
 </script>
 
 <script>
-// Auto data-label für Mobile-Karten-Layout
-// Wird nach jedem Seitenrender aufgerufen
+// Auto data-label + data-status für Mobile-Karten-Layout
 function autoDataLabel() {
   document.querySelectorAll('.table-wrap table').forEach(table => {
     const headers = [...table.querySelectorAll('thead th')].map(th => th.textContent.trim());
     if (!headers.length) return;
+
+    // Finde Status-Spalten-Index
+    const statusIdx = headers.findIndex(h =>
+      h === 'Status' || h === 'status' || h.toLowerCase().includes('status'));
+
     table.querySelectorAll('tbody tr').forEach(row => {
-      [...row.querySelectorAll('td')].forEach((td, i) => {
+      const cells = [...row.querySelectorAll('td')];
+
+      // data-label setzen
+      cells.forEach((td, i) => {
         if (headers[i] && !td.dataset.label) {
           td.dataset.label = headers[i];
         }
       });
+
+      // data-status aus Status-Zelle oder Badge extrahieren
+      if (!row.dataset.status) {
+        let status = null;
+
+        // Methode 1: Status-Spalte
+        if (statusIdx >= 0 && cells[statusIdx]) {
+          const badge = cells[statusIdx].querySelector('.badge');
+          status = badge?.textContent.trim() || cells[statusIdx].textContent.trim();
+        }
+
+        // Methode 2: Suche nach Badge in allen Zellen
+        if (!status) {
+          const badge = row.querySelector('.badge');
+          if (badge) status = badge.textContent.trim();
+        }
+
+        // Methode 3: data-status aus onclick-Attribut
+        if (!status && row.getAttribute('onclick')) {
+          const match = row.getAttribute('onclick').match(/status['":\s]+([^'"]+)/i);
+          if (match) status = match[1];
+        }
+
+        if (status) row.dataset.status = status;
+      }
     });
   });
 }
+
 // Nach DOM-Änderungen automatisch ausführen
-const _observer = new MutationObserver(() => autoDataLabel());
+const _observer = new MutationObserver(() => {
+  clearTimeout(window._autoLabelTimer);
+  window._autoLabelTimer = setTimeout(autoDataLabel, 50);
+});
 document.addEventListener('DOMContentLoaded', () => {
   autoDataLabel();
   _observer.observe(document.getElementById('main-page') || document.body, {
