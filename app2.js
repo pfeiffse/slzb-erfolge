@@ -490,6 +490,21 @@ function tourZuruecksetzen() {
   toast('Tour zurückgesetzt – beim nächsten Login startet sie neu', 'info');
 }
 
+
+// Nächste offene Meldung öffnen
+async function naechsteMeldungOeffnen(aktuelleId) {
+  const alle = await ladeErfolge();
+  const offen = alle.filter(e => ['Eingereicht','Redaktion','Datenprüfung'].includes(e.status));
+  const idx = offen.findIndex(e => e.id === aktuelleId);
+  const naechste = offen[idx + 1] || offen[0];
+  if (naechste && naechste.id !== aktuelleId) {
+    navigateTo('erfolg-detail', { currentErfolgId: naechste.id });
+  } else {
+    toast('✅ Alle Meldungen bearbeitet!', 'success');
+    navigateTo('redaktion');
+  }
+}
+
 async function renderErfolgDetail() {
   const e=await DB.getErfolgById(APP.currentErfolgId);
   if (!e) return `<div class="page"><div class="alert alert-danger"><span class="alert-icon">❌</span><span>Meldung nicht gefunden.</span></div></div>`;

@@ -338,6 +338,13 @@ const DB = {
   },
 
   async erstelleErfolg(daten, beteiligte = []) {
+    // Backend-Validierung (einheitlich mit Frontend)
+    if (!daten.titel?.trim()) throw new Error('Titel ist Pflichtfeld');
+    if (!daten.sportartText && !daten.sportartId) throw new Error('Sportart ist Pflichtfeld');
+    if (!daten.datum) throw new Error('Datum ist Pflichtfeld');
+    if (daten.platzierung !== null && daten.platzierung !== undefined && daten.platzierung < 1)
+      throw new Error('Platzierung muss mindestens 1 sein');
+
     const nr = await this.naechsteErfolgNr();
     const row = await this.unmapErfolg({ ...daten, erfolgNr: nr });
     const { data, error } = await Backend.client

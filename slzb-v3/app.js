@@ -178,6 +178,29 @@ function navigateTo(page, params={}) {
   if (page === 'nutzerverwaltung') {
     setTimeout(ladeNutzerverwaltung, 50);
   }
+  // Redaktions-Shortcuts aktivieren wenn auf Meldungsdetail
+  if (page === 'erfolg-detail') {
+    setTimeout(() => {
+      const handler = (e) => {
+        if (['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)) return;
+        if (e.key === 'n' || e.key === 'N') {
+          naechsteMeldungOeffnen(APP.currentErfolgId);
+        }
+        if (e.key === 'f' || e.key === 'F') {
+          // Freigeben-Button klicken
+          const freigebenBtn = [...document.querySelectorAll('.btn')]
+            .find(b => b.textContent.includes('Freigeben'));
+          if (freigebenBtn) freigebenBtn.click();
+        }
+      };
+      document.addEventListener('keydown', handler);
+      // Handler entfernen wenn Seite verlassen
+      window._redaktionKeyHandler = handler;
+    }, 100);
+  } else if (window._redaktionKeyHandler) {
+    document.removeEventListener('keydown', window._redaktionKeyHandler);
+    window._redaktionKeyHandler = null;
+  }
 }
 
 function updateBadges() {
@@ -2206,6 +2229,90 @@ function leseDatenAusFormular(meldungsart) {
     videoUrl:        document.getElementById('f-video-url')?.value?.trim()||null,
     meldungsart,
   };
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// EINHEITLICHES VALIDIERUNGSSCHEMA
+// Wird sowohl im Frontend als auch als Referenz für Backend genutzt
+// ══════════════════════════════════════════════════════════════
+
+const VALIDIERUNGSREGELN = {
+  einzelerfolg: {
+    titel:       { pflicht: true,  min: 3,   max: 200, label: 'Titel' },
+    sportartText:{ pflicht: true,  min: 2,   max: 50,  label: 'Sportart' },
+    datum:       { pflicht: true,  typ: 'datum', label: 'Datum' },
+    athletText:  { pflicht: true,  min: 2,   max: 100, label: 'Athlet/Team',
+                   hinweis: 'Name des Athleten oder Teams' },
+    platzierung: { pflicht: false, min: 1,   max: 999, typ: 'zahl', label: 'Platzierung' },
+    medaille:    { pflicht: false, werte: ['Gold','Silber','Bronze','keine'], label: 'Medaille' },
+  },
+  teamerfolg: {
+    titel:       { pflicht: true,  min: 3,   max: 200, label: 'Titel' },
+    sportartText:{ pflicht: true,  min: 2,   max: 50,  label: 'Sportart' },
+    datum:       { pflicht: true,  typ: 'datum', label: 'Datum' },
+    teamName:    { pflicht: true,  min: 2,   max: 100, label: 'Team/Mannschaft' },
+  },
+  athletenProfil: {
+    vorname:     { pflicht: true,  min: 1,   max: 50,  label: 'Vorname' },
+    nachname:    { pflicht: true,  min: 1,   max: 50,  label: 'Nachname' },
+    sportart:    { pflicht: false, min: 2,   max: 50,  label: 'Sportart' },
+  },
+};
+
+// Einheitliche Validierungsfunktion
+function validiereNachSchema(daten, schema) {
+  const fehler = [];
+  for (const [feld, regel] of Object.entries(schema)) {
+    const wert = daten[feld];
+    const leer = !wert?.toString().trim();
+
+    if (regel.pflicht && leer) {
+      fehler.push(`${regel.label} ist ein Pflichtfeld`);
+      // Visuelles Feedback
+      const el = document.getElementById('f-' + feld) ||
+                 document.getElementById('ap-' + feld) ||
+                 document.getElementById(feld);
+      if (el) {
+        el.classList.add('error');
+        el.addEventListener('input', () => el.classList.remove('error'), { once: true });
+      }
+      continue;
+    }
+    if (leer) continue; // Optional und leer → OK
+
+    const str = wert.toString().trim();
+    if (regel.min && str.length < regel.min)
+      fehler.push(`${regel.label} muss mindestens ${regel.min} Zeichen haben`);
+    if (regel.max && str.length > regel.max)
+      fehler.push(`${regel.label} darf maximal ${regel.max} Zeichen haben`);
+    if (regel.typ === 'datum') {
+      const d = new Date(str);
+      if (isNaN(d)) fehler.push(`${regel.label} ist kein gültiges Datum`);
+      else if (d > new Date(Date.now() + 365*24*60*60*1000))
+        fehler.push(`${regel.label} liegt mehr als 1 Jahr in der Zukunft`);
+      else if (d < new Date('2000-01-01'))
+        fehler.push(`${regel.label} vor dem Jahr 2000`);
+    }
+    if (regel.typ === 'zahl') {
+      const n = parseInt(str);
+      if (isNaN(n)) fehler.push(`${regel.label} muss eine Zahl sein`);
+      else if (regel.min && n < regel.min) fehler.push(`${regel.label} muss mindestens ${regel.min} sein`);
+      else if (regel.max && n > regel.max) fehler.push(`${regel.label} darf maximal ${regel.max} sein`);
+    }
+    if (regel.werte && !regel.werte.includes(str))
+      fehler.push(`${regel.label}: ungültiger Wert "${str}"`);
+  }
+
+  // Medaille ↔ Platz Konsistenz
+  if (daten.medaille && daten.medaille !== 'keine' && daten.platzierung) {
+    const erwarteterPlatz = {Gold:1, Silber:2, Bronze:3};
+    const erwartet = erwarteterPlatz[daten.medaille];
+    if (erwartet && daten.platzierung !== erwartet) {
+      fehler.push(`${daten.medaille} entspricht normalerweise Platz ${erwartet} (aktuell: ${daten.platzierung})`);
+    }
+  }
+  return fehler;
 }
 
 function validiereFormular(daten, meldungsart) {
