@@ -4837,7 +4837,7 @@ async function renderKalender() {
             <td class="text-sm text-muted">${esc(t.klasse||'–')}</td>
             <td><span style="color:${prioFarbe(t.prioritaet)};font-size:.75rem;font-weight:700">${prioLabel(t.prioritaet)}</span></td>
             <td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:2px 8px" onclick="kalenderCountdown(${JSON.stringify(t).replace(/"/g,'&quot;')})">⏳</button></td>
-              ${(Auth.canDo('redaktion') || t._eigener) ? `<button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:2px 6px" title="Bearbeiten" onclick="zeigeKalenderEintragModal(${JSON.stringify(t).replace(/\"/g,'&quot;')})">✏️</button>` : ''}
+              ${(Auth.canDo('bearbeiten') || t._eigener) ? `<button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:2px 6px" title="Bearbeiten" onclick="zeigeKalenderEintragModal(${JSON.stringify(t).replace(/\"/g,'&quot;')})">✏️</button>` : ''}
               ${t._eigener ? `<button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:2px 6px;color:#E2001A" title="Löschen" onclick="loescheKalenderEintrag('${t._id}')">🗑️</button>` : ''}
             </td>
           </tr>`;}).join('')}
