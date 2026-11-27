@@ -1269,9 +1269,16 @@ async function speichereErfolg(status, meldungsart) {
   const btn=document.querySelector('.card-footer .btn-primary,.card-footer .btn-warning');
   if(btn){btn.disabled=true;btn.textContent='Wird gespeichert...';}
   try {
-    const beteiligte = athletText ? [{
-      schuelerId:null, anzeigename:athletText,
-      rolle:'Athlet', einwilligungsstatus:'Nicht geprüft'
+    // Profil-ID ermitteln wenn Athlet aus Profil stammt
+  const profilId = window._letzteProfilId || null;
+  window._letzteProfilId = null; // Reset nach Verwendung
+
+  const beteiligte = athletText ? [{
+      schuelerId: null,
+      anzeigename: athletText,
+      rolle: 'Athlet',
+      einwilligungsstatus: 'Nicht geprüft',
+      profilId: profilId, // Verknüpfung zum Athleten-Profil
     }] : [];
     const result = await DB.erstelleErfolg({...daten,status}, beteiligte);
     if (!result.ok) throw new Error(result.fehler||'Unbekannter Fehler');
@@ -1807,16 +1814,24 @@ async function fuelleAthletAusProfil(name) {
     try {
       const profile = await ladeAthletenProfile(name);
       if (!profile.length) return;
-      const profil = profile[0]; // Bestes Match
+      // Bestes Match: exakter Name bevorzugt
+      const profil = profile.find(p => p.name.toLowerCase() === name.toLowerCase()) || profile[0];
       // Sportart vorausfüllen wenn noch leer
       const sportartEl = document.getElementById('f-sportart-text');
       if (sportartEl && !sportartEl.value && profil.sportart) {
         sportartEl.value = profil.sportart;
-        // Kleiner Hinweis
-        const hint = sportartEl.parentNode.querySelector('.field-hint');
-        if (hint) hint.textContent = `✅ Aus Profil: ${profil.name}`;
       }
-    } catch(e) { /* Profil nicht gefunden - kein Problem */ }
+      // Profil-ID für spätere Verknüpfung merken
+      window._letzteProfilId = profil.id;
+      // Visueller Hinweis
+      const athletEl = document.getElementById('f-schueler-text');
+      if (athletEl) {
+        const hint = athletEl.closest('.form-group')?.querySelector('.field-hint');
+        if (hint) {
+          hint.innerHTML = `<span style="color:#4caf50">✅ Profil gefunden: ${esc(profil.name)}${profil.sportart?' · '+esc(profil.sportart):''}</span>`;
+        }
+      }
+    } catch(e) { window._letzteProfilId = null; }
   }, 600);
 }
 
@@ -1919,6 +1934,27 @@ async function batchFreigeben(event) {
   navigateTo('redaktion');
 }
 
+
+function redaktionFilter(sportart) {
+  // Alle Kanban-Karten und Tabellenzeilen filtern
+  document.querySelectorAll('.kanban-karte, tbody tr').forEach(el => {
+    if (!sportart) {
+      el.style.display = '';
+    } else {
+      const text = el.textContent.toLowerCase();
+      el.style.display = text.includes(sportart.toLowerCase()) ? '' : 'none';
+    }
+  });
+  // Aktiven Filter-Button markieren
+  document.querySelectorAll('[onclick^="redaktionFilter"]').forEach(btn => {
+    btn.style.background = '';
+    btn.style.borderColor = '';
+  });
+  const aktiv = document.querySelector(`[onclick="redaktionFilter('${sportart}')"]`) ||
+                document.getElementById('rf-alle');
+  if (aktiv) { aktiv.style.background = 'rgba(0,51,102,.15)'; aktiv.style.borderColor = '#003366'; }
+}
+
 async function renderRedaktion() {
   const alle = await ladeErfolge();
   const gruppen = [
@@ -1936,6 +1972,13 @@ async function renderRedaktion() {
       <div>
         <h1>✏️ Redaktionsübersicht</h1>
         <p class="text-muted">${gesamt} Meldung(en) in Bearbeitung · <span style="font-size:.8rem;color:#888">Drag & Drop zum Verschieben</span></p>
+      <!-- Schnellfilter -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+        <button class="btn btn-ghost btn-sm" onclick="redaktionFilter('')" id="rf-alle" style="font-size:.75rem;background:rgba(0,51,102,.1);border-color:#003366">Alle</button>
+        ${[...new Set(alle.map(e=>e.sportart).filter(Boolean))].slice(0,6).map(s =>
+          `<button class="btn btn-ghost btn-sm" onclick="redaktionFilter('${esc(s)}')" style="font-size:.75rem">${esc(s)}</button>`
+        ).join('')}
+      </div>
       </div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-success btn-sm" onclick="batchFreigeben(event)" title="Ausgewählte Meldungen freigeben">

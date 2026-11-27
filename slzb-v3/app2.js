@@ -9373,6 +9373,8 @@ async function zeigeAthletenProfileVerwaltung() {
                       onclick="event.stopPropagation();zeigeAthletProfilFormular(${JSON.stringify(p).replace(/"/g,'&quot;')})">✏️ Bearbeiten</button>
                     <button class="btn btn-ghost btn-sm" style="font-size:.72rem;color:#E2001A"
                       onclick="event.stopPropagation();apLoeschen('${p.id}')">🗑️</button>
+                    <button class="btn btn-outline btn-sm" style="font-size:.72rem;width:100%;margin-top:4px"
+                      onclick="event.stopPropagation();zeigeSchnellMeldungAusProfil(${JSON.stringify(p).replace(/\"/g,'&quot;')})">⚡ Schnell-Meldung</button>
                   </div>
                 </div>
               </div>`).join('')}
@@ -9664,6 +9666,165 @@ async function apFuegeAuswahlZuNeuerVeranstaltung() {
     }
     toast('✅ '+profile.length+' Athlet(en) hinzugefügt – bitte Veranstaltungsname eingeben', 'info');
   }, 600);
+}
+
+
+// ── Schnell-Meldung direkt aus Profil ────────────────────────────
+function zeigeSchnellMeldungAusProfil(profil) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.maxWidth = '480px';
+
+  const mi = {1:'🥇',2:'🥈',3:'🥉'};
+
+  modal.innerHTML = `
+    <div class="modal-header" style="background:linear-gradient(135deg,#003366,#001F4D);color:#fff;border-radius:14px 14px 0 0">
+      <div>
+        <h3 style="color:#fff">⚡ Schnell-Meldung</h3>
+        <div style="font-size:.78rem;color:rgba(255,255,255,.6)">${esc(profil.name)} · ${esc(profil.sportart||'')}</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()" style="color:#fff">✕</button>
+    </div>
+    <div class="modal-body" style="padding:16px">
+      <div class="form-group mb-3">
+        <label style="font-weight:700;font-size:.82rem;text-transform:uppercase;letter-spacing:.05em;color:var(--slzb-text-muted)">Wettbewerb / Veranstaltung</label>
+        <input type="text" id="sm-wettbewerb" placeholder="z.B. Deutsche Meisterschaft"
+          style="width:100%;margin-top:4px" list="sm-wb-list">
+        <datalist id="sm-wb-list">
+          ${ladeGespeicherteVeranstaltungen().map(v => `<option value="${esc(v.veranstaltung)}">`).join('')}
+        </datalist>
+      </div>
+      <div class="form-group mb-3">
+        <label style="font-weight:700;font-size:.82rem;text-transform:uppercase;letter-spacing:.05em;color:var(--slzb-text-muted)">Platzierung</label>
+        <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+          ${[1,2,3,4,5,6,7,8].map(p => `
+            <button onclick="smSetPlatz(${p},this)"
+              style="flex:1;min-width:44px;padding:10px 4px;border-radius:8px;border:2px solid var(--slzb-border);
+                     background:var(--slzb-bg-secondary);font-size:.95rem;font-weight:800;cursor:pointer;font-family:inherit">
+              ${mi[p]||p+'.'}</button>`).join('')}
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div class="form-group">
+          <label style="font-size:.78rem;font-weight:700;color:var(--slzb-text-muted)">Disziplin</label>
+          <input type="text" id="sm-disziplin" placeholder="z.B. 1000m" style="width:100%;margin-top:4px">
+        </div>
+        <div class="form-group">
+          <label style="font-size:.78rem;font-weight:700;color:var(--slzb-text-muted)">Datum</label>
+          <input type="date" id="sm-datum" value="${new Date().toISOString().slice(0,10)}" style="width:100%;margin-top:4px">
+        </div>
+      </div>
+      <div id="sm-vorschau" style="background:var(--slzb-bg-secondary);border-radius:8px;padding:10px 14px;
+           font-size:.82rem;color:var(--slzb-text-muted);border:1px solid var(--slzb-border)">
+        ← Wettbewerb und Platz wählen
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
+      <button class="btn btn-outline" onclick="smEinreichen(false, ${JSON.stringify(profil).replace(/"/g,'&quot;')})">📋 Nur Meldung</button>
+      <button class="btn btn-primary" onclick="smEinreichen(true, ${JSON.stringify(profil).replace(/"/g,'&quot;')})">🖼️ Meldung + Poster</button>
+    </div>`;
+
+  window._smPlatz = null;
+  window._smProfil = profil;
+
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+function smSetPlatz(platz, btn) {
+  window._smPlatz = platz;
+  const farben = {1:'#C9A227',2:'#8A9BB0',3:'#C2783A'};
+  document.querySelectorAll('[onclick^="smSetPlatz"]').forEach(b => {
+    b.style.borderColor = 'var(--slzb-border)';
+    b.style.background = 'var(--slzb-bg-secondary)';
+  });
+  const f = farben[platz] || '#003366';
+  btn.style.borderColor = f;
+  btn.style.background = f;
+  btn.style.color = platz <= 3 ? '#000' : '#fff';
+  // Vorschau
+  const wb = document.getElementById('sm-wettbewerb')?.value.trim();
+  const disziplin = document.getElementById('sm-disziplin')?.value.trim();
+  const mi = {1:'🥇',2:'🥈',3:'🥉'};
+  const vorschau = document.getElementById('sm-vorschau');
+  if (vorschau && wb) {
+    vorschau.innerHTML = `✅ <strong>${esc(window._smProfil?.name)}</strong> · ${mi[platz]||platz+'.'} Platz${disziplin?' – '+esc(disziplin):''} bei ${esc(wb)}`;
+    vorschau.style.color = 'var(--slzb-text)';
+    vorschau.style.borderColor = '#4caf50';
+  }
+}
+
+async function smEinreichen(mitPoster, profilJson) {
+  const profil = typeof profilJson === 'string' ? JSON.parse(profilJson.replace(/&quot;/g,'"')) : profilJson;
+  const platz = window._smPlatz;
+  const wb = document.getElementById('sm-wettbewerb')?.value.trim();
+  const disziplin = document.getElementById('sm-disziplin')?.value.trim();
+  const datum = document.getElementById('sm-datum')?.value;
+
+  if (!wb) { toast('Bitte Wettbewerb eingeben', 'warning'); return; }
+  if (!platz) { toast('Bitte Platzierung wählen', 'warning'); return; }
+
+  document.querySelector('.modal-overlay')?.remove();
+  toast('⏳ Meldung wird eingereicht...', 'info');
+
+  try {
+    const sportartObj = (typeof SLZB_DB !== 'undefined')
+      ? SLZB_DB.sportarten.find(s => s.name === profil.sportart)
+      : null;
+
+    const meldungsDaten = {
+      meldungsart:  'Einzelerfolg',
+      titel:        `${platz}. Platz${disziplin?' – '+disziplin:''} bei ${wb}`,
+      sportartId:   sportartObj?.id || null,
+      sportartText: profil.sportart || '',
+      disziplin:    disziplin || '',
+      wettbewerbText: wb,
+      datum:        datum || new Date().toISOString().slice(0,10),
+      platzierung:  platz,
+      medaille:     platz===1?'Gold':platz===2?'Silber':platz===3?'Bronze':'keine',
+      status:       'Eingereicht',
+    };
+    const beteiligte = [{ schuelerId: null, anzeigename: profil.name, rolle: 'Athlet',
+                          einwilligungsstatus: 'Nicht geprüft', profilId: profil.id }];
+
+    const result = await DB.erstelleErfolg(meldungsDaten, beteiligte);
+    if (!result.ok) throw new Error(result.fehler);
+
+    APP._erfolgeCache = null;
+    toast(`✅ Meldung ${result.nr} eingereicht!`, 'success');
+
+    if (mitPoster) {
+      // Poster erstellen
+      const W = 1080, H = 1350;
+      const canvas = document.createElement('canvas');
+      canvas.width = W; canvas.height = H;
+      const ctx = canvas.getContext('2d');
+      window._bildOffset = { x:0.5, y:0.2 }; window._bildZoom = 1.0;
+      let bild = null;
+      if (profil.bild_url) {
+        bild = await new Promise(res => {
+          const img = new Image(); img.onload = () => res(img); img.onerror = () => res(null);
+          img.src = profil.bild_url;
+        });
+      }
+      await zeichneAthletPortrait(ctx, W, H, {
+        name: profil.name, vorname: profil.vorname, nachname: profil.nachname,
+        sportart: profil.sportart || '', veranstaltung: wb, kader: disziplin || '',
+        erfolge: [`${platz}. Platz${disziplin?' – '+disziplin:''}`],
+        bild, akzent: 'rot',
+      });
+      const a = document.createElement('a');
+      a.download = `SLZB_${profil.name.replace(/\s+/g,'_')}_${datum||'heute'}.png`;
+      canvas.toBlob(blob => { a.href = URL.createObjectURL(blob); a.click(); }, 'image/png');
+      toast('✅ Poster heruntergeladen!', 'success');
+    }
+  } catch(e) {
+    toast('Fehler: ' + e.message, 'danger');
+  }
 }
 
 async function apProfilWaehlen(profil, schliesseModal = true) {
@@ -10135,6 +10296,68 @@ async function euErstellePoster(veranstaltungsId, mitMeldung) {
   }
 }
 
+
+// ── Einheitliche Athlet-Entität ───────────────────────────────────
+// Sucht Athlet in: 1. Athleten-Profile (DB), 2. Meldungen (DB), 3. Freitext
+async function sucheAthlet(name) {
+  if (!name || name.length < 2) return null;
+
+  // 1. Athleten-Profil suchen
+  try {
+    const profile = await ladeAthletenProfile(name);
+    const exakt = profile.find(p => p.name.toLowerCase() === name.toLowerCase());
+    if (exakt) return {
+      quelle: 'profil',
+      id: exakt.id,
+      name: exakt.name,
+      vorname: exakt.vorname,
+      nachname: exakt.nachname,
+      sportart: exakt.sportart,
+      klasse: exakt.klasse,
+      kader: exakt.kader,
+      bildUrl: exakt.bild_url,
+    };
+  } catch(e) {}
+
+  // 2. Aus Meldungen suchen
+  try {
+    const { data } = await Backend.client
+      .from('achievement_participants')
+      .select('participant_role, achievement_id')
+      .ilike('participant_role', `%${name}%`)
+      .limit(5);
+    if (data?.length) return {
+      quelle: 'meldung',
+      name: data[0].participant_role,
+      sportart: null,
+      bildUrl: null,
+    };
+  } catch(e) {}
+
+  // 3. Freitext-Fallback
+  return { quelle: 'freitext', name, sportart: null, bildUrl: null };
+}
+
+// Athlet-Vorschläge für Autocomplete
+async function ladeAthletVorschlaege(suchbegriff) {
+  if (!suchbegriff || suchbegriff.length < 2) return [];
+  try {
+    const [profile, teilnahmen] = await Promise.all([
+      ladeAthletenProfile(suchbegriff),
+      Backend.client.from('achievement_participants')
+        .select('participant_role')
+        .ilike('participant_role', `%${suchbegriff}%`)
+        .limit(10)
+        .then(r => r.data || [])
+    ]);
+    const namen = new Set([
+      ...profile.map(p => p.name),
+      ...teilnahmen.map(t => t.participant_role).filter(Boolean),
+    ]);
+    return [...namen].slice(0, 8);
+  } catch(e) { return []; }
+}
+
 function ladeGespeicherteVeranstaltungen() {
   return JSON.parse(localStorage.getItem('slzb_av_veranstaltungen') || '[]');
 }
@@ -10143,9 +10366,23 @@ function speichereVeranstaltung(daten) {
   const liste = ladeGespeicherteVeranstaltungen();
   const id = 'av_' + Date.now();
   const eintrag = { id, ...daten, gespeichertAm: new Date().toISOString() };
-  liste.unshift(eintrag); // Neueste zuerst
-  // Maximal 10 gespeicherte Veranstaltungen
+  liste.unshift(eintrag);
   localStorage.setItem('slzb_av_veranstaltungen', JSON.stringify(liste.slice(0, 10)));
+
+  // Asynchron: competition_id aus DB holen und nachträglich speichern
+  if (daten.veranstaltung) {
+    DB.getOderErstelleWettbewerb(daten.veranstaltung, new Date().toISOString().slice(0,10))
+      .then(competitionId => {
+        if (!competitionId) return;
+        const aktuelle = ladeGespeicherteVeranstaltungen();
+        const idx = aktuelle.findIndex(v => v.id === id);
+        if (idx >= 0) {
+          aktuelle[idx].competitionId = competitionId;
+          localStorage.setItem('slzb_av_veranstaltungen', JSON.stringify(aktuelle));
+        }
+      })
+      .catch(() => {}); // Fehler ignorieren - nicht kritisch
+  }
   return id;
 }
 
