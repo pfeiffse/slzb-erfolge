@@ -4693,6 +4693,116 @@ async function loescheKalenderEintrag(id, name) {
   navigateTo('kalender');
 }
 
+
+// ── Kalender: Bald & Aktuell Ansicht ─────────────────────────────
+async function kalenderZeigeAktuell() {
+  const eigene = await ladeKalenderEintraege();
+  const alle = [...((typeof SLZB_TERMINE !== 'undefined') ? SLZB_TERMINE : []), ...eigene];
+
+  const heute = new Date(); heute.setHours(0,0,0,0);
+  const in14 = new Date(heute); in14.setDate(heute.getDate() + 14);
+  const vor7  = new Date(heute); vor7.setDate(heute.getDate() - 7);
+
+  const bald = alle.filter(t => {
+    if (!t.datum) return false;
+    const parts = t.datum.split('-');
+    const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+    return d >= vor7 && d <= in14;
+  }).sort((a,b) => a.datum.localeCompare(b.datum));
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal modal-xl';
+  modal.style.maxWidth = '700px';
+
+  const prioFarbe = p => p===1?'#E2001A':p===2?'#E07000':p===3?'#0B63CE':'#888';
+  const prioLabel = p => p===1?'🏆 Meisterschaft':p===2?'⚡ Wettkampf':p===3?'📋 Lehrgang':'📅 Regulär';
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>📍 Bald & Aktuell – nächste 14 Tage</h3>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      ${bald.length === 0
+        ? '<div class="empty-state"><div class="empty-state-icon">📅</div><h3>Keine Termine in den nächsten 14 Tagen</h3></div>'
+        : bald.map(t => {
+            const parts = t.datum.split('-');
+            const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
+            const istHeute = d.toDateString() === heute.toDateString();
+            const istVergangen = d < heute;
+            const tageDiff = Math.round((d - heute) / 86400000);
+            const wann = istHeute ? '🔴 HEUTE' : istVergangen ? `vor ${-tageDiff} Tag(en)` : `in ${tageDiff} Tag(en)`;
+            return `<div style="padding:14px 16px;border-bottom:1px solid var(--slzb-border);
+                      ${istHeute?'background:rgba(226,0,26,.06)':''}
+                      ${istVergangen?'opacity:.7':''}">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+                <div style="flex:1">
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                    <span style="font-weight:700;font-size:.88rem">${esc(t.veranstaltung)}</span>
+                    <span style="font-size:.72rem;font-weight:700;color:${prioFarbe(t.prioritaet)}">${prioLabel(t.prioritaet)}</span>
+                  </div>
+                  <div style="font-size:.78rem;color:var(--slzb-text-muted)">
+                    📅 ${esc(t.datumAnzeige||t.datum)}
+                    ${t.ort?'· 📍 '+esc(t.ort):''}
+                    ${t.sportart?'· '+esc(t.sportart):''}
+                    ${t.klasse?'· '+esc(t.klasse):''}
+                  </div>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
+                  <span style="font-size:.75rem;font-weight:700;
+                    color:${istHeute?'#E2001A':istVergangen?'#888':'#0B63CE'}">${wann}</span>
+                  <div style="display:flex;gap:4px">
+                    ${istVergangen ? `
+                      <button class="btn btn-primary btn-sm" style="font-size:.72rem"
+                        onclick="this.closest('.modal-overlay').remove();kalenderMeldungErstellen(${JSON.stringify(t).replace(/"/g,'&quot;')})">
+                        📝 Meldung erstellen
+                      </button>` : `
+                      <button class="btn btn-outline btn-sm" style="font-size:.72rem"
+                        onclick="this.closest('.modal-overlay').remove();kalenderCountdown(${JSON.stringify(t).replace(/"/g,'&quot;')})">
+                        ⏳ Countdown
+                      </button>`}
+                    <button class="btn btn-ghost btn-sm" style="font-size:.72rem"
+                      onclick="this.closest('.modal-overlay').remove();zeigeKalenderEintragModal(${JSON.stringify(t).replace(/"/g,'&quot;')})">
+                      ✏️
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>`;
+          }).join('')}
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Schließen</button>
+    </div>`;
+
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(modal);
+  document.body.appendChild(overlay);
+  overlay.appendChild(modal);
+}
+
+// Meldung aus Kalender-Termin erstellen
+function kalenderMeldungErstellen(termin) {
+  // Öffne Neue-Meldung mit vorausgefüllten Daten
+  navigateTo('neue-meldung');
+  setTimeout(() => {
+    const titelEl = document.getElementById('f-titel');
+    const sportEl = document.getElementById('f-sportart-text');
+    const wbEl = document.getElementById('f-wettbewerb-text');
+    const datumEl = document.getElementById('f-datum');
+    const ortEl = document.getElementById('f-ort');
+    if (titelEl) titelEl.value = `Erfolg bei ${termin.veranstaltung}`;
+    if (sportEl) sportEl.value = termin.sportart || '';
+    if (wbEl) wbEl.value = termin.veranstaltung || '';
+    if (datumEl) datumEl.value = termin.datum || '';
+    if (ortEl) ortEl.value = termin.ort || '';
+    toast(`✅ Formular mit "${termin.veranstaltung}" vorausgefüllt`, 'info');
+  }, 400);
+}
+
 async function renderKalender() {
   const jetzt = new Date();
   const eigeneEintraege = await ladeKalenderEintraege();
@@ -4763,6 +4873,7 @@ async function renderKalender() {
   return `<div class="page">
     <div class="page-header">
       <h1>📅 Veranstaltungskalender 2026/27</h1>
+      <button class=\"btn btn-outline btn-sm\" onclick=\"kalenderZeigeAktuell()\" style=\"margin-right:6px\">\xf0\x9f\x93\x8d Bald</button>
       <button class=\"btn btn-primary btn-sm\" onclick=\"zeigeKalenderEintragModal()\">➕ Neuer Eintrag</button>
       <p>${alleTermine.length} Termine · ${sportarten.length} Sportarten</p>
     </div>
@@ -4836,7 +4947,7 @@ async function renderKalender() {
             <td class="text-sm text-muted">${esc(t.ort||'–')}</td>
             <td class="text-sm text-muted">${esc(t.klasse||'–')}</td>
             <td><span style="color:${prioFarbe(t.prioritaet)};font-size:.75rem;font-weight:700">${prioLabel(t.prioritaet)}</span></td>
-            <td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:2px 8px" onclick="kalenderCountdown(${JSON.stringify(t).replace(/"/g,'&quot;')})">⏳</button></td>
+            <td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:2px 8px" onclick="kalenderCountdown(${JSON.stringify(t).replace(/"/g,'&quot;')})">⏳</button>
               ${(Auth.canDo('bearbeiten') || t._eigener) ? `<button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:2px 6px" title="Bearbeiten" onclick="zeigeKalenderEintragModal(${JSON.stringify(t).replace(/\"/g,'&quot;')})">✏️</button>` : ''}
               ${t._eigener ? `<button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:2px 6px;color:#E2001A" title="Löschen" onclick="loescheKalenderEintrag('${t._id}')">🗑️</button>` : ''}
             </td>
