@@ -4987,6 +4987,7 @@ async function kalenderZeigeAktuell() {
 
   overlay.appendChild(modal);
   overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
 }
 
 // Meldung aus Kalender-Termin erstellen
