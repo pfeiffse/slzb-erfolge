@@ -4724,7 +4724,7 @@ async function kalenderZeigeAktuell() {
 
   modal.innerHTML = `
     <div class="modal-header">
-      <h3>📍 Bald & Aktuell</h3>
+      <h3>&#128205; Bald & Aktuell</h3>
       <div style="display:flex;align-items:center;gap:8px">
         <span style="font-size:.75rem;color:var(--slzb-text-muted)">
           <input type="number" id="bald-zurueck" value="${tageZurueck}" min="0" max="30"
@@ -4792,9 +4792,6 @@ async function kalenderZeigeAktuell() {
 
   overlay.appendChild(modal);
   overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
-  document.body.appendChild(modal);
-  document.body.appendChild(overlay);
-  overlay.appendChild(modal);
 }
 
 // Meldung aus Kalender-Termin erstellen
