@@ -293,6 +293,10 @@ function initApp() {
   if (typeof zeigeOnboardingTour === 'function') {
     setTimeout(() => zeigeOnboardingTour(Auth.rolle()), 1000);
   }
+  // Benachrichtigungs-System starten
+  if (typeof starteBenachrichtigungsTimer === 'function') {
+    setTimeout(starteBenachrichtigungsTimer, 2000);
+  }
 }
 
 // ── Bottom Navigation Bar (Mobile) ───────────────────────────
@@ -752,6 +756,31 @@ function bindKerndatenAC() {
     bindSportartAC('f-sportart-text','f-disziplin');
     bindAutocomplete('f-wettbewerb-text', SLZB_DB.wettbewerbe.map(w=>w.name));
   },100);
+}
+
+
+// Auto-Titel-Generierung
+function autoGeneriereErfolgsTitel() {
+  const titelEl = document.getElementById('f-titel');
+  if (!titelEl || titelEl.dataset.manuell === '1') return; // Manuell eingegeben → nicht überschreiben
+  
+  const athlet = document.getElementById('f-schueler-text')?.value.trim();
+  const platz = document.getElementById('f-platzierung')?.value;
+  const wettbewerb = document.getElementById('f-wettbewerb-text')?.value.trim();
+  const disziplin = document.getElementById('f-disziplin')?.value.trim();
+  
+  if (!athlet && !wettbewerb) return;
+  
+  const mi = {1:'Gold',2:'Silber',3:'Bronze'};
+  const platzText = platz ? (mi[platz] ? mi[platz]+' bei' : platz+'. Platz bei') : 'Erfolg bei';
+  const titel = [
+    athlet || '',
+    platzText,
+    disziplin ? disziplin+' –' : '',
+    wettbewerb || '',
+  ].filter(Boolean).join(' ').replace(/\s+/g,' ').trim();
+  
+  if (titel.length > 5) titelEl.value = titel;
 }
 
 function renderEinzelerfolgForm() {

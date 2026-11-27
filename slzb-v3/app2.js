@@ -354,6 +354,197 @@ function kanbanAktualisiereBadges() {
 // Kanban-Styles beim Laden der Redaktionsseite initialisieren
 document.addEventListener('DOMContentLoaded', injectKanbanStyles);
 
+
+// ══════════════════════════════════════════════════════════════
+// ZENTRALES BENACHRICHTIGUNGS-SYSTEM
+// ══════════════════════════════════════════════════════════════
+
+let _benachrichtigungenCache = null;
+let _benachrichtigungenTimer = null;
+
+async function ladeBenachrichtigungen() {
+  try {
+    const alle = await ladeErfolge();
+    const heute = new Date(); heute.setHours(0,0,0,0);
+    const in7 = new Date(heute); in7.setDate(heute.getDate() + 7);
+    const vor3 = new Date(heute); vor3.setDate(heute.getDate() - 3);
+
+    const benachrichtigungen = [];
+    const r = Auth.rolle();
+
+    // Trainer: Rückfragen
+    if (['trainer','mitarbeiter','schueler'].includes(r)) {
+      const rueckfragen = alle.filter(e =>
+        e.status === 'Rückfrage an Melder' && e.melderId === Auth.id()
+      );
+      if (rueckfragen.length) {
+        benachrichtigungen.push({
+          typ: 'rueckfrage',
+          prioritaet: 1,
+          titel: `${rueckfragen.length} Rückfrage(n) warten auf Antwort`,
+          text: rueckfragen.map(e => e.titel).slice(0,2).join(', '),
+          icon: '&#128172;',
+          farbe: '#E07000',
+          aktion: () => navigateTo('rueckfragen'),
+          aktionText: 'Jetzt antworten',
+        });
+      }
+    }
+
+    // Redaktion: Neue Meldungen
+    if (['redaktion','oea','admin'].includes(r)) {
+      const neu = alle.filter(e => e.status === 'Eingereicht');
+      if (neu.length) {
+        benachrichtigungen.push({
+          typ: 'neue-meldungen',
+          prioritaet: 1,
+          titel: `${neu.length} neue Meldung(en) warten auf Prüfung`,
+          text: neu.slice(0,2).map(e => e.titel).join(', '),
+          icon: '&#128228;',
+          farbe: '#0B63CE',
+          aktion: () => navigateTo('redaktion'),
+          aktionText: 'Zur Redaktion',
+        });
+      }
+
+      // Freigabe ÖA
+      const freigabe = alle.filter(e => e.status === 'Freigabe Öffentlichkeitsarbeit');
+      if (freigabe.length) {
+        benachrichtigungen.push({
+          typ: 'freigabe',
+          prioritaet: 2,
+          titel: `${freigabe.length} Meldung(en) warten auf Freigabe`,
+          text: freigabe.slice(0,2).map(e => e.titel).join(', '),
+          icon: '&#9989;',
+          farbe: '#C9A227',
+          aktion: () => navigateTo('ausgaben'),
+          aktionText: 'Freigeben',
+        });
+      }
+    }
+
+    // Alle: Bevorstehende Wettkämpfe (nächste 7 Tage, Prio 1+2)
+    try {
+      const eigene = await ladeKalenderEintraege();
+      const alleT = [...((typeof SLZB_TERMINE!=='undefined')?SLZB_TERMINE:[]), ...eigene];
+      const bald = alleT.filter(t => {
+        if (!t.datum) return false;
+        const p = t.datum.split('-');
+        const d = new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));
+        return d >= heute && d <= in7 && (t.prioritaet===1||t.prioritaet===2);
+      });
+      if (bald.length) {
+        benachrichtigungen.push({
+          typ: 'wettkampf',
+          prioritaet: 2,
+          titel: `${bald.length} Wettkampf/Meisterschaft in den nächsten 7 Tagen`,
+          text: bald.slice(0,2).map(t => t.veranstaltung).join(', '),
+          icon: '&#127942;',
+          farbe: '#4caf50',
+          aktion: () => kalenderZeigeAktuell(),
+          aktionText: 'Anzeigen',
+        });
+      }
+    } catch(e) {}
+
+    // Vergangene Wettkämpfe ohne Meldung (letzte 3 Tage)
+    try {
+      const eigene2 = await ladeKalenderEintraege();
+      const alleT2 = [...((typeof SLZB_TERMINE!=='undefined')?SLZB_TERMINE:[]), ...eigene2];
+      const vergangen = alleT2.filter(t => {
+        if (!t.datum) return false;
+        const p = t.datum.split('-');
+        const d = new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));
+        return d >= vor3 && d < heute && (t.prioritaet===1||t.prioritaet===2);
+      });
+      if (vergangen.length && ['redaktion','oea','admin'].includes(r)) {
+        benachrichtigungen.push({
+          typ: 'vergangen',
+          prioritaet: 3,
+          titel: `${vergangen.length} Wettkampf/Meisterschaft ohne Meldung`,
+          text: vergangen.slice(0,2).map(t => t.veranstaltung).join(', '),
+          icon: '&#128221;',
+          farbe: '#888',
+          aktion: () => kalenderZeigeAktuell(),
+          aktionText: 'Meldung erstellen',
+        });
+      }
+    } catch(e) {}
+
+    _benachrichtigungenCache = benachrichtigungen.sort((a,b) => a.prioritaet - b.prioritaet);
+    aktualisiereGlocke();
+    return _benachrichtigungenCache;
+  } catch(e) {
+    return [];
+  }
+}
+
+function aktualisiereGlocke() {
+  const n = _benachrichtigungenCache || [];
+  const kritisch = n.filter(x => x.prioritaet === 1).length;
+  const gesamt = n.length;
+
+  // Glocken-Badge in der Topbar aktualisieren
+  const badge = document.getElementById('benachrichtigungs-badge');
+  if (badge) {
+    badge.textContent = gesamt || '';
+    badge.style.display = gesamt ? 'flex' : 'none';
+    badge.style.background = kritisch ? '#E2001A' : '#C9A227';
+  }
+}
+
+function zeigeBenachrichtigungen() {
+  const n = _benachrichtigungenCache || [];
+  if (!n.length) { toast('Keine neuen Benachrichtigungen', 'info'); return; }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.maxWidth = '480px';
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>&#128276; Benachrichtigungen</h3>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">&#10005;</button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      ${n.map(b => `
+        <div style="padding:14px 16px;border-bottom:1px solid var(--slzb-border);
+                    border-left:4px solid ${b.farbe}">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+            <div style="flex:1">
+              <div style="font-weight:700;font-size:.9rem;margin-bottom:3px">
+                ${b.icon} ${esc(b.titel)}
+              </div>
+              <div style="font-size:.78rem;color:var(--slzb-text-muted)">${esc(b.text)}</div>
+            </div>
+            <button class="btn btn-outline btn-sm" style="font-size:.75rem;flex-shrink:0"
+              onclick="this.closest('.modal-overlay').remove();(${b.aktion.toString()})()">
+              ${esc(b.aktionText)} →
+            </button>
+          </div>
+        </div>`).join('')}
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Schließen</button>
+      <button class="btn btn-ghost btn-sm" onclick="ladeBenachrichtigungen();this.closest('.modal-overlay').remove()">
+        &#8635; Aktualisieren
+      </button>
+    </div>`;
+
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+// Benachrichtigungen beim Start und alle 5 Minuten laden
+function starteBenachrichtigungsTimer() {
+  ladeBenachrichtigungen();
+  clearInterval(_benachrichtigungenTimer);
+  _benachrichtigungenTimer = setInterval(ladeBenachrichtigungen, 5 * 60 * 1000);
+}
+
 function renderStatusFortschritt(status) {
   const schritte = [
     { key: 'Entwurf',       label: 'Entwurf',    icon: '📝' },
