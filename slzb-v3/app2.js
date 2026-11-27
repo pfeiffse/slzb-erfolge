@@ -9500,7 +9500,16 @@ function apBildVorschau(input) {
 async function apSpeichern(existingId) {
   const vorname = document.getElementById('ap-vorname')?.value.trim();
   const nachname = document.getElementById('ap-nachname')?.value.trim();
-  if (!vorname || !nachname) { toast('Vor- und Nachname sind Pflichtfelder', 'warning'); return; }
+  const sportart = document.getElementById('ap-sportart')?.value.trim();
+  const klasse = document.getElementById('ap-klasse')?.value.trim();
+  const kader = document.getElementById('ap-kader')?.value.trim();
+
+  // Einheitliche Schema-Validierung
+  const fehler = validiereNachSchema(
+    { vorname, nachname, sportart, klasse, kader },
+    VALIDIERUNGSREGELN.athletenProfil
+  );
+  if (!zeigeValidierungsFehler(fehler)) return;
 
   const name = `${vorname} ${nachname}`.trim();
   let bildUrl = null;
@@ -9780,8 +9789,12 @@ async function smEinreichen(mitPoster, profilJson) {
   const disziplin = document.getElementById('sm-disziplin')?.value.trim();
   const datum = document.getElementById('sm-datum')?.value;
 
-  if (!wb) { toast('Bitte Wettbewerb eingeben', 'warning'); return; }
-  if (!platz) { toast('Bitte Platzierung wählen', 'warning'); return; }
+  // Schema-Validierung
+  const smFehler = validiereNachSchema(
+    { wettbewerb: wb, platzierung: platz },
+    VALIDIERUNGSREGELN.schnellMeldung
+  );
+  if (!zeigeValidierungsFehler(smFehler)) return;
 
   document.querySelector('.modal-overlay')?.remove();
   toast('⏳ Meldung wird eingereicht...', 'info');
@@ -10196,7 +10209,12 @@ async function euErstellePoster(veranstaltungsId, mitMeldung) {
   const ergebnis   = document.getElementById('eu-ergebnis')?.value.trim();
   const zusatz     = document.getElementById('eu-zusatz')?.value.trim();
 
-  if (!athletName) { toast('Bitte Athleten auswählen', 'warning'); return; }
+  // Schema-Validierung
+  const euFehler = validiereNachSchema(
+    { athlet: athletName, platzierung: platz, wettbewerb: v?.veranstaltung },
+    VALIDIERUNGSREGELN.ergebnisUpdate
+  );
+  if (!zeigeValidierungsFehler(euFehler)) return;
 
   document.querySelector('.modal-overlay')?.remove();
   toast('⏳ Poster wird erstellt...', 'info');
@@ -10586,7 +10604,12 @@ async function erstelleAthletenVorstellung() {
   const ort = document.getElementById('av-ort')?.value.trim() || '';
   const sportart = document.getElementById('av-sportart')?.value.trim();
   const format = document.getElementById('av-format')?.value || 'carousel';
-  if (!veranstaltung) { toast('Bitte Veranstaltungsname eingeben', 'warning'); return; }
+  // Schema-Validierung
+  const avFehler = validiereNachSchema(
+    { veranstaltung, sportart, ort },
+    VALIDIERUNGSREGELN.veranstaltung
+  );
+  if (!zeigeValidierungsFehler(avFehler)) return;
 
   const athletenDivs = [...document.querySelectorAll('[id^="av-athlet-"]')];
   if (!athletenDivs.length) { toast('Bitte mindestens einen Athleten hinzufügen', 'warning'); return; }

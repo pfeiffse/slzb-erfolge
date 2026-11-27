@@ -2258,7 +2258,70 @@ const VALIDIERUNGSREGELN = {
     nachname:    { pflicht: true,  min: 1,   max: 50,  label: 'Nachname' },
     sportart:    { pflicht: false, min: 2,   max: 50,  label: 'Sportart' },
   },
-};
+}
+
+// ── Schema-Erweiterungen für alle Formulare ──────────────────────
+// Modular: bestehende Regeln bleiben unverändert
+
+Object.assign(VALIDIERUNGSREGELN, {
+
+  athletenProfil: {
+    vorname:  { pflicht: true,  min: 1, max: 50,  label: 'Vorname' },
+    nachname: { pflicht: true,  min: 1, max: 50,  label: 'Nachname' },
+    sportart: { pflicht: false, min: 2, max: 50,  label: 'Sportart' },
+    klasse:   { pflicht: false, min: 1, max: 20,  label: 'Klasse' },
+    kader:    { pflicht: false, min: 2, max: 100, label: 'Kader' },
+  },
+
+  veranstaltung: {
+    veranstaltung: { pflicht: true,  min: 3, max: 100, label: 'Veranstaltungsname' },
+    sportart:      { pflicht: false, min: 2, max: 50,  label: 'Sportart' },
+    ort:           { pflicht: false, min: 2, max: 100, label: 'Ort' },
+  },
+
+  ergebnisUpdate: {
+    athlet:      { pflicht: true,  label: 'Athlet' },
+    platzierung: { pflicht: true,  min: 1, max: 999, typ: 'zahl', label: 'Platzierung' },
+    wettbewerb:  { pflicht: true,  min: 3, max: 100, label: 'Wettbewerb' },
+    disziplin:   { pflicht: false, min: 1, max: 50,  label: 'Disziplin' },
+  },
+
+  schnellMeldung: {
+    wettbewerb:  { pflicht: true,  min: 3, max: 100, label: 'Wettbewerb' },
+    platzierung: { pflicht: true,  min: 1, max: 999, typ: 'zahl', label: 'Platzierung' },
+  },
+
+  votingKampagne: {
+    titel: { pflicht: true, min: 3, max: 100, label: 'Titel der Abstimmung' },
+    monat: { pflicht: true, label: 'Monat' },
+  },
+
+  teamerfolg: {
+    titel:       { pflicht: true, min: 3, max: 200, label: 'Titel' },
+    sportartText:{ pflicht: true, min: 2, max: 50,  label: 'Sportart' },
+    datum:       { pflicht: true, typ: 'datum',     label: 'Datum' },
+  },
+});
+
+// Hilfsfunktion: Formular-Felder validieren und Fehler anzeigen
+function zeigeValidierungsFehler(fehler, containerId) {
+  const el = containerId ? document.getElementById(containerId) : null;
+  if (!fehler.length) {
+    if (el) el.innerHTML = '';
+    return true;
+  }
+  const html = `<div class="alert alert-danger">
+    <span class="alert-icon">❌</span>
+    <ul style="margin:0;padding-left:16px">
+      ${fehler.map(f => `<li>${esc(f)}</li>`).join('')}
+    </ul>
+  </div>`;
+  if (el) el.innerHTML = html;
+  else toast(fehler[0], 'danger');
+  return false;
+}
+
+;
 
 // Einheitliche Validierungsfunktion
 function validiereNachSchema(daten, schema) {
