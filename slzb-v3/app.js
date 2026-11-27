@@ -762,6 +762,13 @@ function bilderBlock() {
 
 
 
+// Kompakter Bilder-Block für Minimalmeldung (ohne Teamfoto-Warnung)
+function bilderBlockKompakt() {
+  return `<div id="bilder-liste"></div>
+    <button class="btn btn-ghost btn-sm mt-2" onclick="addBildRow()">+ Bild hinzufügen</button>
+    <div class="form-hint" style="margin-top:6px">JPG, PNG, WebP · max. 10 MB · Urheber erforderlich</div>`;
+}
+
 function kerndatenFelder(extra='') {
   return `<div id="form-errors"></div>
 
@@ -1316,13 +1323,13 @@ function renderMinimalmeldungForm() {
       </div>
     </div>
 
-    <!-- Bild-Upload (optional, wie bei Live-Meldung) -->
+    <!-- Bild-Upload (optional, kompakt) -->
     <div class="card mb-3">
       <div class="card-header" style="padding:12px 16px">
         <h3 style="font-size:.9rem;margin:0">📷 Bild hochladen <span style="font-size:.75rem;color:var(--slzb-text-muted);font-weight:400">(optional)</span></h3>
       </div>
       <div class="card-body" style="padding:12px 16px">
-        ${bilderBlock()}
+        ${bilderBlockKompakt()}
       </div>
     </div>
 
@@ -1365,27 +1372,69 @@ function renderArtikelForm() {
 // Bilder aus bilderBlock() nach dem Speichern hochladen
 async function uploadBilderAusFormular(erfolgId) {
   const rows = document.querySelectorAll('[id^="bild-row-"]');
-  let ok=0, fehler=0;
+  let ok=0, fehler=0, uebersprungen=0;
+
+  // Zähle Bilder mit Datei
+  const mitDatei = [...rows].filter(row => {
+    const fi = row.querySelector('input[type="file"]');
+    return fi?.files?.length > 0;
+  });
+  if (!mitDatei.length) return; // Keine Bilder → still beenden
+
+  // Ladeindikator anzeigen
+  const ladeToast = document.createElement('div');
+  ladeToast.id = 'bild-upload-toast';
+  ladeToast.className = 'alert alert-info';
+  ladeToast.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;max-width:320px';
+  ladeToast.innerHTML = `<span class="alert-icon">⏳</span><span>Bilder werden hochgeladen (0/${mitDatei.length})...</span>`;
+  document.body.appendChild(ladeToast);
+
   for (const row of rows) {
     const id = row.id.replace('bild-row-','');
     const fileInput = row.querySelector('input[type="file"]');
     const urheber = row.querySelector(`#bild-urheber-${id}`)?.value?.trim()||'';
-    const quelle = row.querySelector(`#bild-quelle-${id}`)?.value?.trim()||urheber;
+    const quelle = row.querySelector(`#bild-quelle-${id}`)?.value?.trim()||urheber||'SLZB-Archiv';
     const caption = row.querySelector(`#bild-caption-${id}`)?.value?.trim()||null;
     const altText = row.querySelector(`#bild-alt-${id}`)?.value?.trim()||null;
-    if (!fileInput?.files?.length) continue;
-    if (!urheber) { toast(`Bild ${id}: Urheber fehlt – übersprungen`,'warning'); fehler++; continue; }
+
+    if (!fileInput?.files?.length) { uebersprungen++; continue; }
+
     const datei = fileInput.files[0];
-    if (datei.size > 10*1024*1024) { toast(`Bild ${id}: Datei zu groß – übersprungen`,'warning'); fehler++; continue; }
+
+    // Validierungen
+    const erlaubteTypen = ['image/jpeg','image/png','image/webp','image/gif'];
+    if (!erlaubteTypen.includes(datei.type)) {
+      toast(`Bild ${id}: Ungültiges Format (${datei.type||'unbekannt'}) – übersprungen`,'warning');
+      fehler++; continue;
+    }
+    if (datei.size > 10*1024*1024) {
+      toast(`Bild ${id}: Zu groß (${(datei.size/1024/1024).toFixed(1)} MB, max. 10 MB) – übersprungen`,'warning');
+      fehler++; continue;
+    }
+    if (!urheber) {
+      toast(`Bild ${id}: Urheber fehlt – übersprungen`,'warning');
+      fehler++; continue;
+    }
+
+    // Ladeindikator aktualisieren
+    const ladeSpan = ladeToast.querySelector('span:last-child');
+    if (ladeSpan) ladeSpan.textContent = `Bilder werden hochgeladen (${ok+1}/${mitDatei.length})...`;
+
     try {
       const session = await Backend.session();
-      if (!session) throw new Error('Nicht angemeldet');
+      if (!session) throw new Error('Nicht angemeldet – bitte neu einloggen');
       const userId = Auth.id();
       const dateiname = `${Date.now()}_${datei.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
       const pfad = `${userId}/${erfolgId}/${dateiname}`;
+
       const { data: uploadData, error: uploadError } = await Backend.client.storage
-        .from('achievement-media').upload(pfad, datei, { cacheControl:'3600', upsert:false, contentType:datei.type });
-      if (uploadError) throw new Error('Storage: '+uploadError.message);
+        .from('achievement-media').upload(pfad, datei, {
+          cacheControl: '3600',
+          upsert: false,
+          contentType: datei.type
+        });
+      if (uploadError) throw new Error('Upload fehlgeschlagen: '+uploadError.message);
+
       const { error: metaError } = await Backend.client.from('achievement_media').insert([{
         achievement_id: erfolgId,
         storage_path: uploadData.path || pfad,
@@ -1401,17 +1450,29 @@ async function uploadBilderAusFormular(erfolgId) {
         created_at: new Date().toISOString(),
       }]);
       if (metaError) {
-        await Backend.client.storage.from('achievement-media').remove([pfad]);
-        throw new Error('Metadaten: '+metaError.message);
+        // Rollback: Storage-Datei löschen
+        await Backend.client.storage.from('achievement-media').remove([pfad]).catch(()=>{});
+        throw new Error('Metadaten konnten nicht gespeichert werden: '+metaError.message);
       }
       ok++;
     } catch(err) {
-      toast(`Bild ${id} Fehler: ${err.message}`,'danger');
+      console.error(`[Upload] Bild ${id}:`, err);
+      toast(`Bild ${id}: ${err.message}`,'danger');
       fehler++;
     }
   }
-  if (ok>0) toast(`${ok} Bild(er) erfolgreich hochgeladen`,'success');
-  if (fehler>0) toast(`${fehler} Bild(er) konnten nicht hochgeladen werden`,'warning');
+
+  // Ladeindikator entfernen
+  ladeToast.remove();
+
+  // Zusammenfassung
+  if (ok > 0 && fehler === 0) {
+    toast(`✅ ${ok} Bild${ok!==1?'er':''} hochgeladen`,'success');
+  } else if (ok > 0 && fehler > 0) {
+    toast(`⚠️ ${ok} Bild${ok!==1?'er':''} hochgeladen, ${fehler} fehlgeschlagen`,'warning');
+  } else if (fehler > 0) {
+    toast(`❌ ${fehler} Bild${fehler!==1?'er':''} konnten nicht hochgeladen werden. Bitte im Erfolg-Detail nachträglich hochladen.`,'danger');
+  }
 }
 
 async function speichereErfolg(status, meldungsart) {
@@ -1452,7 +1513,15 @@ async function speichereErfolg(status, meldungsart) {
   const fehler = validiereFormular(daten, meldungsart);
   if (fehler.length) {
     const el=document.getElementById('form-errors');
-    if(el) el.innerHTML=`<div class="alert alert-danger"><span class="alert-icon">❌</span><ul>${fehler.map(f=>`<li>${esc(f)}</li>`).join('')}</ul></div>`;
+    if(el) {
+      el.innerHTML=`<div class="alert alert-danger"><span class="alert-icon">❌</span><ul>${fehler.map(f=>`<li>${esc(f)}</li>`).join('')}</ul></div>`;
+      el.scrollIntoView({behavior:'smooth', block:'center'});
+    }
+    // <details> öffnen wenn optionale Felder ausgefüllt sind (damit User sie sieht)
+    const details = document.querySelector('details');
+    if (details && (daten.wettbewerbText || daten.ort || daten.titel)) {
+      details.open = true;
+    }
     return;
   }
   const btn=document.querySelector('.card-footer .btn-primary,.card-footer .btn-warning');
@@ -2356,18 +2425,77 @@ function addBildRow() {
   div.id=`bild-row-${id}`; div.className='card mb-2'; div.style.padding='14px';
   div.innerHTML=`<div class="flex items-center gap-2 mb-2">
     <strong class="text-sm">Bild ${id}</strong>
+    <span id="bild-info-${id}" style="font-size:.75rem;color:var(--slzb-text-muted)"></span>
     <button class="btn btn-ghost btn-sm" onclick="document.getElementById('bild-row-${id}').remove()">✕</button>
   </div>
+  <div id="bild-preview-${id}" style="display:none;margin-bottom:10px">
+    <img style="max-height:120px;max-width:100%;border-radius:6px;object-fit:contain;background:#f0f0f0" alt="Vorschau">
+  </div>
   <div class="form-row cols-3">
-    <div class="form-group"><label>Datei</label><input type="file" accept="image/*"></div>
-    <div class="form-group"><label>Urheber <span class="required">*</span></label><input type="text" id="bild-urheber-${id}" placeholder="Name des Fotografen"></div>
-    <div class="form-group"><label>Quelle <span class="required">*</span></label><input type="text" id="bild-quelle-${id}" placeholder="z.B. SLZB-Archiv"></div>
+    <div class="form-group">
+      <label>Datei <span style="font-size:.72rem;color:var(--slzb-text-muted)">(max. 10 MB)</span></label>
+      <input type="file" accept="image/jpeg,image/png,image/webp,image/gif"
+        id="bild-file-${id}"
+        onchange="bildDateiGewaehlt(this, ${id})">
+      <div id="bild-fehler-${id}" style="color:#E2001A;font-size:.75rem;margin-top:3px;display:none"></div>
+    </div>
+    <div class="form-group"><label>Urheber / Fotograf <span class="required">*</span></label>
+      <input type="text" id="bild-urheber-${id}" placeholder="Name des Fotografen"></div>
+    <div class="form-group"><label>Quelle</label>
+      <input type="text" id="bild-quelle-${id}" placeholder="z.B. SLZB-Archiv" value="SLZB-Archiv"></div>
   </div>
   <div class="form-row cols-2">
     <div class="form-group"><label>Bildunterschrift</label><input type="text" id="bild-caption-${id}"></div>
     <div class="form-group"><label>Alternativtext</label><input type="text" id="bild-alt-${id}"></div>
   </div>`;
   c.appendChild(div);
+}
+
+// Datei-Validierung bei Auswahl
+function bildDateiGewaehlt(input, id) {
+  const fehlerEl = document.getElementById(`bild-fehler-${id}`);
+  const infoEl   = document.getElementById(`bild-info-${id}`);
+  const prevEl   = document.getElementById(`bild-preview-${id}`);
+  if (!input.files?.length) return;
+  const datei = input.files[0];
+
+  // Format prüfen
+  const erlaubteTypen = ['image/jpeg','image/png','image/webp','image/gif'];
+  if (!erlaubteTypen.includes(datei.type)) {
+    fehlerEl.textContent = `❌ Ungültiges Format: ${datei.type || 'unbekannt'}. Erlaubt: JPG, PNG, WebP, GIF`;
+    fehlerEl.style.display = 'block';
+    input.value = '';
+    if (prevEl) prevEl.style.display = 'none';
+    return;
+  }
+
+  // Größe prüfen
+  const maxMB = 10;
+  if (datei.size > maxMB * 1024 * 1024) {
+    const istMB = (datei.size / 1024 / 1024).toFixed(1);
+    fehlerEl.textContent = `❌ Datei zu groß: ${istMB} MB (max. ${maxMB} MB)`;
+    fehlerEl.style.display = 'block';
+    input.value = '';
+    if (prevEl) prevEl.style.display = 'none';
+    return;
+  }
+
+  // Alles OK
+  fehlerEl.style.display = 'none';
+  const kb = datei.size < 1024*1024
+    ? Math.round(datei.size/1024) + ' KB'
+    : (datei.size/1024/1024).toFixed(1) + ' MB';
+  if (infoEl) infoEl.textContent = `✓ ${datei.name} (${kb})`;
+
+  // Vorschau
+  if (prevEl) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = prevEl.querySelector('img');
+      if (img) { img.src = e.target.result; prevEl.style.display = 'block'; }
+    };
+    reader.readAsDataURL(datei);
+  }
 }
 
 function leseDatenAusFormular(meldungsart) {
