@@ -4884,6 +4884,42 @@ async function loescheKalenderEintrag(id, name) {
   navigateTo('kalender');
 }
 
+async function loescheKalenderEintragSicher(id, name, istEigen) {
+  if (!id || id === 'undefined') {
+    // SLZB_TERMINE-Eintrag: kann nicht direkt gelöscht werden
+    // Stattdessen: als "ausgeblendet" markieren (eigener Eintrag mit speziellem Flag)
+    const ok = await slzbConfirm(
+      `"${name}" ist ein Standard-Termin und kann nicht dauerhaft gelöscht werden.\n\nSoll er stattdessen ausgeblendet werden?`,
+      { titel: 'Termin ausblenden', icon: '🙈', bestaetigenText: 'Ausblenden', typ: 'default' }
+    );
+    if (!ok) return;
+    // Speichere als "ausgeblendet" in kalender_eintraege
+    const { error } = await Backend.client.from('kalender_eintraege').insert([{
+      datum: '2000-01-01', // Dummy-Datum
+      sportart: 'AUSGEBLENDET',
+      veranstaltung: name,
+      prioritaet: 4,
+      erstellt_von: Auth.id(),
+      ueberschreibt: name,
+      ausgeblendet: true,
+    }]);
+    if (error) { toast('Fehler: ' + error.message, 'danger'); return; }
+    toast('✅ Termin ausgeblendet', 'success');
+    navigateTo('kalender');
+    return;
+  }
+  // Eigener Eintrag: direkt löschen
+  const ok = await slzbConfirm(
+    `Eintrag "${name}" wirklich löschen?`,
+    { titel: 'Eintrag löschen', icon: '🗑️', bestaetigenText: 'Löschen', typ: 'danger' }
+  );
+  if (!ok) return;
+  const { error } = await Backend.client.from('kalender_eintraege').delete().eq('id', id);
+  if (error) { toast('Fehler: ' + error.message, 'danger'); return; }
+  toast('✅ Eintrag gelöscht', 'success');
+  navigateTo('kalender');
+}
+
 
 // ── Kalender: Bald & Aktuell Ansicht ─────────────────────────────
 async function kalenderZeigeAktuell() {
@@ -7952,7 +7988,7 @@ async function renderVotingVerwaltung() {
           <button class=\"btn btn-outline btn-sm\" onclick=\"zeigeVotingAbstimmung('${k.id}')\">🗳️ Öffnen</button>
           <button class=\"btn btn-ghost btn-sm\" onclick=\"zeigeVotingLink('${k.id}')\">🔗 Link</button>
           <button class=\"btn btn-ghost btn-sm\" onclick=\"zeigeVotingAushang('${k.id}')\">📢 Poster</button>
-          ${Auth.canDo('bearbeiten')?`
+          ${(Auth.canDo('bearbeiten')||Auth.canDo('voting'))?`
             <button class=\"btn btn-ghost btn-sm\" onclick=\"bearbeiteVotingKampagne('${k.id}')\">✏️ Bearbeiten</button>
             <button class=\"btn btn-ghost btn-sm\" onclick=\"zeigeVotingErgebnis('${k.id}')\">📊 Ergebnis</button>
             <button class=\"btn btn-ghost btn-sm\" onclick=\"toggleVotingStatus('${k.id}','${k.status}')\">

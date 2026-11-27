@@ -412,17 +412,15 @@ async function renderDashboard() {
       <div><h1>Dashboard</h1>
       <p>Willkommen, ${esc(Auth.name())}. <span class="text-muted text-sm">v3 · Supabase Auth</span></p></div>
       <button class=\"btn btn-primary\" onclick=\"zeigeWochenvorschau()\" style=\"white-space:nowrap;flex-shrink:0\">&#128197; Wochenvorschau</button>\n    </div>\n    <div class=\"grid grid-4 mb-4\">
-      <div class="stat-card clickable" style="cursor:pointer" onclick=\"navigateTo('meine-meldungen')\"><div class=\"stat-icon blue\">📋</div><div><div class="stat-value">${alle.length}</div><div class="stat-label">Meldungen gesamt</div></div></div>
-      <div class="stat-card clickable" style="cursor:pointer" onclick="navigateTo('ausgaben')"><div class="stat-icon green">✅</div><div><div class="stat-value">${freigegeben}</div><div class="stat-label">Freigegeben</div></div></div>
-      <div class="stat-card clickable" style="cursor:pointer" onclick="navigateTo('redaktion')"><div class="stat-icon orange">⏳</div><div><div class="stat-value">${offen}</div><div class="stat-label">In Bearbeitung</div></div></div>
-      <div class="stat-card clickable" style="cursor:pointer" onclick="navigateTo('einwilligungen')"><div class="stat-icon red">🔒</div><div><div class="stat-value">${gesperrt}</div><div class="stat-label">Gesperrt</div></div></div>
-    </div>
-    <div class="grid grid-3 mb-4">
-      <div class="stat-card clickable" style="cursor:pointer" onclick="navigateTo('redaktion')"><div class="stat-icon orange">⚠️</div><div><div class="stat-value">${unvollst}</div><div class="stat-label">Unvollständig</div></div></div>
-      <div class="stat-card clickable" style="cursor:pointer" onclick="navigateTo('rueckfragen')"><div class="stat-icon purple">💬</div><div><div class="stat-value">${rueck}</div><div class="stat-label">Rückfragen</div></div></div>
-      <div class="stat-card clickable" style="cursor:pointer" onclick="navigateTo('ausgaben')"><div class="stat-icon gold">🏆</div><div><div class="stat-value">${frg}</div><div class="stat-label">Warten auf ÖA</div></div></div>
-    </div>
-    <!-- Rollenspezifische Quick-Actions -->
+      <div clagrid grid-4 mb-4\">
+      ${alle.length > 0 ? `<div class=\"stat-card clickable\" style=\"cursor:pointer\" onclick=\"navigateTo('meine-meldungen')\"><div class=\"stat-icon blue\">&#128203;</div><div><div class=\"stat-value\">${alle.length}</div><div class=\"stat-label\">Meldungen gesamt</div></div></div>` : ''}
+      ${freigegeben > 0 ? `<div class=\"stat-card clickable\" style=\"cursor:pointer\" onclick=\"navigateTo('ausgaben')\"><div class=\"stat-icon green\">&#9989;</div><div><div class=\"stat-value\">${freigegeben}</div><div class=\"stat-label\">Freigegeben</div></div></div>` : ''}
+      ${offen > 0 ? `<div class=\"stat-card clickable\" style=\"cursor:pointer\" onclick=\"navigateTo('redaktion')\"><div class=\"stat-icon orange\">&#9203;</div><div><div class=\"stat-value\">${offen}</div><div class=\"stat-label\">In Bearbeitung</div></div></div>` : ''}
+      ${rueck > 0 ? `<div class=\"stat-card clickable\" style=\"cursor:pointer\" onclick=\"navigateTo('rueckfragen')\"><div class=\"stat-icon purple\">&#128172;</div><div><div class=\"stat-value\">${rueck}</div><div class=\"stat-label\">R\u00fcckfragen</div></div></div>` : ''}
+      ${frg > 0 ? `<div class=\"stat-card clickable\" style=\"cursor:pointer\" onclick=\"navigateTo('ausgaben')\"><div class=\"stat-icon gold\">&#127942;</div><div><div class=\"stat-value\">${frg}</div><div class=\"stat-label\">Warten auf \u00d6A</div></div></div>` : ''}
+      ${gesperrt > 0 ? `<div class=\"stat-card clickable\" style=\"cursor:pointer\" onclick=\"navigateTo('einwilligungen')\"><div class=\"stat-icon red\">&#128274;</div><div><div class=\"stat-value\">${gesperrt}</div><div class=\"stat-label\">Gesperrt</div></div></div>` : ''}
+      ${unvollst > 0 ? `<div class=\"stat-card clickable\" style=\"cursor:pointer\" onclick=\"navigateTo('redaktion')\"><div class=\"stat-icon orange\">&#9888;</div><div><div class=\"stat-value\">${unvollst}</div><div class=\"stat-label\">Unvollst\u00e4ndig</div></div></div>` : ''}
+    </div>ons -->
     <div class="card mb-4">
       <div class="card-header"><h2>⚡ Schnellzugriff</h2></div>
       <div class="card-body">
@@ -474,35 +472,6 @@ async function renderDashboard() {
       </div>
     </div>
 
-    ${Auth.canDo('erfassen') ? `<div class="card mb-4">
-      <div class="card-header"><h2>➕ Schnellerfassung</h2></div>
-      <div class="card-body">
-        <p style="font-size:.75rem;color:#888;font-weight:700;letter-spacing:2px;margin-bottom:8px">SPORTLICHE ERFOLGE</p>
-        <div class="meldungsart-grid">
-          ${[{art:'Einzelerfolg',icon:'🏅',desc:'Ein Schüler, ein Ergebnis',empfohlen:true},
-             {art:'Teamerfolg',icon:'🏆',desc:'Mehrere Schüler, gemeinsames Ergebnis',empfohlen:true},
-             {art:'Sammelmeldung',icon:'📊',desc:'Import / Schnelleingabe',empfohlen:true},
-             {art:'Fertiger Artikel',icon:'📰',desc:'Text mit KI-Extraktion'},
-             {art:'Minimalmeldung',icon:'⚡',desc:'Schnellmeldung, Details folgen'},
-          ].map(m=>`<div class="meldungsart-card" onclick="APP.selectedMeldungsart='${m.art}';navigateTo('neue-meldung')">
-            <div class="meldungsart-icon">${m.icon}</div>
-            <div class="meldungsart-title">${m.art}</div>
-            <div class="meldungsart-desc">${m.desc}</div>
-          </div>`).join('')}
-        </div>
-        ${Auth.canDo('nichtSport')?`
-        <p style="font-size:.75rem;color:#888;font-weight:700;letter-spacing:2px;margin:16px 0 8px">SONSTIGE AUSGABEN</p>
-        <div class="meldungsart-grid">
-          ${[{art:'Jubiläum',icon:'🏅',desc:'Jubiläum oder Ehrung',fn:"navigateTo('jubilaeum')"},
-             {art:'Schulnachricht',icon:'📰',desc:'Ankündigung oder Info',fn:"navigateTo('schulnachrichten')"},
-             {art:'Countdown',icon:'⏳',desc:'Veranstaltung ankündigen',fn:"navigateTo('countdown')"},
-          ].map(m=>`<div class="meldungsart-card" onclick="${m.fn}" style="border-color:rgba(201,162,39,0.4)">
-            <div class="meldungsart-icon">${m.icon}</div>
-            <div class="meldungsart-title">${m.art}</div>
-            <div class="meldungsart-desc">${m.desc}</div>
-          </div>`).join('')}
-        </div>`:''}
-      </div></div></div>` : ''}
     <div class="card">
       <div class="card-header"><h2>🕐 Letzte Meldungen</h2>
         <button class="btn btn-ghost btn-sm" onclick=\"navigateTo('meine-meldungen')\">Alle →</button></div>
