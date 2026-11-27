@@ -4700,14 +4700,17 @@ async function kalenderZeigeAktuell() {
   const alle = [...((typeof SLZB_TERMINE !== 'undefined') ? SLZB_TERMINE : []), ...eigene];
 
   const heute = new Date(); heute.setHours(0,0,0,0);
-  const in14 = new Date(heute); in14.setDate(heute.getDate() + 14);
-  const vor7  = new Date(heute); vor7.setDate(heute.getDate() - 7);
+  // Konfigurierbare Zeitfenster (Standard: 3 Tage zurück, 7 Tage voraus)
+  const tageZurueck = parseInt(localStorage.getItem('slzb_bald_zurueck') || '3');
+  const tageVoraus  = parseInt(localStorage.getItem('slzb_bald_voraus')  || '7');
+  const inN  = new Date(heute); inN.setDate(heute.getDate() + tageVoraus);
+  const vorN = new Date(heute); vorN.setDate(heute.getDate() - tageZurueck);
 
   const bald = alle.filter(t => {
     if (!t.datum) return false;
     const parts = t.datum.split('-');
     const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
-    return d >= vor7 && d <= in14;
+    return d >= vorN && d <= inN;
   }).sort((a,b) => a.datum.localeCompare(b.datum));
 
   const overlay = document.createElement('div');
@@ -4721,8 +4724,18 @@ async function kalenderZeigeAktuell() {
 
   modal.innerHTML = `
     <div class="modal-header">
-      <h3>📍 Bald & Aktuell – nächste 14 Tage</h3>
-      <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
+      <h3>📍 Bald & Aktuell</h3>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:.75rem;color:var(--slzb-text-muted)">
+          <input type="number" id="bald-zurueck" value="${tageZurueck}" min="0" max="30"
+            style="width:40px;text-align:center;background:var(--slzb-bg-secondary);border:1px solid var(--slzb-border);border-radius:4px;padding:2px 4px;font-size:.75rem"
+            onchange="localStorage.setItem('slzb_bald_zurueck',this.value);kalenderZeigeAktuell()"> Tage zurück /
+          <input type="number" id="bald-voraus" value="${tageVoraus}" min="1" max="90"
+            style="width:40px;text-align:center;background:var(--slzb-bg-secondary);border:1px solid var(--slzb-border);border-radius:4px;padding:2px 4px;font-size:.75rem"
+            onchange="localStorage.setItem('slzb_bald_voraus',this.value);kalenderZeigeAktuell()"> Tage voraus
+        </span>
+        <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
+      </div>
     </div>
     <div class="modal-body" style="padding:0">
       ${bald.length === 0
@@ -4785,10 +4798,53 @@ async function kalenderZeigeAktuell() {
 }
 
 // Meldung aus Kalender-Termin erstellen
-function kalenderMeldungErstellen(termin) {
-  // Öffne Neue-Meldung mit vorausgefüllten Daten
+async function kalenderMeldungErstellen(termin) {
+  // Suche passende gespeicherte Veranstaltung
+  const veranstaltungen = ladeGespeicherteVeranstaltungen();
+  const passend = veranstaltungen.find(v =>
+    v.veranstaltung?.toLowerCase().includes(termin.veranstaltung?.toLowerCase().slice(0,10)) ||
+    termin.veranstaltung?.toLowerCase().includes(v.veranstaltung?.toLowerCase().slice(0,10))
+  );
+
+  if (passend && passend.athleten?.length) {
+    // Zeige Auswahl: Einzelmeldung oder Ergebnis-Update
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.style.maxWidth = '460px';
+    modal.innerHTML = `
+      <div class="modal-header">
+        <h3>📝 Meldung für ${esc(termin.veranstaltung)}</h3>
+        <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info mb-3">
+          <span class="alert-icon">✅</span>
+          <span>Gespeicherte Veranstaltung gefunden: <strong>${esc(passend.veranstaltung)}</strong>
+          mit ${passend.athleten.length} Athlet(en)</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <button class="btn btn-primary" onclick="this.closest('.modal-overlay').remove();zeigeErgebnisUpdateModal('${passend.id}')">
+            🏆 Ergebnis-Update (schnell, mit Poster)
+          </button>
+          <button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove();kalenderMeldungFormular(${JSON.stringify(termin).replace(/"/g,'&quot;')})">
+            📋 Neue Meldung (Formular)
+          </button>
+        </div>
+      </div>`;
+    overlay.appendChild(modal);
+    overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+  } else {
+    // Direkt Formular öffnen
+    kalenderMeldungFormular(termin);
+  }
+}
+
+function kalenderMeldungFormular(termin) {
   navigateTo('neue-meldung');
-  setTimeout(() => {
+  setTimeout(async () => {
     const titelEl = document.getElementById('f-titel');
     const sportEl = document.getElementById('f-sportart-text');
     const wbEl = document.getElementById('f-wettbewerb-text');
@@ -4799,6 +4855,22 @@ function kalenderMeldungErstellen(termin) {
     if (wbEl) wbEl.value = termin.veranstaltung || '';
     if (datumEl) datumEl.value = termin.datum || '';
     if (ortEl) ortEl.value = termin.ort || '';
+
+    // Athleten aus Profil vorschlagen wenn Sportart bekannt
+    if (termin.sportart && typeof ladeAthletenProfile === 'function') {
+      try {
+        const profile = await ladeAthletenProfile('', false);
+        const passende = profile.filter(p => p.sportart === termin.sportart);
+        if (passende.length === 1) {
+          // Genau ein Athlet dieser Sportart → automatisch eintragen
+          const schuelerEl = document.getElementById('f-schueler-text');
+          if (schuelerEl && !schuelerEl.value) {
+            schuelerEl.value = passende[0].name;
+            window._letzteProfilId = passende[0].id;
+          }
+        }
+      } catch(e) {}
+    }
     toast(`✅ Formular mit "${termin.veranstaltung}" vorausgefüllt`, 'info');
   }, 400);
 }
