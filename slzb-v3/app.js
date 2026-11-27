@@ -380,6 +380,22 @@ async function renderDashboard() {
   // Sofort Spinner zeigen, dann Daten laden
   const alle = await ladeErfolge();
   const freigegeben = alle.filter(e=>['Freigegeben','Veröffentlicht'].includes(e.status)).length;
+
+  // Bevorstehende Wettkämpfe + aktive Veranstaltungen für Dashboard
+  let bevorstehend = [], aktiveVeranstaltungen = [];
+  try {
+    const eigene = await ladeKalenderEintraege();
+    const alleT = [...((typeof SLZB_TERMINE!=='undefined')?SLZB_TERMINE:[]), ...eigene];
+    const h = new Date(); h.setHours(0,0,0,0);
+    const in7 = new Date(h); in7.setDate(h.getDate()+7);
+    bevorstehend = alleT.filter(t=>{
+      if(!t.datum) return false;
+      const p=t.datum.split('-');
+      const d=new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));
+      return d>=h && d<=in7 && (t.prioritaet===1||t.prioritaet===2);
+    }).sort((a,b)=>a.datum.localeCompare(b.datum)).slice(0,4);
+    aktiveVeranstaltungen = ladeGespeicherteVeranstaltungen().slice(0,3);
+  } catch(e) {}
   const offen = alle.filter(e=>['Eingereicht','Datenprüfung','Redaktion','Einwilligungsprüfung','Dublettenverdacht'].includes(e.status)).length;
   const unvollst = alle.filter(e=>e.status==='Unvollständig').length;
   const gesperrt = alle.filter(e=>e.status==='Wegen Einwilligung gesperrt').length;
@@ -443,6 +459,9 @@ async function renderDashboard() {
             <span style="font-size:1.4rem">📅</span>
             <span style="font-size:.8rem">Wochenvorschau</span>
           </button>
+          ${Auth.canDo('erfassen') ? `<button class=\"btn btn-ghost\" onclick=\"kalenderZeigeAktuell()\" style=\"height:64px;flex-direction:column;gap:4px\" title=\"Bevorstehende Wettkämpfe\"><span style=\"font-size:1.4rem\">&#128205;</span><span style=\"font-size:.8rem\">Bald & Aktuell</span></button>` : ''}
+          ${Auth.canDo('redaktion') ? `<button class=\"btn btn-ghost\" onclick=\"zeigeVeranstaltungsWorkspace()\" style=\"height:64px;flex-direction:column;gap:4px\" title=\"Gespeicherte Veranstaltungen\"><span style=\"font-size:1.4rem\">&#127942;</span><span style=\"font-size:.8rem\">Veranstaltungen</span></button>` : ''}
+          ${Auth.canDo('redaktion') ? `<button class=\"btn btn-ghost\" onclick=\"zeigeAthletenVorstellung()\" style=\"height:64px;flex-direction:column;gap:4px\" title=\"WK-Vorschau erstellen\"><span style=\"font-size:1.4rem\">&#127939;</span><span style=\"font-size:.8rem\">WK-Vorschau</span></button>` : ''}
         </div>
       </div>
     </div>

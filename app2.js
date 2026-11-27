@@ -4770,11 +4770,15 @@ async function kalenderZeigeAktuell() {
                     ${istVergangen ? `
                       <button class="btn btn-primary btn-sm" style="font-size:.72rem"
                         onclick="this.closest('.modal-overlay').remove();kalenderMeldungErstellen(${JSON.stringify(t).replace(/"/g,'&quot;')})">
-                        📝 Meldung erstellen
+                        &#128221; Meldung
                       </button>` : `
                       <button class="btn btn-outline btn-sm" style="font-size:.72rem"
                         onclick="this.closest('.modal-overlay').remove();kalenderCountdown(${JSON.stringify(t).replace(/"/g,'&quot;')})">
-                        ⏳ Countdown
+                        &#9203; Countdown
+                      </button>
+                      <button class="btn btn-outline btn-sm" style="font-size:.72rem"
+                        onclick="this.closest('.modal-overlay').remove();kalenderAthletenvorschau(${JSON.stringify(t).replace(/"/g,'&quot;')})">
+                        &#127939; Vorschau
                       </button>`}
                     <button class="btn btn-ghost btn-sm" style="font-size:.72rem"
                       onclick="this.closest('.modal-overlay').remove();zeigeKalenderEintragModal(${JSON.stringify(t).replace(/"/g,'&quot;')})">
@@ -4795,6 +4799,23 @@ async function kalenderZeigeAktuell() {
 }
 
 // Meldung aus Kalender-Termin erstellen
+
+// Athletenvorschau direkt aus Kalender-Termin erstellen
+function kalenderAthletenvorschau(termin) {
+  // Öffne Athletenvorstellungs-Formular mit vorausgefüllten Daten
+  window._avGespeicherteDaten = null;
+  zeigeAthletenVorstellung();
+  setTimeout(() => {
+    const veranstEl = document.getElementById('av-veranstaltung');
+    const ortEl = document.getElementById('av-ort');
+    const sportartEl = document.getElementById('av-sportart');
+    if (veranstEl) veranstEl.value = termin.veranstaltung || '';
+    if (ortEl) ortEl.value = termin.ort || '';
+    if (sportartEl) sportartEl.value = termin.sportart || '';
+    toast('&#127939; Athletenvorschau für "' + (termin.veranstaltung||'') + '" vorbereitet – Athleten hinzufügen!', 'info');
+  }, 400);
+}
+
 async function kalenderMeldungErstellen(termin) {
   // Suche passende gespeicherte Veranstaltung
   const veranstaltungen = ladeGespeicherteVeranstaltungen();
