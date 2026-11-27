@@ -1579,6 +1579,11 @@ async function wechsleBildschirmFormat(format) {
     if (info) info.textContent='1080×1350 px · Hochformat';
     await zeichneSLZBPoster('screen-canvas', e);
   }
+  // Datenschutz-Warnung auf Canvas zeichnen wenn gesperrt
+  if (window._posterDsGesperrt) {
+    const dsCanvas = document.getElementById('screen-canvas');
+    if (dsCanvas) zeigeDatenschutzWarnung(dsCanvas, dsCanvas.getContext('2d'));
+  }
 }
 
 async function wechsleSocialFormat(format, erfolgId) {
@@ -1634,6 +1639,11 @@ async function wechsleSocialFormat(format, erfolgId) {
     if(info) info.textContent='1080×1080 px · Beitrag';
     await zeichneSocialFormat('social-canvas', e, 'beitrag');
   }
+  // Datenschutz-Warnung auf Canvas zeichnen wenn gesperrt
+  if (window._posterDsGesperrt) {
+    const dsCanvas = document.getElementById('social-canvas');
+    if (dsCanvas) zeigeDatenschutzWarnung(dsCanvas, dsCanvas.getContext('2d'));
+  }
 }
 
 
@@ -1670,6 +1680,14 @@ async function zeichneA3Variante(canvasId, e, nr) {
   else if (nr===5) await zeichnePoster4Bilder(canvasId, eQR);
   else if (nr===6) await zeichneTabellenLayout(canvasId, eQR);
   else if (nr===7) await zeichnePortraitLayout(canvasId, eQR);
+  // Datenschutz-Warnung auf Canvas zeichnen wenn gesperrt
+  if (window._posterDsGesperrt) {
+    const canvas = document.getElementById(canvasId);
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      zeigeDatenschutzWarnung(canvas, ctx);
+    }
+  }
 }
 
 
@@ -11808,8 +11826,10 @@ async function importiereDatenschutzExcel() {
         headerZeile = i;
         // Prüfe ob erste Spalte eine Nummerierung ist (Nr., lfd., #, Nummer)
         const firstCol = row[0];
+        // Nummerierungsspalte erkennen: nur wenn explizit Nr./lfd. oder Zahl
+        // NICHT bei leerer erster Spalte (könnte auch Nachname-Spalte ohne Header sein)
         if (firstCol === 'nr' || firstCol === 'nr.' || firstCol === 'lfd' || firstCol === '#' ||
-            firstCol === 'nummer' || firstCol === 'lfd.' || firstCol === '' ||
+            firstCol === 'nummer' || firstCol === 'lfd.' || firstCol === 'no' ||
             /^\d+$/.test(firstCol)) {
           colOffset = 1;
         }
@@ -11862,6 +11882,10 @@ async function importiereDatenschutzExcel() {
       if (/^\d+$/.test(nachname)) continue;
       // Komplett leere Zeilen überspringen
       if (cols.every(c => !c || c === '-' || c === '–' || c === '/' || c === ' ')) continue;
+      // Vorname darf keine reine Zahl sein
+      if (/^\d+$/.test(vorname)) continue;
+      // Vorname muss mindestens 2 Zeichen haben
+      if (vorname.length < 2) continue;
 
       daten.push({
         nachname,
