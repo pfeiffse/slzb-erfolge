@@ -420,7 +420,7 @@ async function renderDashboard() {
       ${frg > 0 ? `<div class=\"stat-card clickable\" style=\"cursor:pointer\" onclick=\"navigateTo('ausgaben')\"><div class=\"stat-icon gold\">&#127942;</div><div><div class=\"stat-value\">${frg}</div><div class=\"stat-label\">Warten auf \u00d6A</div></div></div>` : ''}
       ${gesperrt > 0 ? `<div class=\"stat-card clickable\" style=\"cursor:pointer\" onclick=\"navigateTo('einwilligungen')\"><div class=\"stat-icon red\">&#128274;</div><div><div class=\"stat-value\">${gesperrt}</div><div class=\"stat-label\">Gesperrt</div></div></div>` : ''}
       ${unvollst > 0 ? `<div class=\"stat-card clickable\" style=\"cursor:pointer\" onclick=\"navigateTo('redaktion')\"><div class=\"stat-icon orange\">&#9888;</div><div><div class=\"stat-value\">${unvollst}</div><div class=\"stat-label\">Unvollst\u00e4ndig</div></div></div>` : ''}
-    </div>ons -->
+    </div>
     <div class="card mb-4">
       <div class="card-header"><h2>⚡ Schnellzugriff</h2></div>
       <div class="card-body">
@@ -648,44 +648,57 @@ function zeigeMeldungsartAuswahl() {
   overlay.className = 'modal-overlay';
   const modal = document.createElement('div');
   modal.className = 'modal';
-  modal.style.maxWidth = '560px';
+  modal.style.maxWidth = '460px';
   modal.innerHTML = `
     <div class="modal-header">
-      <h3>&#128221; Meldungsart wählen</h3>
+      <h3>&#8942; Weitere Meldungsarten</h3>
       <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">&#10005;</button>
     </div>
     <div class="modal-body">
-      <div class="meldungsart-grid">
-        ${[
-          {art:'Einzelerfolg',icon:'&#127941;',desc:'Ein Schüler, ein Ergebnis',empfohlen:true},
-          {art:'Teamerfolg',icon:'&#127942;',desc:'Mehrere Schüler, gemeinsames Ergebnis',empfohlen:true},
-          {art:'Sammelmeldung',icon:'&#128202;',desc:'Import / Schnelleingabe',empfohlen:true},
-          {art:'Mehrtitel-Athlet',icon:'&#127941;',desc:'Ein Athlet, mehrere Titel'},
-          {art:'Veranstaltungs-Bilanz',icon:'&#127963;',desc:'Gesamtergebnis einer Veranstaltung'},
-          {art:'Fertiger Artikel',icon:'&#128240;',desc:'Text mit KI-Extraktion'},
-          {art:'Minimalmeldung',icon:'&#9889;',desc:'Schnellmeldung, Details folgen'},
-        ].map(m=>`<div class="meldungsart-card" onclick="APP.selectedMeldungsart='${m.art}';navigateTo('neue-meldung');this.closest('.modal-overlay').remove()">
-          ${m.empfohlen?'<div style=\"position:absolute;top:6px;right:6px;background:#E2001A;color:#fff;font-size:.6rem;font-weight:700;padding:1px 5px;border-radius:8px\">&#9733;</div>':''}
-          <div class="meldungsart-icon">${m.icon}</div>
-          <div class="meldungsart-title">${m.art}</div>
-          <div class="meldungsart-desc">${m.desc}</div>
-        </div>`).join('')}
-      </div>
+      <p style="font-size:.85rem;color:var(--slzb-text-muted);margin-bottom:16px">
+        Sonstige Ausgaben und spezielle Meldungsarten:
+      </p>
       ${Auth.canDo('nichtSport') ? `
-      <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--slzb-border)">
+      <div style="margin-bottom:16px">
         <p style="font-size:.75rem;font-weight:700;color:var(--slzb-text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Sonstige Ausgaben</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-outline btn-sm" onclick="navigateTo('jubilaeum');this.closest('.modal-overlay').remove()">&#127941; Jubiläum</button>
-          <button class="btn btn-outline btn-sm" onclick="navigateTo('schulnachrichten');this.closest('.modal-overlay').remove()">&#128240; Schulnachricht</button>
-          <button class="btn btn-outline btn-sm" onclick="navigateTo('countdown');this.closest('.modal-overlay').remove()">&#9203; Countdown</button>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button class="btn btn-outline" style="justify-content:flex-start;gap:12px;padding:12px 16px"
+            onclick="navigateTo('jubilaeum');this.closest('.modal-overlay').remove()">
+            <span style="font-size:1.2rem">&#127941;</span>
+            <div style="text-align:left"><div style="font-weight:700">Jubiläum / Ehrung</div><div style="font-size:.75rem;color:var(--slzb-text-muted)">Besondere Anlässe und Ehrungen</div></div>
+          </button>
+          <button class="btn btn-outline" style="justify-content:flex-start;gap:12px;padding:12px 16px"
+            onclick="navigateTo('schulnachrichten');this.closest('.modal-overlay').remove()">
+            <span style="font-size:1.2rem">&#128240;</span>
+            <div style="text-align:left"><div style="font-weight:700">Schulnachricht / Foto-Karussell</div><div style="font-size:.75rem;color:var(--slzb-text-muted)">Ankündigungen, Events, Fotos</div></div>
+          </button>
+          <button class="btn btn-outline" style="justify-content:flex-start;gap:12px;padding:12px 16px"
+            onclick="navigateTo('countdown');this.closest('.modal-overlay').remove()">
+            <span style="font-size:1.2rem">&#9203;</span>
+            <div style="text-align:left"><div style="font-weight:700">Countdown-Poster</div><div style="font-size:.75rem;color:var(--slzb-text-muted)">Veranstaltung ankündigen</div></div>
+          </button>
         </div>
       </div>` : ''}
+      <div>
+        <p style="font-size:.75rem;font-weight:700;color:var(--slzb-text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Spezielle Meldungsarten</p>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button class="btn btn-outline" style="justify-content:flex-start;gap:12px;padding:12px 16px"
+            onclick="APP.selectedMeldungsart='Fertiger Artikel';navigateTo('neue-meldung');this.closest('.modal-overlay').remove()">
+            <span style="font-size:1.2rem">&#128240;</span>
+            <div style="text-align:left"><div style="font-weight:700">Fertiger Artikel</div><div style="font-size:.75rem;color:var(--slzb-text-muted)">Text hochladen, KI extrahiert Daten</div></div>
+          </button>
+          <button class="btn btn-outline" style="justify-content:flex-start;gap:12px;padding:12px 16px"
+            onclick="APP.selectedMeldungsart='Minimalmeldung';navigateTo('neue-meldung');this.closest('.modal-overlay').remove()">
+            <span style="font-size:1.2rem">&#9889;</span>
+            <div style="text-align:left"><div style="font-weight:700">Minimalmeldung</div><div style="font-size:.75rem;color:var(--slzb-text-muted)">Schnellmeldung, Details folgen später</div></div>
+          </button>
+        </div>
+      </div>
     </div>`;
   overlay.appendChild(modal);
   overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
   document.body.appendChild(overlay);
 }
-
 function renderMeldungsartAuswahl() {
   const sportArten = [
     {art:'Einzelerfolg',icon:'🏅',desc:'Ein Schüler, ein Wettbewerb, ein Ergebnis.'},
