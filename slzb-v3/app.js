@@ -1259,34 +1259,77 @@ async function vbEinreichen() {
 }
 
 function renderMinimalmeldungForm() {
+  // Heutiges Datum als Standard
+  const heute = new Date().toISOString().slice(0,10);
   return `<div class="page">
     ${formularKopf('Minimalmeldung','⚡')}
-    <div class="alert alert-warning"><span class="alert-icon">⚠️</span>
-      <span>Minimalmeldungen erhalten automatisch den Status <strong>Unvollständig</strong>.</span></div>
+    <div class="alert alert-info" style="margin-bottom:16px">
+      <span class="alert-icon">⚡</span>
+      <span><strong>Schnellmeldung:</strong> Nur das Wichtigste – Details können später ergänzt werden. Status: <strong>Unvollständig</strong>.</span>
+    </div>
     <div class="card mb-3">
       <div class="card-body">
         <div id="form-errors"></div>
-        <div class="form-row cols-2">
-          <div class="form-group"><label>Sportart <span class="required">*</span></label>
-            <input type="text" id="f-sportart-text" placeholder="z.B. Leichtathletik" autocomplete="off"></div>
-          <div class="form-group"><label>Wettbewerb</label>
-            <input type="text" id="f-wettbewerb-text" placeholder="z.B. Berliner Landesmeisterschaften" autocomplete="off"></div>
+
+        <!-- Pflichtfeld: Kurzinfo -->
+        <div class="form-group mb-3">
+          <label style="font-weight:700;font-size:.9rem">Was ist passiert? <span class="required">*</span></label>
+          <textarea id="f-kurzinfo" rows="3"
+            placeholder="z.B. Max Mustermann – 1. Platz beim Berliner Landesmeisterschaft im Judo"
+            style="font-size:1rem;padding:12px;border-radius:8px;width:100%"></textarea>
         </div>
-        <div class="form-row cols-2">
-          <div class="form-group"><label>Datum <span class="required">*</span></label><input type="date" id="f-datum"></div>
-          <div class="form-group"><label>Ort</label><input type="text" id="f-ort"></div>
+
+        <!-- Sportart (Pflicht) + Datum (Pflicht) – kompakt -->
+        <div class="form-row cols-2" style="margin-bottom:12px">
+          <div class="form-group">
+            <label>Sportart <span class="required">*</span></label>
+            <input type="text" id="f-sportart-text" placeholder="z.B. Judo" autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label>Datum <span class="required">*</span></label>
+            <input type="date" id="f-datum" value="${heute}">
+          </div>
         </div>
-        <div class="form-group"><label>Titel</label>
-          <input type="text" id="f-titel" placeholder="Kurzer Titel (optional)"></div>
-        <div class="form-group"><label>Kurzinfo <span class="required">*</span></label>
-          <textarea id="f-kurzinfo" rows="3" placeholder="Was ist passiert?"></textarea></div>
+
+        <!-- Optionale Felder (eingeklappt) -->
+        <details style="margin-top:8px">
+          <summary style="cursor:pointer;font-size:.82rem;color:var(--slzb-text-muted);font-weight:600;padding:6px 0">
+            ➕ Weitere Details (optional)
+          </summary>
+          <div style="margin-top:12px;display:flex;flex-direction:column;gap:10px">
+            <div class="form-row cols-2">
+              <div class="form-group">
+                <label>Wettbewerb</label>
+                <input type="text" id="f-wettbewerb-text" placeholder="z.B. Berliner Landesmeisterschaften" autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label>Ort</label>
+                <input type="text" id="f-ort" placeholder="z.B. Berlin">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Titel</label>
+              <input type="text" id="f-titel" placeholder="Kurzer Titel (wird automatisch generiert wenn leer)">
+            </div>
+          </div>
+        </details>
       </div>
     </div>
-    ${bilderBlock()}
+
+    <!-- Bild-Upload (optional, wie bei Live-Meldung) -->
+    <div class="card mb-3">
+      <div class="card-header" style="padding:12px 16px">
+        <h3 style="font-size:.9rem;margin:0">📷 Bild hochladen <span style="font-size:.75rem;color:var(--slzb-text-muted);font-weight:400">(optional)</span></h3>
+      </div>
+      <div class="card-body" style="padding:12px 16px">
+        ${bilderBlock()}
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-footer">
         <button class="btn btn-ghost" onclick="APP.selectedMeldungsart=null;navigateTo('neue-meldung')">Abbrechen</button>
-        <button class="btn btn-warning" onclick="speichereErfolg('Unvollständig','Minimalmeldung')">⚡ Einreichen</button>
+        <button class="btn btn-warning" onclick="speichereErfolg('Unvollständig','Minimalmeldung')">⚡ Schnell einreichen</button>
       </div>
     </div>
   </div>`;
@@ -1397,6 +1440,13 @@ async function speichereErfolg(status, meldungsart) {
       );
       if (!weiter) return;
     }
+  }
+
+  // Auto-Titel für Minimalmeldung: aus Kurzinfo ableiten wenn leer
+  if (meldungsart === 'Minimalmeldung' && !daten.titel && daten.kurzinfo) {
+    // Ersten Satz der Kurzinfo als Titel verwenden (max. 80 Zeichen)
+    const ersterSatz = daten.kurzinfo.split(/[.!?\n]/)[0].trim();
+    daten.titel = ersterSatz.length > 80 ? ersterSatz.slice(0, 77) + '...' : ersterSatz;
   }
 
   const fehler = validiereFormular(daten, meldungsart);
@@ -2381,6 +2431,14 @@ const VALIDIERUNGSREGELN = {
 
 Object.assign(VALIDIERUNGSREGELN, {
 
+  // Minimalmeldung: nur Kurzinfo + Sportart + Datum Pflicht, Titel optional (wird auto-generiert)
+  minimalmeldung: {
+    kurzinfo:    { pflicht: true,  min: 5,   max: 500, label: 'Kurzinfo' },
+    sportartText:{ pflicht: true,  min: 2,   max: 50,  label: 'Sportart' },
+    datum:       { pflicht: true,  typ: 'datum', label: 'Datum' },
+    titel:       { pflicht: false, min: 0,   max: 200, label: 'Titel' },
+  },
+
   athletenProfil: {
     vorname:  { pflicht: true,  min: 1, max: 50,  label: 'Vorname' },
     nachname: { pflicht: true,  min: 1, max: 50,  label: 'Nachname' },
@@ -2496,7 +2554,8 @@ function validiereNachSchema(daten, schema) {
 
 function validiereFormular(daten, meldungsart) {
   const fehler=[];
-  if(!daten.titel?.trim()) fehler.push('Titel ist Pflichtfeld');
+  // Titel: Pflichtfeld außer bei Minimalmeldung (dort wird er auto-generiert)
+  if(meldungsart !== 'Minimalmeldung' && !daten.titel?.trim()) fehler.push('Titel ist Pflichtfeld');
   if(!daten.sportartId&&!daten.sportartText) fehler.push('Sportart ist Pflichtfeld');
   if(!daten.datum) fehler.push('Datum ist Pflichtfeld');
   else {
