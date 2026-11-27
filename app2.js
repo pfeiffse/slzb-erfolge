@@ -491,7 +491,6 @@ function tourZuruecksetzen() {
 }
 
 
-// Nächste offene Meldung öffnen
 async function naechsteMeldungOeffnen(aktuelleId) {
   const alle = await ladeErfolge();
   const offen = alle.filter(e => ['Eingereicht','Redaktion','Datenprüfung'].includes(e.status));
@@ -9275,7 +9274,7 @@ function avBildVorschau(id, input) {
 // ATHLETEN-PROFILE (Supabase)
 // ══════════════════════════════════════════════════════════════
 
-async function ladeAthletenProfile(suchbegriff = '', mitErfolgen = false) {
+async function ladeAthletenProfile(suchbegriff = '') {
   try {
     let query = Backend.client
       .from('athleten_profile')
@@ -9287,38 +9286,7 @@ async function ladeAthletenProfile(suchbegriff = '', mitErfolgen = false) {
     }
     const { data, error } = await query.limit(50);
     if (error) throw new Error(error.message);
-    const profile = data || [];
-
-    // Optional: Erfolge aus Meldungen laden
-    if (mitErfolgen && profile.length) {
-      await Promise.all(profile.map(async p => {
-        try {
-          const { data: teilnahmen } = await Backend.client
-            .from('achievement_participants')
-            .select('achievement_id, participant_role')
-            .ilike('participant_role', `%${p.vorname || p.name.split(' ')[0]}%`)
-            .limit(20);
-          if (!teilnahmen?.length) { p.erfolge = []; return; }
-          const ids = [...new Set(teilnahmen.map(t => t.achievement_id))];
-          const { data: meldungen } = await Backend.client
-            .from('achievements')
-            .select('id, title, event_date, placement, medal, level, sport_id')
-            .in('id', ids)
-            .in('status', ['Freigegeben', 'Veröffentlicht'])
-            .order('event_date', { ascending: false })
-            .limit(10);
-          p.erfolge = (meldungen || []).map(m => ({
-            id: m.id,
-            titel: m.title,
-            datum: m.event_date,
-            platz: m.placement,
-            medaille: m.medal,
-            ebene: m.level,
-          }));
-        } catch(e) { p.erfolge = []; }
-      }));
-    }
-    return profile;
+    return data || [];
   } catch(e) {
     console.warn('[Athleten-Profile]', e.message);
     return [];
@@ -9344,7 +9312,7 @@ async function loescheAthletProfil(id) {
 
 // Athleten-Profile Verwaltung
 async function zeigeAthletenProfileVerwaltung() {
-  const profile = await ladeAthletenProfile('', true); // true = mit Erfolgen
+  const profile = await ladeAthletenProfile();
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   const modal = document.createElement('div');
@@ -9381,15 +9349,15 @@ async function zeigeAthletenProfileVerwaltung() {
                   <div style="font-weight:700;font-size:.9rem">${esc(p.name)}</div>
                   <div style="font-size:.78rem;color:#888;margin-top:2px">${esc(p.sportart||'–')}${p.klasse?' · '+esc(p.klasse):''}</div>
                   ${p.kader ? `<div style="font-size:.72rem;color:#666">${esc(p.kader)}</div>` : ''}
-                  <div style="\\n                  ${p.erfolge?.length ? `<div style=\"margin-top:6px;border-top:1px solid var(--slzb-border);padding-top:5px\">` + p.erfolge.slice(0,3).map(e => { const mi={Gold:'🥇',Silber:'🥈',Bronze:'🥉'}; const badge=e.medaille&&e.medaille!=='keine'?mi[e.medaille]||'':e.platz?e.platz+'.':''; return `<div style=\"font-size:.7rem;color:var(--slzb-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis\">${badge} ${esc(e.titel||'–')}</div>`; }).join('') + (p.erfolge.length>3?`<div style=\"font-size:.68rem;color:#888\">+${p.erfolge.length-3} weitere</div>`:'') + `</div>` : ''}display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+                  <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
                     <button class="btn btn-primary btn-sm" style="font-size:.72rem;width:100%;margin-bottom:4px"
                       onclick="event.stopPropagation();apZurVeranstaltungHinzu(${JSON.stringify(p).replace(/\"/g,'&quot;')})">➕ Zur Veranstaltung</button>
                     <button class="btn btn-ghost btn-sm" style="font-size:.72rem;flex:1"
                       onclick="event.stopPropagation();zeigeAthletProfilFormular(${JSON.stringify(p).replace(/"/g,'&quot;')})">✏️ Bearbeiten</button>
-                    <button class="btn btn-ghost btn-sm" style="font-size:.72rem;color:#E2001A"
-                      onclick="event.stopPropagation();apLoeschen('${p.id}')">🗑️</button>
                     <button class="btn btn-outline btn-sm" style="font-size:.72rem;width:100%;margin-top:4px"
                       onclick="event.stopPropagation();zeigeSchnellMeldungAusProfil(${JSON.stringify(p).replace(/\"/g,'&quot;')})">⚡ Schnell-Meldung</button>
+                    <button class="btn btn-ghost btn-sm" style="font-size:.72rem;color:#E2001A"
+                      onclick="event.stopPropagation();apLoeschen('${p.id}')">🗑️</button>
                   </div>
                 </div>
               </div>`).join('')}
@@ -9406,7 +9374,7 @@ async function zeigeAthletenProfileVerwaltung() {
 }
 
 async function apSuche(suchbegriff) {
-  const profile = await ladeAthletenProfile(suchbegriff, true);
+  const profile = await ladeAthletenProfile(suchbegriff);
   const liste = document.getElementById('ap-liste');
   if (!liste) return;
   if (!profile.length) { liste.innerHTML = '<p class="text-muted">Keine Profile gefunden.</p>'; return; }
@@ -9500,16 +9468,11 @@ function apBildVorschau(input) {
 async function apSpeichern(existingId) {
   const vorname = document.getElementById('ap-vorname')?.value.trim();
   const nachname = document.getElementById('ap-nachname')?.value.trim();
-  const sportart = document.getElementById('ap-sportart')?.value.trim();
-  const klasse = document.getElementById('ap-klasse')?.value.trim();
-  const kader = document.getElementById('ap-kader')?.value.trim();
-
-  // Einheitliche Schema-Validierung
-  const fehler = validiereNachSchema(
-    { vorname, nachname, sportart, klasse, kader },
-    VALIDIERUNGSREGELN.athletenProfil
-  );
-  if (!zeigeValidierungsFehler(fehler)) return;
+  // Schema-Validierung
+  const fehler = typeof validiereNachSchema === 'function' && typeof VALIDIERUNGSREGELN !== 'undefined'
+    ? validiereNachSchema({ vorname, nachname }, VALIDIERUNGSREGELN.athletenProfil || {})
+    : (!vorname || !nachname ? ['Vor- und Nachname sind Pflichtfelder'] : []);
+  if (fehler.length) { toast(fehler[0], 'warning'); return; }
 
   const name = `${vorname} ${nachname}`.trim();
   let bildUrl = null;
@@ -9668,12 +9631,9 @@ async function apFuegeAuswahlZuVeranstaltungHinzu(veranstaltungsId) {
   };
   zeigeAthletenVorstellungMitDaten();
   setTimeout(async () => {
-    for (const p of profile) {
-      await apProfilWaehlen(p, false); // false = Modal nicht schließen
-      await new Promise(r=>setTimeout(r,250));
-    }
+    for (const p of profile) { await apProfilWaehlen(p); await new Promise(r=>setTimeout(r,200)); }
     toast('✅ '+profile.length+' Athlet(en) zu "'+v.veranstaltung+'" hinzugefügt', 'success');
-  }, 600);
+  }, 400);
 }
 
 async function apFuegeAuswahlZuNeuerVeranstaltung() {
@@ -9682,16 +9642,11 @@ async function apFuegeAuswahlZuNeuerVeranstaltung() {
   document.querySelectorAll('.modal-overlay').forEach(o => o.remove());
   window._avGespeicherteDaten = null;
   zeigeAthletenVorstellung();
-  // Warte bis Modal vollständig geöffnet ist, dann Profile hinzufügen
   setTimeout(async () => {
-    for (const p of profile) {
-      await apProfilWaehlen(p, false); // false = Modal nicht schließen
-      await new Promise(r=>setTimeout(r,250));
-    }
+    for (const p of profile) { await apProfilWaehlen(p); await new Promise(r=>setTimeout(r,200)); }
     toast('✅ '+profile.length+' Athlet(en) hinzugefügt – bitte Veranstaltungsname eingeben', 'info');
-  }, 600);
+  }, 400);
 }
-
 
 // ── Schnell-Meldung direkt aus Profil ────────────────────────────
 function zeigeSchnellMeldungAusProfil(profil) {
@@ -9789,12 +9744,8 @@ async function smEinreichen(mitPoster, profilJson) {
   const disziplin = document.getElementById('sm-disziplin')?.value.trim();
   const datum = document.getElementById('sm-datum')?.value;
 
-  // Schema-Validierung
-  const smFehler = validiereNachSchema(
-    { wettbewerb: wb, platzierung: platz },
-    VALIDIERUNGSREGELN.schnellMeldung
-  );
-  if (!zeigeValidierungsFehler(smFehler)) return;
+  if (!wb) { toast('Bitte Wettbewerb eingeben', 'warning'); return; }
+  if (!platz) { toast('Bitte Platzierung wählen', 'warning'); return; }
 
   document.querySelector('.modal-overlay')?.remove();
   toast('⏳ Meldung wird eingereicht...', 'info');
@@ -9854,18 +9805,8 @@ async function smEinreichen(mitPoster, profilJson) {
     toast('Fehler: ' + e.message, 'danger');
   }
 }
-
-async function apProfilWaehlen(profil, schliesseModal = true) {
-  // Nur das Profil-Auswahl-Modal schließen, nicht das Athletenvorstellungs-Modal
-  if (schliesseModal) {
-    // Schließe nur das oberste Modal (Profil-Auswahl), nicht alle
-    const modals = document.querySelectorAll('.modal-overlay');
-    if (modals.length > 1) {
-      modals[modals.length - 1].remove(); // Nur das letzte (Profil-Auswahl)
-    } else if (modals.length === 1) {
-      modals[0].remove();
-    }
-  }
+async function apProfilWaehlen(profil) {
+  document.querySelector('.modal-overlay')?.remove();
   // Finde den nächsten freien Athleten-Slot oder füge neuen hinzu
   const liste = document.getElementById('av-athleten-liste');
   if (!liste) { toast('Bitte zuerst das Athletenvorstellungs-Formular öffnen', 'warning'); return; }
@@ -10201,25 +10142,19 @@ async function euErstellePoster(veranstaltungsId, mitMeldung) {
   const v = liste.find(x => x.id === veranstaltungsId);
   if (!v) return;
 
-  // Lese aus window._euAthlet/_euPlatz (neue Button-Eingabe)
-  // ODER aus alten Input-Feldern (Fallback)
-  const athletName = window._euAthlet || document.getElementById('eu-athlet')?.value;
-  const platz      = window._euPlatz  || parseInt(document.getElementById('eu-platz')?.value) || null;
+  const athletName = document.getElementById('eu-athlet')?.value;
   const disziplin  = document.getElementById('eu-disziplin')?.value.trim();
+  const platz      = parseInt(document.getElementById('eu-platz')?.value) || null;
   const ergebnis   = document.getElementById('eu-ergebnis')?.value.trim();
   const zusatz     = document.getElementById('eu-zusatz')?.value.trim();
 
-  // Schema-Validierung
-  const euFehler = validiereNachSchema(
-    { athlet: athletName, platzierung: platz, wettbewerb: v?.veranstaltung },
-    VALIDIERUNGSREGELN.ergebnisUpdate
-  );
-  if (!zeigeValidierungsFehler(euFehler)) return;
+  if (!athletName) { toast('Bitte Athleten auswählen', 'warning'); return; }
+  if (!platz) { toast('Bitte Platzierung wählen', 'warning'); return; }
 
   document.querySelector('.modal-overlay')?.remove();
   toast('⏳ Poster wird erstellt...', 'info');
 
-  // Bild laden: zuerst hochgeladenes Foto, dann Bild aus Workspace-Athlet
+  // Bild laden
   let bild = null;
   if (window._euBildDataUrl) {
     bild = await new Promise(res => {
@@ -10233,14 +10168,6 @@ async function euErstellePoster(veranstaltungsId, mitMeldung) {
   const athlet = athletName === '__alle__'
     ? { name: v.veranstaltung, vorname: '', nachname: '' }
     : (v.athleten||[]).find(a => (a.name||a.vorname+' '+a.nachname) === athletName) || { name: athletName };
-
-  // Bild aus Workspace-Athlet laden wenn kein Foto hochgeladen
-  if (!bild && athlet.bildUrl) {
-    bild = await new Promise(res => {
-      const img = new Image(); img.onload = () => res(img); img.onerror = () => res(null);
-      img.src = athlet.bildUrl;
-    });
-  }
 
   // Poster erstellen
   const W = 1080, H = 1350;
@@ -10263,7 +10190,7 @@ async function euErstellePoster(veranstaltungsId, mitMeldung) {
       ...(zusatz ? [zusatz] : []),
     ],
     bild,
-    akzent: 'rot',  // Immer rot für Sporterfolge
+    akzent: 'rot',
   });
 
   // Download
@@ -10271,124 +10198,23 @@ async function euErstellePoster(veranstaltungsId, mitMeldung) {
   a.download = `SLZB_Update_${(athlet.name||'').replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.png`;
   canvas.toBlob(blob => { a.href = URL.createObjectURL(blob); a.click(); }, 'image/png');
 
-  // Meldung direkt einreichen (nicht nur Formular öffnen)
+  // Optional: Meldung erstellen
   if (mitMeldung && platz) {
-    toast('✅ Poster heruntergeladen! Meldung wird eingereicht...', 'success');
-    try {
-      // Direkt als Meldung speichern
-      // Sportart-ID aus Name ermitteln
-      const sportartObj = (typeof SLZB_DB !== 'undefined')
-        ? SLZB_DB.sportarten.find(s => s.name === v.sportart || s.id === v.sportart)
-        : null;
-      const sportartId = sportartObj?.id || null;
-
-      const meldungsDaten = {
-        meldungsart:    'Einzelerfolg',
-        titel:          `${platz}. Platz${disziplin?' – '+disziplin:''} bei ${v.veranstaltung}`,
-        sportartId:     sportartId,          // ← korrekte ID für DB
-        sportartText:   v.sportart || '',    // ← Anzeigename
-        disziplin:      disziplin || '',     // ← Disziplin (z.B. "1000m")
-        wettbewerbText: v.veranstaltung,
-        datum:          new Date().toISOString().slice(0,10),
-        ort:            v.ort || '',
-        ebene:          'Bundesebene',       // Standard für Wettkampf-Updates
-        platzierung:    platz,
-        medaille:       platz===1?'Gold':platz===2?'Silber':platz===3?'Bronze':'keine',
-        ergebnisText:   ergebnis ? `${platz}. Platz – ${disziplin||''} ${ergebnis}`.trim() : '',
-        kurzinfo:       zusatz || '',
-        status:         'Eingereicht',
-      };
-      const beteiligte = athlet.name && athlet.name !== v.veranstaltung
-        ? [{ schuelerId: null, anzeigename: athlet.name, rolle: 'Athlet', einwilligungsstatus: 'Nicht geprüft' }]
-        : [];
-      const result = await DB.erstelleErfolg(meldungsDaten, beteiligte);
-      if (result.ok) {
-        toast(`✅ Meldung ${result.nr} eingereicht!`, 'success');
-        // Cache leeren damit Meldung in "Meine Meldungen" erscheint
-        APP._erfolgeCache = null;
-      } else {
-        throw new Error(result.fehler || 'Unbekannter Fehler');
-      }
-    } catch(err) {
-      // Fallback: Formular öffnen
-      toast('⚠️ Direkt-Einreichung fehlgeschlagen – Formular wird geöffnet', 'warning');
+    toast('✅ Poster heruntergeladen! Meldung wird vorbereitet...', 'success');
+    setTimeout(() => {
+      navigateTo('neue-meldung');
       setTimeout(() => {
-        navigateTo('neue-meldung');
-        setTimeout(() => {
-          const titelEl = document.getElementById('f-titel');
-          const sportEl = document.getElementById('f-sportart-text');
-          const schuelerEl = document.getElementById('f-schueler-text');
-          if (titelEl) titelEl.value = `${platz}. Platz${disziplin?' – '+disziplin:''} bei ${v.veranstaltung}`;
-          if (sportEl) sportEl.value = v.sportart || '';
-          if (schuelerEl) schuelerEl.value = athlet.name || '';
-        }, 300);
-      }, 500);
-    }
+        const titelEl = document.getElementById('f-titel');
+        const sportEl = document.getElementById('f-sportart-text');
+        const schuelerEl = document.getElementById('f-schueler-text');
+        if (titelEl) titelEl.value = `${platz}. Platz${disziplin?' – '+disziplin:''} bei ${v.veranstaltung}`;
+        if (sportEl) sportEl.value = v.sportart || '';
+        if (schuelerEl) schuelerEl.value = athlet.name || '';
+      }, 300);
+    }, 1000);
   } else {
     toast('✅ Poster heruntergeladen!', 'success');
   }
-}
-
-
-// ── Einheitliche Athlet-Entität ───────────────────────────────────
-// Sucht Athlet in: 1. Athleten-Profile (DB), 2. Meldungen (DB), 3. Freitext
-async function sucheAthlet(name) {
-  if (!name || name.length < 2) return null;
-
-  // 1. Athleten-Profil suchen
-  try {
-    const profile = await ladeAthletenProfile(name);
-    const exakt = profile.find(p => p.name.toLowerCase() === name.toLowerCase());
-    if (exakt) return {
-      quelle: 'profil',
-      id: exakt.id,
-      name: exakt.name,
-      vorname: exakt.vorname,
-      nachname: exakt.nachname,
-      sportart: exakt.sportart,
-      klasse: exakt.klasse,
-      kader: exakt.kader,
-      bildUrl: exakt.bild_url,
-    };
-  } catch(e) {}
-
-  // 2. Aus Meldungen suchen
-  try {
-    const { data } = await Backend.client
-      .from('achievement_participants')
-      .select('participant_role, achievement_id')
-      .ilike('participant_role', `%${name}%`)
-      .limit(5);
-    if (data?.length) return {
-      quelle: 'meldung',
-      name: data[0].participant_role,
-      sportart: null,
-      bildUrl: null,
-    };
-  } catch(e) {}
-
-  // 3. Freitext-Fallback
-  return { quelle: 'freitext', name, sportart: null, bildUrl: null };
-}
-
-// Athlet-Vorschläge für Autocomplete
-async function ladeAthletVorschlaege(suchbegriff) {
-  if (!suchbegriff || suchbegriff.length < 2) return [];
-  try {
-    const [profile, teilnahmen] = await Promise.all([
-      ladeAthletenProfile(suchbegriff),
-      Backend.client.from('achievement_participants')
-        .select('participant_role')
-        .ilike('participant_role', `%${suchbegriff}%`)
-        .limit(10)
-        .then(r => r.data || [])
-    ]);
-    const namen = new Set([
-      ...profile.map(p => p.name),
-      ...teilnahmen.map(t => t.participant_role).filter(Boolean),
-    ]);
-    return [...namen].slice(0, 8);
-  } catch(e) { return []; }
 }
 
 function ladeGespeicherteVeranstaltungen() {
@@ -10399,23 +10225,9 @@ function speichereVeranstaltung(daten) {
   const liste = ladeGespeicherteVeranstaltungen();
   const id = 'av_' + Date.now();
   const eintrag = { id, ...daten, gespeichertAm: new Date().toISOString() };
-  liste.unshift(eintrag);
+  liste.unshift(eintrag); // Neueste zuerst
+  // Maximal 10 gespeicherte Veranstaltungen
   localStorage.setItem('slzb_av_veranstaltungen', JSON.stringify(liste.slice(0, 10)));
-
-  // Asynchron: competition_id aus DB holen und nachträglich speichern
-  if (daten.veranstaltung) {
-    DB.getOderErstelleWettbewerb(daten.veranstaltung, new Date().toISOString().slice(0,10))
-      .then(competitionId => {
-        if (!competitionId) return;
-        const aktuelle = ladeGespeicherteVeranstaltungen();
-        const idx = aktuelle.findIndex(v => v.id === id);
-        if (idx >= 0) {
-          aktuelle[idx].competitionId = competitionId;
-          localStorage.setItem('slzb_av_veranstaltungen', JSON.stringify(aktuelle));
-        }
-      })
-      .catch(() => {}); // Fehler ignorieren - nicht kritisch
-  }
   return id;
 }
 
@@ -10604,12 +10416,12 @@ async function erstelleAthletenVorstellung() {
   const ort = document.getElementById('av-ort')?.value.trim() || '';
   const sportart = document.getElementById('av-sportart')?.value.trim();
   const format = document.getElementById('av-format')?.value || 'carousel';
-  // Schema-Validierung
-  const avFehler = validiereNachSchema(
-    { veranstaltung, sportart, ort },
-    VALIDIERUNGSREGELN.veranstaltung
-  );
-  if (!zeigeValidierungsFehler(avFehler)) return;
+  if (!veranstaltung) { toast('Bitte Veranstaltungsname eingeben', 'warning'); return; }
+  // Zusätzliche Schema-Validierung wenn verfügbar
+  if (typeof validiereNachSchema === 'function' && typeof VALIDIERUNGSREGELN !== 'undefined' && VALIDIERUNGSREGELN.veranstaltung) {
+    const avFehler = validiereNachSchema({ veranstaltung, sportart, ort }, VALIDIERUNGSREGELN.veranstaltung);
+    if (avFehler.length) { toast(avFehler[0], 'warning'); return; }
+  }
 
   const athletenDivs = [...document.querySelectorAll('[id^="av-athlet-"]')];
   if (!athletenDivs.length) { toast('Bitte mindestens einen Athleten hinzufügen', 'warning'); return; }
