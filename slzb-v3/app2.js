@@ -9631,9 +9631,12 @@ async function apFuegeAuswahlZuVeranstaltungHinzu(veranstaltungsId) {
   };
   zeigeAthletenVorstellungMitDaten();
   setTimeout(async () => {
-    for (const p of profile) { await apProfilWaehlen(p); await new Promise(r=>setTimeout(r,200)); }
+    for (const p of profile) {
+      await apProfilWaehlen(p, false); // false = Modal nicht schließen
+      await new Promise(r=>setTimeout(r,300));
+    }
     toast('✅ '+profile.length+' Athlet(en) zu "'+v.veranstaltung+'" hinzugefügt', 'success');
-  }, 400);
+  }, 800);
 }
 
 async function apFuegeAuswahlZuNeuerVeranstaltung() {
@@ -9643,9 +9646,13 @@ async function apFuegeAuswahlZuNeuerVeranstaltung() {
   window._avGespeicherteDaten = null;
   zeigeAthletenVorstellung();
   setTimeout(async () => {
-    for (const p of profile) { await apProfilWaehlen(p); await new Promise(r=>setTimeout(r,200)); }
+    for (const p of profile) { await apProfilWaehlen(p, false); await new Promise(r=>setTimeout(r,300)); }
     toast('✅ '+profile.length+' Athlet(en) hinzugefügt – bitte Veranstaltungsname eingeben', 'info');
-  }, 400);
+    setTimeout(() => {
+      const el = document.getElementById('av-veranstaltung');
+      if (el) { el.focus(); el.select(); }
+    }, 200);
+  }, 800);
 }
 
 // ── Schnell-Meldung direkt aus Profil ────────────────────────────
@@ -10268,6 +10275,7 @@ function avSpeichereWorkspace() {
 
 function zeigeVeranstaltungsWorkspace() {
   const liste = ladeGespeicherteVeranstaltungen();
+  console.log('[Workspace] Gespeicherte Veranstaltungen:', liste.length, liste.map(v=>v.veranstaltung));
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   const modal = document.createElement('div');
@@ -10417,11 +10425,6 @@ async function erstelleAthletenVorstellung() {
   const sportart = document.getElementById('av-sportart')?.value.trim();
   const format = document.getElementById('av-format')?.value || 'carousel';
   if (!veranstaltung) { toast('Bitte Veranstaltungsname eingeben', 'warning'); return; }
-  // Zusätzliche Schema-Validierung wenn verfügbar
-  if (typeof validiereNachSchema === 'function' && typeof VALIDIERUNGSREGELN !== 'undefined' && VALIDIERUNGSREGELN.veranstaltung) {
-    const avFehler = validiereNachSchema({ veranstaltung, sportart, ort }, VALIDIERUNGSREGELN.veranstaltung);
-    if (avFehler.length) { toast(avFehler[0], 'warning'); return; }
-  }
 
   const athletenDivs = [...document.querySelectorAll('[id^="av-athlet-"]')];
   if (!athletenDivs.length) { toast('Bitte mindestens einen Athleten hinzufügen', 'warning'); return; }
