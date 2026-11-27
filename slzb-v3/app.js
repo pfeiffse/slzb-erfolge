@@ -25,6 +25,38 @@ function esc(str) {
   if (!str) return '';
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+// ── Status-Vereinfachung für Trainer ─────────────────────────────
+function statusFuerTrainer(status) {
+  // Trainer sehen vereinfachte Status
+  const map = {
+    'Entwurf':                      { label: '📝 Entwurf',        cls: 'entwurf',     info: 'Noch nicht eingereicht' },
+    'Eingereicht':                  { label: '📤 Eingereicht',    cls: 'eingereicht', info: 'Wird geprüft' },
+    'Rückfrage an Melder':          { label: '💬 Rückfrage',      cls: 'rueckfrage',  info: 'Bitte antworten' },
+    'Unvollständig':                { label: '⚠️ Unvollständig',  cls: 'rueckfrage',  info: 'Bitte ergänzen' },
+    'Datenprüfung':                 { label: '🔍 In Prüfung',     cls: 'eingereicht', info: 'Wird bearbeitet' },
+    'Dublettenverdacht':            { label: '🔍 In Prüfung',     cls: 'eingereicht', info: 'Wird bearbeitet' },
+    'Einwilligungsprüfung':         { label: '🔍 In Prüfung',     cls: 'eingereicht', info: 'Wird bearbeitet' },
+    'Redaktion':                    { label: '✏️ In Bearbeitung', cls: 'eingereicht', info: 'Redaktion prüft' },
+    'Freigabe Öffentlichkeitsarbeit':{ label: '✏️ In Bearbeitung',cls: 'eingereicht', info: 'Fast fertig' },
+    'Teilweise freigegeben':        { label: '✅ Freigegeben',    cls: 'freigegeben', info: 'Teilweise veröffentlicht' },
+    'Freigegeben':                  { label: '✅ Freigegeben',    cls: 'freigegeben', info: 'Bereit zur Veröffentlichung' },
+    'Veröffentlicht':               { label: '🌐 Veröffentlicht', cls: 'veroeffentlicht', info: 'Online sichtbar' },
+    'Archiviert':                   { label: '🗄️ Archiviert',    cls: 'archiviert',  info: 'Abgeschlossen' },
+    'Wegen Einwilligung gesperrt':  { label: '🔒 Gesperrt',       cls: 'gesperrt',    info: 'Datenschutz-Problem' },
+    'Widerrufen':                   { label: '🔒 Gesperrt',       cls: 'gesperrt',    info: 'Widerrufen' },
+    'Zur Löschung vorgemerkt':      { label: '🗑️ Wird gelöscht', cls: 'geloescht',   info: 'Zur Löschung markiert' },
+    'Gelöscht/Anonymisiert':        { label: '🗑️ Gelöscht',      cls: 'geloescht',   info: 'Gelöscht' },
+  };
+  return map[status] || { label: status, cls: 'entwurf', info: '' };
+}
+
+// Status-Badge mit Tooltip für Trainer
+function statusBadgeTrainer(status) {
+  const s = statusFuerTrainer(status);
+  return `<span class="badge badge-${s.cls}" title="${esc(s.info)}">${s.label}</span>`;
+}
+
 function statusBadge(status) {
   const map={
     'Entwurf':'entwurf','Unvollständig':'unvollstaendig','Eingereicht':'eingereicht',
@@ -1748,15 +1780,49 @@ async function sammelCSVInRaster() {
   } catch(e) { toast('Fehler: '+e.message,'danger'); }
 }
 
+
+// Auto-Fill: Sportart aus Profil wenn Athlet-Name eingegeben
+let _autoFillTimer = null;
+async function fuelleAthletAusProfil(name) {
+  clearTimeout(_autoFillTimer);
+  if (!name || name.length < 3) return;
+  _autoFillTimer = setTimeout(async () => {
+    try {
+      const profile = await ladeAthletenProfile(name);
+      if (!profile.length) return;
+      const profil = profile[0]; // Bestes Match
+      // Sportart vorausfüllen wenn noch leer
+      const sportartEl = document.getElementById('f-sportart-text');
+      if (sportartEl && !sportartEl.value && profil.sportart) {
+        sportartEl.value = profil.sportart;
+        // Kleiner Hinweis
+        const hint = sportartEl.parentNode.querySelector('.field-hint');
+        if (hint) hint.textContent = `✅ Aus Profil: ${profil.name}`;
+      }
+    } catch(e) { /* Profil nicht gefunden - kein Problem */ }
+  }, 600);
+}
+
 async function renderMeineMeldungen() {
   const r = Auth.rolle();
   const filter = r==='admin' ? {} : { melderId: Auth.id() };
   const meldungen = await ladeErfolge();
   const gefiltert = r==='admin' ? meldungen : meldungen.filter(e=>e.melderId===Auth.id());
+  const istTrainer = ['trainer','mitarbeiter','schueler'].includes(r);
   return `<div class="page">
-    <div class="page-header"><h1>📋 Meine Meldungen</h1><p>${gefiltert.length} Meldung(en).</p></div>
-    <div class="card"><div class="table-wrap"><table>
-      <thead><tr><th>Nr.</th><th>Titel</th><th>Art</th><th>Sportart</th><th>Datum</th><th>Status</th><th>Eingereicht</th><th></th></tr></thead>
+    <div class="page-header">
+      <h1>📋 Meine Meldungen</h1>
+      <p>${gefiltert.length} Meldung(en)
+        ${istTrainer ? ' · <span style="font-size:.8rem;color:var(--slzb-text-muted)">Klicke auf eine Meldung für Details</span>' : ''}
+      </p>
+    </div>
+    ${istTrainer && gefiltert.filter(e=>e.status==='Rückfrage an Melder').length > 0 ? `
+      <div class="alert alert-warning mb-3">
+        <span class="alert-icon">💬</span>
+        <span><strong>${gefiltert.filter(e=>e.status==='Rückfrage an Melder').length} Rückfrage(n)</strong> warten auf deine Antwort</span>
+      </div>` : ''}
+    <div class="card"><div class="table-wrap mobile-cards"><table>
+      <thead><tr><th>Nr.</th><th>Titel</th><th>Sportart</th><th>Datum</th><th>Status</th><th></th></tr></thead>
       <tbody>${gefiltert.length===0?'<tr><td colspan="8" class="text-center text-muted" style="padding:30px">Keine Meldungen.</td></tr>':
         gefiltert.map(e=>`<tr class="clickable" onclick="navigateTo('erfolg-detail',{currentErfolgId:'${e.id}'})">
           <td class="text-xs text-muted">${esc(e.erfolgNr||'–')}</td>
@@ -1764,7 +1830,7 @@ async function renderMeineMeldungen() {
           <td class="text-sm">${esc(e.meldungsart)}</td>
           <td class="text-sm">${esc(e.sportartText||'–')}</td>
           <td class="text-sm">${fmt(e.datum)}</td>
-          <td>${statusBadge(e.status)}</td>
+          <td>${istTrainer ? statusBadgeTrainer(e.status) : statusBadge(e.status)}</td>
           <td class="text-sm text-muted">${fmtDT(e.eingangsdatum)}</td>
           <td><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();navigateTo('erfolg-detail',{currentErfolgId:'${e.id}'})">→</button></td>
         </tr>`).join('')}
