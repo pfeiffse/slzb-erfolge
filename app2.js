@@ -10245,9 +10245,35 @@ function loescheGespeicherteVeranstaltung(id) {
 
 
 function avSpeichereWorkspace() {
-  const opts = window._avOptsBase;
-  const athleten = window._avAthleten;
-  if (!opts || !athleten?.length) { toast('Keine Daten zum Speichern', 'warning'); return; }
+  // Daten aus Formular-Feldern lesen (falls noch kein Vorschau-Modal geöffnet war)
+  let opts = window._avOptsBase;
+  let athleten = window._avAthleten;
+
+  // Fallback: direkt aus Formular lesen
+  if (!opts) {
+    const veranstaltung = document.getElementById('av-veranstaltung')?.value.trim();
+    const ort = document.getElementById('av-ort')?.value.trim() || '';
+    const sportart = document.getElementById('av-sportart')?.value.trim() || '';
+    if (!veranstaltung) { toast('Bitte zuerst Veranstaltungsname eingeben', 'warning'); return; }
+    opts = { veranstaltung, ort, sportart, teamfoto: null };
+  }
+  if (!athleten?.length) {
+    // Athleten aus Formular lesen
+    const divs = [...document.querySelectorAll('[id^="av-athlet-"]')];
+    athleten = divs.map(div => {
+      const idMatch = div.id.match(/av-athlet-(\d+)/);
+      if (!idMatch) return null;
+      const id = idMatch[1];
+      const vorname = document.getElementById()?.value.trim() || '';
+      const nachname = document.getElementById()?.value.trim() || '';
+      if (!vorname && !nachname) return null;
+      return { vorname, nachname, name: (vorname+" "+nachname).trim(),
+               kader: document.getElementById(`av-kader-${id}`)?.value.trim() || '',
+               bildUrl: window[`_avBildObj_${id}`]?.src || null };
+    }).filter(Boolean);
+  }
+  if (!opts?.veranstaltung) { toast('Bitte Veranstaltungsname eingeben', 'warning'); return; }
+  if (!athleten?.length) { toast('Bitte mindestens einen Athleten hinzufügen', 'warning'); return; }
 
   const daten = {
     veranstaltung: opts.veranstaltung,
