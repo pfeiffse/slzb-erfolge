@@ -426,7 +426,7 @@ async function renderDashboard() {
       <div class="card-body">
         <div id="quick-actions-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px">
           ${Auth.canDo('erfassen') ? `
-            <button class=\"btn btn-primary\" onclick=\"APP.selectedMeldungsart='Einzelerfolg';navigateTo('neue-meldung')\" style=\"height:64px;flex-direction:column;gap:4px\" title=\"Einzelerfolg melden\">
+            <button class=\"btn btn-primary\" onclick=\"zeigeSportmeldungsartAuswahl()\" style=\"height:64px;flex-direction:column;gap:4px\" title=\"Sporterfolg melden\">
               <span style=\"font-size:1.4rem\">&#127941;</span>
               <span style=\"font-size:.8rem\">Sporterfolg</span>
             </button>
@@ -605,6 +605,44 @@ function renderNeueMeldung() {
 
 
 // Meldungsart-Auswahl Modal
+
+// Sportmeldungsart-Auswahl (nur Sporterfolge)
+function zeigeSportmeldungsartAuswahl() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.maxWidth = '520px';
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>&#127941; Sporterfolg melden</h3>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.85rem;color:var(--slzb-text-muted);margin-bottom:16px">
+        Welche Art von Sporterfolg möchtest du melden?
+      </p>
+      <div class="meldungsart-grid">
+        ${[
+          {art:'Einzelerfolg',     icon:'&#127941;', desc:'Ein Schüler, ein Ergebnis',           empfohlen:true},
+          {art:'Teamerfolg',       icon:'&#127942;', desc:'Mehrere Schüler, gemeinsames Ergebnis',empfohlen:true},
+          {art:'Sammelmeldung',    icon:'&#128202;', desc:'Mehrere Erfolge auf einmal eingeben',  empfohlen:true},
+          {art:'Mehrtitel-Athlet', icon:'&#127941;', desc:'Ein Athlet, mehrere Titel'},
+          {art:'Veranstaltungs-Bilanz', icon:'&#127963;', desc:'Gesamtergebnis einer Veranstaltung'},
+          {art:'Minimalmeldung',   icon:'&#9889;',   desc:'Schnellmeldung, Details folgen später'},
+        ].map(m=>`<div class="meldungsart-card" onclick="APP.selectedMeldungsart='${m.art}';navigateTo('neue-meldung');this.closest('.modal-overlay').remove()">
+          ${m.empfohlen?'<div style=\"position:absolute;top:6px;right:6px;background:#E2001A;color:#fff;font-size:.6rem;font-weight:700;padding:1px 5px;border-radius:8px\">&#9733; Häufig</div>':''}
+          <div class="meldungsart-icon">${m.icon}</div>
+          <div class="meldungsart-title">${m.art}</div>
+          <div class="meldungsart-desc">${m.desc}</div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  overlay.appendChild(modal);
+  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
 function zeigeMeldungsartAuswahl() {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
