@@ -429,9 +429,9 @@ async function renderDashboard() {
       <div class="card-body">
         <p style="font-size:.75rem;color:#888;font-weight:700;letter-spacing:2px;margin-bottom:8px">SPORTLICHE ERFOLGE</p>
         <div class="meldungsart-grid">
-          ${[{art:'Einzelerfolg',icon:'🏅',desc:'Ein Schüler, ein Ergebnis'},
-             {art:'Teamerfolg',icon:'🏆',desc:'Mehrere Schüler, gemeinsames Ergebnis'},
-             {art:'Sammelmeldung',icon:'📊',desc:'Import / Schnelleingabe'},
+          ${[{art:'Einzelerfolg',icon:'🏅',desc:'Ein Schüler, ein Ergebnis',empfohlen:true},
+             {art:'Teamerfolg',icon:'🏆',desc:'Mehrere Schüler, gemeinsames Ergebnis',empfohlen:true},
+             {art:'Sammelmeldung',icon:'📊',desc:'Import / Schnelleingabe',empfohlen:true},
              {art:'Fertiger Artikel',icon:'📰',desc:'Text mit KI-Extraktion'},
              {art:'Minimalmeldung',icon:'⚡',desc:'Schnellmeldung, Details folgen'},
           ].map(m=>`<div class="meldungsart-card" onclick="APP.selectedMeldungsart='${m.art}';navigateTo('neue-meldung')">
@@ -736,7 +736,24 @@ function renderEinzelerfolgForm() {
       <button class="btn btn-primary" onclick="speichereErfolg('Eingereicht','Einzelerfolg')">📤 Einreichen</button>
     </div></div>
   </div>`;
-  setTimeout(()=>{ bindKerndatenAC(); }, 100);
+  setTimeout(()=>{
+    bindKerndatenAC();
+    // Smarte Defaults setzen
+    const datumEl = document.getElementById('f-datum');
+    if (datumEl && !datumEl.value) {
+      datumEl.value = new Date().toISOString().slice(0,10); // Heute
+    }
+    const ebeneEl = document.getElementById('f-ebene');
+    if (ebeneEl && !ebeneEl.value) {
+      ebeneEl.value = 'Bundesebene'; // Häufigster Wert
+    }
+    // Sportart aus letzter Meldung vorausfüllen
+    const letztesMeldung = APP._erfolgeCache?.find(e => e.melderId === Auth.id());
+    if (letztesMeldung?.sportartText) {
+      const sportEl = document.getElementById('f-sportart-text');
+      if (sportEl && !sportEl.value) sportEl.value = letztesMeldung.sportartText;
+    }
+  }, 100);
   return html;
 }
 
@@ -1870,6 +1887,38 @@ async function renderRueckfragen() {
 }
 
 // ── Redaktionsübersicht ──────────────────────────────────────
+
+// ── Batch-Freigabe ────────────────────────────────────────────────
+function batchSelectAll(checkbox, gruppeId) {
+  document.querySelectorAll(`.batch-${gruppeId}`).forEach(cb => {
+    cb.checked = checkbox.checked;
+  });
+}
+
+async function batchFreigeben(event) {
+  event.stopPropagation();
+  const checked = [...document.querySelectorAll('.batch-eingereicht:checked')];
+  if (!checked.length) { toast('Bitte Meldungen auswählen', 'warning'); return; }
+
+  const ok = await slzbConfirm(
+    `${checked.length} Meldung(en) freigeben?`,
+    { titel: 'Batch-Freigabe', icon: '✅', bestaetigenText: 'Alle freigeben', typ: 'default' }
+  );
+  if (!ok) return;
+
+  let erfolg = 0;
+  for (const cb of checked) {
+    try {
+      await DB.statusWechsel(cb.value, 'Freigegeben', 'Batch-Freigabe');
+      erfolg++;
+    } catch(e) { console.warn('Batch-Fehler:', e.message); }
+  }
+
+  toast(`✅ ${erfolg} von ${checked.length} Meldungen freigegeben`, 'success');
+  APP._erfolgeCache = null;
+  navigateTo('redaktion');
+}
+
 async function renderRedaktion() {
   const alle = await ladeErfolge();
   const gruppen = [
@@ -1888,7 +1937,12 @@ async function renderRedaktion() {
         <h1>✏️ Redaktionsübersicht</h1>
         <p class="text-muted">${gesamt} Meldung(en) in Bearbeitung · <span style="font-size:.8rem;color:#888">Drag & Drop zum Verschieben</span></p>
       </div>
-      <button class="btn btn-ghost btn-sm" onclick="ladeErfolge(true).then(()=>navigateTo('redaktion'))">↻ Aktualisieren</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-success btn-sm" onclick="batchFreigeben(event)" title="Ausgewählte Meldungen freigeben">
+          ✅ Auswahl freigeben
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="ladeErfolge(true).then(()=>navigateTo('redaktion'))">↻ Aktualisieren</button>
+      </div>
     </div>
 
     <!-- Drag & Drop Kanban -->
@@ -1968,7 +2022,10 @@ async function renderRedaktion() {
             <td data-label="Sportart" class="text-sm">${esc(e.sportart||'–')}</td>
             <td data-label="Datum" class="text-sm">${fmt(e.datum)}</td>
             <td data-label="Athlet" class="text-sm">${esc(e.athletenName||'–')}</td>
-            <td onclick="event.stopPropagation()">
+            <td onclick="event.stopPropagation()" style="white-space:nowrap">
+              <input type="checkbox" class="batch-cb batch-redaktion" value="${e.id}"
+                style="width:16px;height:16px;accent-color:#003366;margin-right:6px;vertical-align:middle"
+                onclick="event.stopPropagation()">
               <button class="btn btn-primary btn-sm" onclick="navigateTo('erfolg-detail',{currentErfolgId:'${e.id}'})">Prüfen →</button>
             </td>
           </tr>`).join('')}
