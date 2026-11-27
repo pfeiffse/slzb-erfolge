@@ -4561,6 +4561,7 @@ async function ladeKalenderEintraege() {
 // Neuen Kalender-Eintrag erstellen / bearbeiten
 function zeigeKalenderEintragModal(eintrag = null) {
   const istNeu = !eintrag;
+  const istSlzbTermin = eintrag && !eintrag._eigener && !eintrag._id;
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   const modal = document.createElement('div');
@@ -4581,6 +4582,7 @@ function zeigeKalenderEintragModal(eintrag = null) {
   modal.innerHTML = `
     <div class="modal-header">
       <h3>${istNeu ? '➕ Neuer Kalender-Eintrag' : '✏️ Eintrag bearbeiten'}</h3>
+      ${istSlzbTermin ? '<div style="font-size:.75rem;color:rgba(255,255,255,.6);margin-top:2px">Wird als eigener Eintrag gespeichert</div>' : ''}
       <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
     </div>
     <div class="modal-body">
@@ -4588,6 +4590,8 @@ function zeigeKalenderEintragModal(eintrag = null) {
         <div class="form-group">
           <label style="font-weight:600">Datum <span class="required">*</span></label>
           <input type="date" id="ke-datum" value="${eintrag?.datum||''}" style="width:100%">
+          <input type="hidden" id="ke-original-name" value="${eintrag?.veranstaltung||''}">
+          <input type="hidden" id="ke-ist-slzb-termin" value="${istSlzbTermin?'1':'0'}">
         </div>
         <div class="form-group">
           <label style="font-weight:600">Datum bis <span class="text-muted text-xs">(optional)</span></label>
@@ -4655,11 +4659,16 @@ async function speichereKalenderEintrag(id) {
     }
   }
 
+  const originalName = document.getElementById('ke-original-name')?.value || '';
+  const istSlzbTerminSpeichern = document.getElementById('ke-ist-slzb-termin')?.value === '1';
+
   const daten = {
     datum, datum_bis: datumBis, datum_anzeige: datumAnzeige,
     sportart, veranstaltung, ort, klasse,
     prioritaet: prio, prioritaet_text: prioTexte[prio] || '4 – Regulär',
     erstellt_von: Auth.id(), geaendert_am: new Date().toISOString(),
+    // Bei SLZB_TERMINE-Überschreibung: Original-Name speichern zum Filtern
+    ...(istSlzbTerminSpeichern && originalName ? { ueberschreibt: originalName } : {}),
   };
 
   let error;
@@ -4691,7 +4700,19 @@ async function renderKalender() {
   const aktJahr = jetzt.getFullYear();
 
   // Termine aus SLZB_TERMINE (termine.js)
-  const alleTermine = [...((typeof SLZB_TERMINE !== 'undefined') ? SLZB_TERMINE : []), ...(typeof eigeneEintraege !== 'undefined' ? eigeneEintraege : [])];
+  // Eigene Einträge die SLZB_TERMINE überschreiben
+  const ueberschriebeneNamen = new Set(
+    (eigeneEintraege || [])
+      .filter(e => e.ueberschreibt)
+      .map(e => e.ueberschreibt)
+  );
+
+  const alleTermine = [
+    // SLZB_TERMINE ohne überschriebene Einträge
+    ...((typeof SLZB_TERMINE !== 'undefined') ? SLZB_TERMINE.filter(t => !ueberschriebeneNamen.has(t.veranstaltung)) : []),
+    // Eigene Einträge
+    ...(eigeneEintraege || [])
+  ];
 
   // Filter-State
   const state = window._kalenderState || {
@@ -4815,7 +4836,10 @@ async function renderKalender() {
             <td class="text-sm text-muted">${esc(t.ort||'–')}</td>
             <td class="text-sm text-muted">${esc(t.klasse||'–')}</td>
             <td><span style="color:${prioFarbe(t.prioritaet)};font-size:.75rem;font-weight:700">${prioLabel(t.prioritaet)}</span></td>
-            <td><button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:2px 8px" onclick="kalenderCountdown(${JSON.stringify(t).replace(/"/g,'&quot;')})">⏳</button></td>
+            <td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:2px 8px" onclick="kalenderCountdown(${JSON.stringify(t).replace(/"/g,'&quot;')})">⏳</button></td>
+              ${(Auth.canDo('redaktion') || t._eigener) ? `<button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:2px 6px" title="Bearbeiten" onclick="zeigeKalenderEintragModal(${JSON.stringify(t).replace(/\"/g,'&quot;')})">✏️</button>` : ''}
+              ${t._eigener ? `<button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:2px 6px;color:#E2001A" title="Löschen" onclick="loescheKalenderEintrag('${t._id}')">🗑️</button>` : ''}
+            </td>
           </tr>`;}).join('')}
         </tbody>
       </table></div>
