@@ -1,3 +1,39 @@
+
+// ── Modal-Schutz vor versehentlichem Außen-Klick ─────────────────────────────
+// Für Formular-Modals: kein Schließen bei Außen-Klick, stattdessen Wackeln
+function schutzeModalVorAussenklick(overlay, modal) {
+  overlay.addEventListener('click', ev => {
+    if (ev.target !== overlay) return;
+    // Wackeln-Animation statt Schließen
+    if (!document.getElementById('modal-shake-style')) {
+      const s = document.createElement('style');
+      s.id = 'modal-shake-style';
+      s.textContent = `
+        @keyframes modal-shake {
+          0%,100% { transform: translateX(0); }
+          20%      { transform: translateX(-8px); }
+          40%      { transform: translateX(8px); }
+          60%      { transform: translateX(-5px); }
+          80%      { transform: translateX(5px); }
+        }
+        .modal-shake { animation: modal-shake 0.35s ease; }
+      `;
+      document.head.appendChild(s);
+    }
+    if (modal && !modal.classList.contains('modal-shake')) {
+      modal.classList.add('modal-shake');
+      setTimeout(() => modal.classList.remove('modal-shake'), 380);
+    }
+  });
+}
+
+// Einfaches Schließen bei Außen-Klick (für Info-Modals ohne Formulare)
+function schliesseModalBeiAussenklick(overlay) {
+  overlay.addEventListener('click', ev => {
+    if (ev.target === overlay) overlay.remove();
+  });
+}
+
 // ============================================================
 // SLZB-Erfolge v3 – App-Logik Teil 2
 // ============================================================
@@ -1369,7 +1405,7 @@ async function zeigeA3Vorschau(erfolgId) {
       }
     };
     overlay.appendChild(modal);
-    overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
+    schutzeModalVorAussenklick(overlay, modal);
     document.body.appendChild(overlay);
 
     // Variante 1 als Standard
@@ -1428,7 +1464,7 @@ async function zeigeBildschirmModal(erfolgId) {
     modal.querySelector('.close-btn').onclick = ()=>overlay.remove();
     modal.querySelector('.dl-png').onclick = ()=>exportPosterPNG(e,'screen-canvas');
     overlay.appendChild(modal);
-    overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
+    schutzeModalVorAussenklick(overlay, modal);
     document.body.appendChild(overlay);
     // Modus-Select dynamisch einfügen
     const _infoEl = document.getElementById('screen-format-info');
@@ -1517,7 +1553,7 @@ async function zeigeSocialModal(erfolgId) {
     const igBtn = modal.querySelector('.ig-share');
     if (igBtn) igBtn.onclick = ()=>teileAufInstagram('social-canvas');
     overlay.appendChild(modal);
-    overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
+    schutzeModalVorAussenklick(overlay, modal);
     document.body.appendChild(overlay);
 
     // Aktuelles Format merken
@@ -3539,7 +3575,7 @@ function zeigeNachwuchswahlModal() {
   modal.querySelector('.close-x').onclick = ()=>overlay.remove();
   modal.querySelector('.close-btn').onclick = ()=>overlay.remove();
   overlay.appendChild(modal);
-  overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
+  schutzeModalVorAussenklick(overlay, modal);
   document.body.appendChild(overlay);
   window._nwModus = 'monat';
   window._nwKandidaten = [];
@@ -3745,7 +3781,7 @@ function zeigeCountdownModal() {
   modal.querySelector('.close-x').onclick = ()=>overlay.remove();
   modal.querySelector('.close-btn').onclick = ()=>overlay.remove();
   overlay.appendChild(modal);
-  overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
+  schutzeModalVorAussenklick(overlay, modal);
   document.body.appendChild(overlay);
   window._cdFormat = 'hochformat';
   // Datum vorausfüllen (morgen)
@@ -4011,7 +4047,7 @@ function zeigeJubilaeumModal() {
   modal.querySelector('.close-x').onclick = ()=>overlay.remove();
   modal.querySelector('.close-btn').onclick = ()=>overlay.remove();
   overlay.appendChild(modal);
-  overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
+  schutzeModalVorAussenklick(overlay, modal);
   document.body.appendChild(overlay);
   window._jubFormat = 'hochformat';
   const morgen = new Date(); morgen.setHours(0,0,0,0);
@@ -4145,7 +4181,7 @@ function zeigeFotoKarussellModal() {
   modal.querySelector('.close-x').onclick = () => overlay.remove();
   modal.querySelector('.close-btn').onclick = () => overlay.remove();
   overlay.appendChild(modal);
-  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  schutzeModalVorAussenklick(overlay, modal);
   document.body.appendChild(overlay);
 
   // Heutiges Datum vorausfüllen
@@ -4315,7 +4351,7 @@ async function zeigeFotoKarussellVorschau() {
     </div>`;
 
   overlay.appendChild(modal);
-  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  schutzeModalVorAussenklick(overlay, modal);
   document.body.appendChild(overlay);
 
   window._fkvAktuellerIdx = 0;
@@ -4673,7 +4709,7 @@ function zeigeSchulnachrichtModal() {
   modal.querySelector('.close-x').onclick = ()=>overlay.remove();
   modal.querySelector('.close-btn').onclick = ()=>overlay.remove();
   overlay.appendChild(modal);
-  overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
+  schutzeModalVorAussenklick(overlay, modal);
   document.body.appendChild(overlay);
   window._snFormat = 'hochformat';
   const heute = new Date();
@@ -4837,7 +4873,7 @@ function zeigeKalenderEintragModal(eintrag = null) {
     </div>`;
 
   overlay.appendChild(modal);
-  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  schutzeModalVorAussenklick(overlay, modal);
   document.body.appendChild(overlay);
 }
 
@@ -5040,7 +5076,7 @@ async function kalenderZeigeAktuell() {
     </div>`;
 
   overlay.appendChild(modal);
-  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  schutzeModalVorAussenklick(overlay, modal);
   document.body.appendChild(overlay);
 }
 
@@ -5503,7 +5539,7 @@ async function zeigeDublettenModal(erfolgId) {
     modal.querySelector('.close-x').onclick = ()=>overlay.remove();
     modal.querySelector('.close-btn').onclick = ()=>overlay.remove();
     overlay.appendChild(modal);
-    overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
+    schutzeModalVorAussenklick(overlay, modal);
     document.body.appendChild(overlay);
 
   } catch(err) {
@@ -5658,7 +5694,7 @@ function zeigeVideoModal(erfolgId, aktuelleUrl='') {
   modal.querySelector('.close-x').onclick = ()=>overlay.remove();
   modal.querySelector('.close-btn').onclick = ()=>overlay.remove();
   overlay.appendChild(modal);
-  overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
+  schutzeModalVorAussenklick(overlay, modal);
   document.body.appendChild(overlay);
 
   // Vorschau sofort aktualisieren wenn URL vorhanden
@@ -7321,7 +7357,7 @@ async function zeigeMeldungZusammenfassen(erfolgId) {
     </div>`;
 
   overlay.appendChild(modal);
-  overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
+  schutzeModalVorAussenklick(overlay, modal);
   document.body.appendChild(overlay);
 }
 
@@ -8099,7 +8135,7 @@ async function zeigeJahreswahl() {
     + '<button class="btn btn-primary" onclick="erstelleJahreswahl(\'aktiv\')">▶️ Aktivieren</button>'
     + '</div>';
   overlay.appendChild(modal);
-  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  schutzeModalVorAussenklick(overlay, modal);
   document.body.appendChild(overlay);
 }
 
@@ -8252,7 +8288,7 @@ async function zeigeJahreswahl() {
   modal.querySelector('#jahres-abbrechen').onclick = () => overlay.remove();
   modal.querySelector('#jahres-entwurf').onclick = () => erstelleJahreswahl('entwurf');
   modal.querySelector('#jahres-aktivieren').onclick = () => erstelleJahreswahl('aktiv');
-  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  schutzeModalVorAussenklick(overlay, modal);
   document.body.appendChild(overlay);
 }
 
@@ -8397,7 +8433,7 @@ function zeigeVotingErstellen() {
     </div>`;
 
   overlay.appendChild(modal);
-  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  schutzeModalVorAussenklick(overlay, modal);
   document.body.appendChild(overlay);
 
   // Bild-Vorschau für alle 7 Kandidaten
@@ -8510,7 +8546,7 @@ async function zeigeVotingAbstimmung(kampagneId) {
   modal.className = 'modal modal-xl';
   modal.innerHTML = '<div class="modal-body" style="text-align:center;padding:40px"><div class="spinner"></div><p>Lade Abstimmung...</p></div>';
   overlay.appendChild(modal);
-  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  schutzeModalVorAussenklick(overlay, modal);
   document.body.appendChild(overlay);
 
   try {
@@ -8714,7 +8750,7 @@ async function zeigeVotingErgebnis(kampagneId) {
     </div>`;
 
   overlay.appendChild(modal);
-  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  schutzeModalVorAussenklick(overlay, modal);
   document.body.appendChild(overlay);
 
   // Chart.js Balkendiagramm
@@ -9243,7 +9279,7 @@ function zeigeVotingLink(kampagneId) {
     </div>`;
 
   overlay.appendChild(modal);
-  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  schutzeModalVorAussenklick(overlay, modal);
   document.body.appendChild(overlay);
 }
 
@@ -9360,7 +9396,7 @@ async function bearbeiteVotingKampagne(kampagneId) {
     </div>`;
 
   overlay.appendChild(modal);
-  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  schutzeModalVorAussenklick(overlay, modal);
   document.body.appendChild(overlay);
   // IDs für speichereVotingBearbeitung merken
   window._veKandidatenIds = kandidaten.map(k2 => k2.id);
@@ -9544,7 +9580,7 @@ function zeigeAthletenVorstellung() {
       <button class=\"btn btn-ghost btn-sm\" onclick=\"zeigeVeranstaltungsWorkspace()\" title=\"Gespeicherte Veranstaltungen laden\">📋 Gespeicherte</button>\n      <button class=\"btn btn-ghost btn-sm\" onclick=\"zeigeAthletenProfileVerwaltung()\" title=\"Athleten-Profile verwalten\">👤 Profile</button>\n      <button class=\"btn btn-ghost\" onclick=\"this.closest(\\'.modal-overlay\\').remove()\">Abbrechen</button>\n      <button class=\"btn btn-primary\" onclick=\"erstelleAthletenVorstellung()\">🖼️ Erstellen & herunterladen</button>\n    </div>`;
 
   overlay.appendChild(modal);
-  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  schutzeModalVorAussenklick(overlay, modal);
   document.body.appendChild(overlay);
 
   // Bild-Cache leeren (außer wenn Zurück-Navigation)
@@ -9649,7 +9685,7 @@ async function zeigeAthletenBildarchiv(athletenId) {
     </div>`;
 
   overlay.appendChild(modal);
-  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  schutzeModalVorAussenklick(overlay, modal);
   document.body.appendChild(overlay);
 }
 
@@ -9840,7 +9876,7 @@ async function zeigeAthletenProfileVerwaltung() {
     </div>`;
 
   overlay.appendChild(modal);
-  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  schutzeModalVorAussenklick(overlay, modal);
   document.body.appendChild(overlay);
 }
 
@@ -9920,7 +9956,7 @@ function zeigeAthletProfilFormular(profil = null) {
     </div>`;
 
   overlay.appendChild(modal);
-  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  schutzeModalVorAussenklick(overlay, modal);
   document.body.appendChild(overlay);
 }
 
@@ -10188,7 +10224,7 @@ function zeigeSchnellMeldungAusProfil(profil) {
   window._smProfil = profil;
 
   overlay.appendChild(modal);
-  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  schutzeModalVorAussenklick(overlay, modal);
   document.body.appendChild(overlay);
 }
 
@@ -10433,7 +10469,7 @@ function zeigeErgebnisUpdateModal(veranstaltungsId) {
   window._euVeranstaltungsId = veranstaltungsId;
 
   overlay.appendChild(modal);
-  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  schutzeModalVorAussenklick(overlay, modal);
   document.body.appendChild(overlay);
 
   // Keyboard-Shortcuts: 1-8 für Platz
@@ -11083,7 +11119,7 @@ async function zeigeAthletenVorschau(athleten, opts_base, format) {
     </div>`;
 
   overlay.appendChild(modal);
-  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  schutzeModalVorAussenklick(overlay, modal);
   document.body.appendChild(overlay);
 
   // Globale Variablen für den Editor
@@ -11384,7 +11420,7 @@ async function zeigeVotingSiegerPoster(typ) {
         <button class="btn btn-primary" onclick="exportPosterPNG(window._votingSieger,'sieger-a3-canvas')">📥 PNG herunterladen</button>
       </div>`;
     overlay.appendChild(modal);
-    overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+    schutzeModalVorAussenklick(overlay, modal);
     document.body.appendChild(overlay);
     window._a3Erfolg = sieger;
     setTimeout(async () => {
@@ -11414,7 +11450,7 @@ async function zeigeVotingSiegerPoster(typ) {
         <button class="btn btn-primary" onclick="exportPosterPNG(window._votingSieger,'sieger-bs-canvas')">📥 PNG herunterladen</button>
       </div>`;
     overlay.appendChild(modal);
-    overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+    schutzeModalVorAussenklick(overlay, modal);
     document.body.appendChild(overlay);
     setTimeout(async () => {
       await ladeMontserrat(); await ladeLogo();
@@ -11442,7 +11478,7 @@ async function zeigeVotingSiegerPoster(typ) {
         <button class="btn btn-primary" onclick="exportPosterPNG(window._votingSieger,'sieger-sm-canvas')">📥 PNG herunterladen</button>
       </div>`;
     overlay.appendChild(modal);
-    overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+    schutzeModalVorAussenklick(overlay, modal);
     document.body.appendChild(overlay);
     setTimeout(async () => {
       await ladeMontserrat(); await ladeLogo();
@@ -11502,7 +11538,7 @@ async function zeigeVotingAushang(kampagneId) {
     </div>`;
 
   overlay.appendChild(modal);
-  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  schutzeModalVorAussenklick(overlay, modal);
   document.body.appendChild(overlay);
 
   window._votingAushangKampagne = k;
@@ -12158,7 +12194,7 @@ function zeigeBildPositionEditor() {
     </div>`;
 
   overlay.appendChild(modal);
-  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  schutzeModalVorAussenklick(overlay, modal);
   document.body.appendChild(overlay);
 
   // Vorschau sofort laden
