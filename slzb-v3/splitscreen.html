@@ -1266,7 +1266,6 @@ if (params.get('autostart') === '1') {
   // Wenn keine Konfiguration gespeichert: GitHub-Modus als Standard
   const gespeichert = localStorage.getItem('slzb_splitscreen');
   if (!gespeichert) {
-    // Setze GitHub als Standard-Quelle
     const quelleEl = document.getElementById('cfg-vplan-quelle');
     if (quelleEl) { quelleEl.value = 'github'; vplanQuelleWechseln('github'); }
   }
@@ -1276,7 +1275,64 @@ if (params.get('autostart') === '1') {
     const quelleEl = document.getElementById('cfg-vplan-quelle');
     if (quelleEl) { quelleEl.value = quelleParam; vplanQuelleWechseln(quelleParam); }
   }
-  setTimeout(starteAnzeige, 500);
+
+  // Vollbild-Modus: ?fullscreen=1 oder ?autostart=1&fullscreen=1
+  const wantFullscreen = params.get('fullscreen') === '1' || params.get('autostart') === '1';
+
+  if (wantFullscreen) {
+    // Zeige kurzen "Klick zum Starten"-Overlay (Browser braucht User-Gesture für Vollbild)
+    const overlay = document.createElement('div');
+    overlay.id = 'fullscreen-start-overlay';
+    overlay.style.cssText = `
+      position: fixed; inset: 0; z-index: 99999;
+      background: linear-gradient(135deg, #003366, #001F4D);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      cursor: pointer; font-family: Arial, sans-serif;
+    `;
+    overlay.innerHTML = `
+      <img src="slzb-sport-erfolge-logo.png" alt="SLZB" 
+        style="height:80px;margin-bottom:24px;opacity:.9"
+        onerror="this.style.display='none'">
+      <div style="color:#fff;font-size:1.8rem;font-weight:700;margin-bottom:8px">
+        SLZB-Erfolge & Vertretungsplan
+      </div>
+      <div style="color:rgba(255,255,255,.6);font-size:1rem;margin-bottom:32px">
+        Schul- und Leistungssportzentrum Berlin
+      </div>
+      <div style="background:#E2001A;color:#fff;padding:16px 40px;border-radius:12px;
+                  font-size:1.1rem;font-weight:700;animation:live-pulse 1.5s ease-in-out infinite">
+        ▶ Anzeige starten
+      </div>
+      <div style="color:rgba(255,255,255,.3);font-size:.75rem;margin-top:16px">
+        Klicken oder beliebige Taste drücken
+      </div>
+    `;
+
+    const startVollbild = () => {
+      overlay.remove();
+      // Vollbild aktivieren
+      document.documentElement.requestFullscreen().catch(() => {});
+      setTimeout(starteAnzeige, 300);
+    };
+
+    overlay.addEventListener('click', startVollbild);
+    document.addEventListener('keydown', startVollbild, { once: true });
+    document.body.appendChild(overlay);
+
+    // Kiosk-Modus: Verhindere Verlassen des Vollbilds
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement && document.getElementById('layout')?.style.display !== 'none') {
+        // Vollbild wurde verlassen → nach 3s wieder aktivieren
+        setTimeout(() => {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }, 3000);
+      }
+    });
+
+  } else {
+    setTimeout(starteAnzeige, 500);
+  }
 } else {
   ladeKonfig();
 }
