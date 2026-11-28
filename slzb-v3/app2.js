@@ -9281,28 +9281,37 @@ async function zeigeVotingSiegerAusgaben(kandidatId, kampagneId) {
     </div>
     <div class="modal-body">
       <p class="text-muted mb-3">Erstelle Ausgaben für den Sieger der Abstimmung.</p>
-      <div class="grid grid-3" style="gap:12px">
-        <div class="card text-center">
-          <div class="card-body">
-            <div style="font-size:2rem">📄</div>
-            <div class="font-bold mt-2">A3-Aushang</div>
-            <button class="btn btn-primary btn-sm mt-3 w-full" onclick="this.closest('.modal-overlay').remove();zeigeVotingSiegerPoster('a3')">Erstellen</button>
-          </div>
+      <!-- Sieger-Info -->
+      <div style="background:linear-gradient(135deg,rgba(201,162,39,.15),rgba(201,162,39,.05));border:1px solid rgba(201,162,39,.3);border-radius:10px;padding:14px;margin-bottom:16px;display:flex;align-items:center;gap:14px">
+        ${k2.bild_url ? `<img src="${esc(k2.bild_url)}" style="width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid #C9A227">` : '<div style="width:60px;height:60px;border-radius:50%;background:#C9A227;display:flex;align-items:center;justify-content:center;font-size:1.8rem">🏆</div>'}
+        <div>
+          <div style="font-weight:800;font-size:1.1rem">${esc(k2.name)}</div>
+          <div style="font-size:.82rem;color:var(--slzb-text-muted)">${esc(k2.sportart||'')}${k2.klasse?' · '+esc(k2.klasse):''}</div>
+          <div style="font-size:.78rem;color:#C9A227;font-weight:700;margin-top:3px">🥇 ${siegerStimmen} Stimmen (${pct}%) von ${gesamt} gesamt</div>
         </div>
-        <div class="card text-center">
-          <div class="card-body">
-            <div style="font-size:2rem">🖥️</div>
-            <div class="font-bold mt-2">Bildschirm</div>
-            <button class="btn btn-primary btn-sm mt-3 w-full" onclick="this.closest('.modal-overlay').remove();zeigeVotingSiegerPoster('bildschirm')">Erstellen</button>
-          </div>
-        </div>
-        <div class="card text-center">
-          <div class="card-body">
-            <div style="font-size:2rem">📱</div>
-            <div class="font-bold mt-2">Social Media</div>
-            <button class="btn btn-primary btn-sm mt-3 w-full" onclick="this.closest('.modal-overlay').remove();zeigeVotingSiegerPoster('social')">Erstellen</button>
-          </div>
-        </div>
+      </div>
+
+      <!-- Ausgaben-Optionen -->
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px">
+        <button class="btn btn-outline" style="height:64px;flex-direction:column;gap:4px"
+          onclick="this.closest('.modal-overlay').remove();zeigeVotingSiegerPoster('a3')">
+          <span style="font-size:1.3rem">📄</span><span style="font-size:.8rem">A3-Aushang</span>
+        </button>
+        <button class="btn btn-outline" style="height:64px;flex-direction:column;gap:4px"
+          onclick="this.closest('.modal-overlay').remove();zeigeVotingSiegerPoster('social')">
+          <span style="font-size:1.3rem">📱</span><span style="font-size:.8rem">Social Media</span>
+        </button>
+        <button class="btn btn-outline" style="height:64px;flex-direction:column;gap:4px"
+          onclick="this.closest('.modal-overlay').remove();zeigeVotingSiegerPoster('bildschirm')">
+          <span style="font-size:1.3rem">🖥️</span><span style="font-size:.8rem">Bildschirm</span>
+        </button>
+        <button class="btn btn-primary" style="height:64px;flex-direction:column;gap:4px"
+          onclick="this.closest('.modal-overlay').remove();erstelleVotingSiegerMeldung('${kandidatId}','${kampagneId}')">
+          <span style="font-size:1.3rem">📋</span><span style="font-size:.8rem">Als Meldung speichern</span>
+        </button>
+      </div>
+      <div style="font-size:.75rem;color:var(--slzb-text-muted);text-align:center">
+        „Als Meldung speichern" erstellt einen Eintrag in der Redaktionsübersicht
       </div>
     </div>`;
 
@@ -9310,8 +9319,73 @@ async function zeigeVotingSiegerAusgaben(kandidatId, kampagneId) {
   window._votingSieger = fakeErfolg;
 
   overlay.appendChild(modal);
-  overlay.addEventListener('click', ev => { if(ev.target===overlay) overlay.remove(); });
+  schutzeModalVorAussenklick(overlay, modal);
   document.body.appendChild(overlay);
+}
+
+// Voting-Sieger als echte Meldung in der Datenbank speichern
+async function erstelleVotingSiegerMeldung(kandidatId, kampagneId) {
+  try {
+    const { data: k } = await Backend.client.from('voting_candidates').select('*').eq('id', kandidatId).single();
+    const { data: kamp } = await Backend.client.from('voting_campaigns').select('*').eq('id', kampagneId).single();
+    const { data: stimmen } = await Backend.client.from('voting_votes').select('candidate_id').eq('campaign_id', kampagneId);
+    const stimmenMap = {};
+    (stimmen||[]).forEach(s => { stimmenMap[s.candidate_id] = (stimmenMap[s.candidate_id]||0)+1; });
+    const gesamt = stimmen?.length || 0;
+    const siegerStimmen = stimmenMap[kandidatId] || 0;
+    const pct = gesamt ? Math.round(siegerStimmen/gesamt*100) : 0;
+
+    const monatNamen = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+    const jetzt = new Date();
+    const monatLabel = kamp.monat
+      ? `${monatNamen[parseInt(kamp.monat.split('-')[1])-1]} ${kamp.monat.split('-')[0]}`
+      : `${monatNamen[jetzt.getMonth()]} ${jetzt.getFullYear()}`;
+
+    const titel = `${esc(k.name)} – Sportler/in des Monats ${monatLabel}`;
+        const kurzinfo = k.name + ' wurde mit ' + siegerStimmen + ' Stimmen (' + pct + '% von ' + gesamt + ' Stimmen) zur/zum Sportler/in des Monats ' + monatLabel + ' gewählt.' + (k.erfolg ? '\n\nErfolg: ' + k.erfolg : '');
+
+    const beteiligte = [{ schuelerId: null, anzeigename: k.name, rolle: 'Athlet', einwilligungsstatus: 'Nicht geprüft' }];
+
+    const result = await DB.erstelleErfolg({
+      titel,
+      sportartText: k.sportart || '',
+      sportartId: null,
+      wettbewerbText: kamp.titel,
+      wettbewerbId: null,
+      datum: jetzt.toISOString().slice(0,10),
+      ort: '',
+      ebene: 'Schulebene',
+      platzierung: 1,
+      medaille: 'Gold',
+      ergebnisText: `${siegerStimmen} Stimmen · ${pct}%`,
+      kurzinfo,
+      quelleUrl: '',
+      videoUrl: null,
+      meldungsart: 'Einzelerfolg',
+    }, beteiligte);
+
+    if (!result.ok) throw new Error(result.fehler || 'Unbekannter Fehler');
+
+    // Bild aus Voting übernehmen wenn vorhanden
+    if (k.bild_url) {
+      await Backend.client.from('achievement_media').insert([{
+        achievement_id: result.id,
+        storage_path: k.storage_path || k.bild_url,
+        original_name: 'voting_bild.jpg',
+        mime_type: 'image/jpeg',
+        creator: 'SLZB-Abstimmung',
+        source: 'Sportler-des-Monats-Wahl',
+        uploaded_by: Auth.id(),
+        created_at: new Date().toISOString(),
+      }]).catch(() => {}); // Fehler ignorieren wenn kein storage_path
+    }
+
+    toast(`✅ Meldung "${titel}" erstellt (${result.nr})`, 'success');
+    APP._erfolgeCache = null; // Cache leeren
+    navigateTo('erfolg-detail', { currentErfolgId: result.id });
+  } catch(e) {
+    toast('Fehler: ' + e.message, 'danger');
+  }
 }
 
 
