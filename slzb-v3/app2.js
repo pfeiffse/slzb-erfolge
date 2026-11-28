@@ -3655,18 +3655,8 @@ async function zeichneHighlightKarte(canvasId, e, nr, gesamt) {
     ctx.fillText('SLZB Berlin', 20, 55);
   }
 
-  // Karussell-Nummer oben rechts
+  // Karussell-Nummer weggelassen – Instagram zeigt sie automatisch oben rechts an
   const monat = window._highlightMonat || '';
-  ctx.fillStyle = 'rgba(0,0,0,0.6)';
-  const numW = 90, numH = 36;
-  const numX = W - numW - 16, numY = 16;
-  ctx.beginPath();
-  ctx.roundRect(numX, numY, numW, numH, 8);
-  ctx.fill();
-  ctx.fillStyle = '#fff';
-  ctx.font = 'bold 16px Montserrat, Arial';
-  ctx.textAlign = 'center';
-  ctx.fillText(`${nr} / ${gesamt}`, numX + numW/2, numY + 24);
 
   // Sportart-Badge
   const sportartText = e.sportartText || '';
@@ -6455,9 +6445,6 @@ async function wochenvorschauStories() {
     ctx.fillText(String(termine.length), W/2, H*0.62+40);
     ctx.fillStyle='#fff'; ctx.font='bold 18px Montserrat, Arial, sans-serif';
     ctx.fillText(termine.length===1?'VERANSTALTUNG':'VERANSTALTUNGEN', W/2, H*0.62+62);
-
-    // Story-Nummer
-    zeichneStoryNummer(ctx, W, H, 1, gesamt);
     zeichneSlzbFooterNeu(ctx, W, H);
   }, `SLZB_Woche_Story_01_Titel.png`);
 
@@ -6536,9 +6523,6 @@ async function wochenvorschauStories() {
 
         y += ROW_H;
       });
-
-      // Story-Nummer
-      zeichneStoryNummer(ctx, W, H, storyNr, gesamt);
       zeichneSlzbFooterNeu(ctx, W, H);
     }, `SLZB_Woche_Story_${String(storyNr).padStart(2,'0')}_${tagName}.png`);
 
