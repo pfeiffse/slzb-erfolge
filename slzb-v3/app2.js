@@ -8293,6 +8293,9 @@ function posterEditorWerte(e) {
     beteiligte: athlet
       ? [{ anzeigename: athlet, rolle: 'Athlet', schuelerId: null, einwilligungsstatus: 'Nicht geprüft' }]
       : e.beteiligte,
+    // Bild-Zoom/Position persistent speichern
+    _bildOffset: window._bildOffset || { x: 0.5, y: 0.2 },
+    _bildZoom: window._bildZoom || 1.0,
   };
 }
 
@@ -8398,6 +8401,10 @@ async function posterEntwurfSpeichern(typ, variante, format) {
       notiz: notiz || null,
       erstellt_von: Auth.id(),
       erstellt_von_name: Auth.name(),
+      // Bild-Zoom/Position speichern
+      bild_offset_x: (werte._bildOffset || window._bildOffset || {}).x || 0.5,
+      bild_offset_y: (werte._bildOffset || window._bildOffset || {}).y || 0.2,
+      bild_zoom: werte._bildZoom || window._bildZoom || 1.0,
     };
     // PNG hochladen
     const cId = typ==='a3'?'a3-canvas':typ==='bildschirm'?'screen-canvas':'social-canvas';
@@ -8458,6 +8465,13 @@ async function posterEntwurfOeffnen(draftId) {
       const el = document.getElementById(id);
       if (el) el.value = val;
     });
+    // Zoom/Position wiederherstellen
+    if (draft.bild_offset_x !== undefined) {
+      window._bildOffset = { x: draft.bild_offset_x || 0.5, y: draft.bild_offset_y || 0.2 };
+    }
+    if (draft.bild_zoom !== undefined) {
+      window._bildZoom = draft.bild_zoom || 1.0;
+    }
     posterEditorAktualisieren();
     toast('📂 Version ' + (draft.version||'?') + ' geladen', 'success');
   }, 600);
@@ -9039,10 +9053,10 @@ async function speichereVoting(status) {
           const file = bildInput.files[0];
           const pfad = `voting/${kampagne.id}_${i}_${Date.now()}.${file.name.split('.').pop()}`;
           const { error: upErr } = await Backend.client.storage
-            .from('poster-exports')
+            .from('achievement-media')
             .upload(pfad, file, { contentType: file.type, upsert: true });
           if (!upErr) {
-            const { data: urlData } = Backend.client.storage.from('poster-exports').getPublicUrl(pfad);
+            const { data: urlData } = Backend.client.storage.from('achievement-mediarts').getPublicUrl(pfad);
             bildUrl = urlData?.publicUrl || null;
           } else { console.warn('Bild-Upload:', upErr.message); }
         } catch(imgErr) { console.warn('Bild-Upload:', imgErr.message); }
@@ -10056,13 +10070,13 @@ async function speichereVotingBearbeitung(kampagneId) {
       const file = bildInput.files[0];
       const pfad = 'voting/'+kampagneId+'_'+kid+'_'+Date.now()+'.'+file.name.split('.').pop();
       const { error: upErr } = await Backend.client.storage
-        .from('poster-exports').upload(pfad, file, { contentType: file.type, upsert: true });
+        .from('achievement-media').upload(pfad, file, { contentType: file.type, upsert: true });
       if (!upErr) {
-        const { data: urlData } = Backend.client.storage.from('poster-exports').getPublicUrl(pfad);
+        const { data: urlData } = Backend.client.storage.from('achievement-media').getPublicUrl(pfad);
         if (urlData?.publicUrl) {
           updateData.bild_url = urlData.publicUrl;
           updateData.storage_path = pfad;
-          updateData.storage_bucket = 'poster-exports';
+          updateData.storage_bucket = 'achievement-media';
         }
       } else {
         toast('Bild-Upload Fehler: ' + upErr.message, 'warning');

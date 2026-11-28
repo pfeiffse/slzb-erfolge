@@ -603,12 +603,29 @@ function starteAnzeige() {
       const tabBtn = document.querySelectorAll('.vplan-tab')[
         ['heute','morgen','uebersicht'].indexOf(tab)];
       zeigeVplanTab(tab, tabBtn);
-      // Nächsten Wechsel mit individueller Dauer planen
-      _tabTimer = setTimeout(naechsterTab, _tabDauern[tab] || 30000);
+      // Scroll-Ende-Callback setzen: Tab wechselt wenn Scroll am Ende
+      // ODER nach der konfigurierten Zeit (was zuerst kommt)
+      _vpScrollEndCallback = () => {
+        clearTimeout(_tabTimer);
+        naechsterTab();
+      };
+      // Fallback: Tab wechselt spätestens nach der konfigurierten Zeit
+      _tabTimer = setTimeout(() => {
+        _vpScrollEndCallback = null; // Callback deaktivieren
+        naechsterTab();
+      }, _tabDauern[tab] || 30000);
     }
     // Ersten Tab sofort zeigen, dann nach seiner Dauer wechseln
     const ersterTab = _tabReihenfolge[0];
-    _tabTimer = setTimeout(naechsterTab, _tabDauern[ersterTab] || 30000);
+    // Scroll-Ende-Callback für ersten Tab
+    _vpScrollEndCallback = () => {
+      clearTimeout(_tabTimer);
+      naechsterTab();
+    };
+    _tabTimer = setTimeout(() => {
+      _vpScrollEndCallback = null;
+      naechsterTab();
+    }, _tabDauern[ersterTab] || 30000);
   }
 
   // Layout setzen
@@ -1151,11 +1168,14 @@ let _vpScrollTimer = null;
 let _vpScrollDir = 1;
 let _vpScrollPos = 0;
 
+// Callback der aufgerufen wird wenn Scroll am Ende (für Tab-Wechsel)
+let _vpScrollEndCallback = null;
+
 function starteVpAutoScroll(geschwindigkeit = 30) {
   stoppeVpAutoScroll();
+  let scrollEndGemeldet = false;
 
   _vpScrollTimer = setInterval(() => {
-    // Versuche zuerst den iFrame-Inhalt zu scrollen (Same-Origin)
     const frame = document.getElementById('vplan-frame');
     const wrap = document.getElementById('vplan-frame-wrap');
 
@@ -1175,7 +1195,7 @@ function starteVpAutoScroll(geschwindigkeit = 30) {
       }
     } catch(e) { scrollEl = null; }
 
-    // Methode 2: Wrapper-Div scrollen (wenn iFrame overflow:auto hat)
+    // Methode 2: Wrapper-Div
     if (!scrollEl || maxScroll <= 0) {
       if (wrap) {
         scrollEl = wrap;
@@ -1183,25 +1203,52 @@ function starteVpAutoScroll(geschwindigkeit = 30) {
       }
     }
 
-    if (!scrollEl || maxScroll <= 0) return;
+    // Kein Scroll nötig: Callback nach kurzer Pause (Tab-Wechsel-Timer läuft normal)
+    if (!scrollEl || maxScroll <= 0) {
+      if (!scrollEndGemeldet) {
+        scrollEndGemeldet = true;
+        // Kein Scroll nötig → Tab-Wechsel nach normaler Zeit
+        // (wird vom Tab-Timer gesteuert, kein sofortiger Wechsel)
+      }
+      return;
+    }
 
     _vpScrollPos += _vpScrollDir * 1;
 
     if (_vpScrollPos >= maxScroll) {
       _vpScrollDir = -1;
-      // Pause am Ende: 3 Sekunden warten, dann zurück nach oben
-      clearInterval(_vpScrollTimer);
-      _vpScrollTimer = null;
-      setTimeout(() => {
-        _vpScrollDir = 1;
-        _vpScrollPos = 0;
-        if (scrollEl) scrollEl.scrollTop = 0;
-        // Neu starten
-        starteVpAutoScroll(geschwindigkeit);
-      }, 3000);
+      // Am Ende: Tab wechseln wenn Callback gesetzt, sonst zurück scrollen
+      if (!scrollEndGemeldet) {
+        scrollEndGemeldet = true;
+        clearInterval(_vpScrollTimer);
+        _vpScrollTimer = null;
+
+        if (typeof _vpScrollEndCallback === 'function') {
+          // Tab-Wechsel auslösen
+          setTimeout(() => {
+            _vpScrollDir = 1;
+            _vpScrollPos = 0;
+            if (scrollEl) scrollEl.scrollTop = 0;
+            scrollEndGemeldet = false;
+            const cb = _vpScrollEndCallback;
+            starteVpAutoScroll(geschwindigkeit);
+            cb(); // Tab wechseln
+          }, 1500); // 1.5s Pause am Ende
+        } else {
+          // Kein Callback: zurück nach oben scrollen
+          setTimeout(() => {
+            _vpScrollDir = 1;
+            _vpScrollPos = 0;
+            if (scrollEl) scrollEl.scrollTop = 0;
+            scrollEndGemeldet = false;
+            starteVpAutoScroll(geschwindigkeit);
+          }, 3000);
+        }
+      }
       return;
     } else if (_vpScrollPos <= 0) {
       _vpScrollDir = 1;
+      scrollEndGemeldet = false;
     }
 
     if (scrollEl) scrollEl.scrollTop = _vpScrollPos;
