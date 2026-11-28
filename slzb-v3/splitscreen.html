@@ -571,7 +571,7 @@ function vplanQuelleWechseln(quelle) {
   document.getElementById('vplan-upload-bereich').style.display  = quelle === 'upload'  ? '' : 'none';
   document.getElementById('vplan-github-bereich').style.display  = quelle === 'github'  ? '' : 'none';
   document.getElementById('vplan-url-bereich').style.display     = quelle === 'url'     ? '' : 'none';
-  const lokalEl = document.getElementById('vplan-lokal-bereich'); if (lokalEl) lokalEl.style.display = quelle === 'lokal' ? '' : 'none';\
+  const lokalEl = document.getElementById('vplan-lokal-bereich'); if (lokalEl) lokalEl.style.display = quelle === 'lokal' ? '' : 'none';
 }
 
 // Gespeicherte Vplan-HTMLs laden
@@ -864,9 +864,9 @@ function starteAnzeige() {
   const tabKonfig = [
     { id: 'heute',      aktiv: document.getElementById('tab-heute-aktiv')?.checked ?? true,
       dauer: parseInt(document.getElementById('tab-heute-dauer')?.value || '30000') },
-    { id: 'morgen',     aktiv: document.getElementById('tab-morgen-aktiv')?.checked ?? true && hatMorgen,
+    { id: 'morgen',     aktiv: (document.getElementById('tab-morgen-aktiv')?.checked ?? true) && hatMorgen,
       dauer: parseInt(document.getElementById('tab-morgen-dauer')?.value || '30000') },
-    { id: 'uebersicht', aktiv: document.getElementById('tab-uebersicht-aktiv')?.checked ?? false && hatUebersicht,
+    { id: 'uebersicht', aktiv: (document.getElementById('tab-uebersicht-aktiv')?.checked ?? false) && hatUebersicht,
       dauer: parseInt(document.getElementById('tab-uebersicht-dauer')?.value || '60000') },
   ].filter(t => t.aktiv && (t.id === 'heute' || (t.id === 'morgen' && hatMorgen) || (t.id === 'uebersicht' && hatUebersicht)));
 
