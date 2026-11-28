@@ -2981,7 +2981,37 @@ async function zeichneCountdownPoster(canvasId, opts) {
     if (opts.ort) { ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.fillText(opts.ort, CX, ortY+infoSz+6, W-80); }
   }
 
-  // 8. Footer: zeichneSlzbFooterNeu (grün)
+  // 8. Flagge (wehend, links) – wenn Ort angegeben
+  const flagge = opts.flagge || (typeof ortZuFlagge === 'function' ? ortZuFlagge(opts.ort||'') : null);
+  if (flagge && flagge !== '🌍') {
+    const flagX = querformat ? 40 : 30;
+    const flagY = querformat ? H*0.30 : H*0.28;
+    const flagSz = querformat ? Math.round(H*0.12) : Math.round(H*0.08);
+    ctx.save();
+    ctx.font = `${flagSz}px Arial`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.globalAlpha = 0.85;
+    // Leichter Schatten für Tiefe
+    ctx.shadowColor = 'rgba(0,0,0,0.4)';
+    ctx.shadowBlur = 8;
+    ctx.fillText(flagge, flagX, flagY);
+    ctx.restore();
+  }
+
+  // 9. Link als Kurztext (wenn angegeben)
+  if (opts.link) {
+    const linkText = opts.link.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
+    const linkSz = Math.round(H * 0.014);
+    const linkY = H - (querformat ? 55 : 70);
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.font = `${linkSz}px Montserrat, Arial, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText('🔗 ' + linkText, W/2, linkY, W - 80);
+  }
+
+  // 10. Footer: zeichneSlzbFooterNeu (grün)
   zeichneSlzbFooterNeu(ctx, W, H, 'gruen');
 }
 

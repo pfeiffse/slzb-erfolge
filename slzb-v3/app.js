@@ -85,6 +85,115 @@ function ebeneBadge(e) {
 function einwilligungIcon(ok) {
   return ok?'<span class="ew-ok">✓</span>':'<span class="ew-nok">✗</span>';
 }
+
+// ── Sportart → Akzentfarbe ────────────────────────────────────────────────────
+function sportartFarbe(sportart) {
+  if (!sportart) return 'var(--sport-default)';
+  const s = sportart.toLowerCase().replace(/[^a-zäöü]/g, '');
+  const map = {
+    eiskunstlauf: 'var(--sport-eiskunstlauf)',
+    eisschnelllauf: 'var(--sport-eisschnelllauf)',
+    eishockey: 'var(--sport-eishockey)',
+    bogenschiessen: 'var(--sport-bogenschiessen)',
+    bogenschießen: 'var(--sport-bogenschiessen)',
+    judo: 'var(--sport-judo)',
+    boxen: 'var(--sport-boxen)',
+    fechten: 'var(--sport-fechten)',
+    leichtathletik: 'var(--sport-leichtathletik)',
+    schwimmen: 'var(--sport-schwimmen)',
+    paraschwimmen: 'var(--sport-para-schwimmen)',
+    turnen: 'var(--sport-turnen)',
+    volleyball: 'var(--sport-volleyball)',
+    basketball: 'var(--sport-basketball)',
+    handball: 'var(--sport-handball)',
+    fussball: 'var(--sport-fussball)',
+    fußball: 'var(--sport-fussball)',
+    radsport: 'var(--sport-radsport)',
+    gewichtheben: 'var(--sport-gewichtheben)',
+    wasserspringen: 'var(--sport-wasserspringen)',
+  };
+  for (const [key, val] of Object.entries(map)) {
+    if (s.includes(key.replace(/[^a-zäöü]/g, ''))) return val;
+  }
+  return 'var(--sport-default)';
+}
+
+// ── Ort/Land → Flaggen-Emoji ──────────────────────────────────────────────────
+function ortZuFlagge(ort) {
+  if (!ort) return null;
+  const o = ort.toLowerCase();
+  // Berlin / Deutschland-intern
+  if (o.includes('berlin')) return '🏴'; // Berliner Flagge (schwarz-weiß-rot)
+  // Deutsche Städte → Deutschland
+  const deutscheStaedte = ['münchen','hamburg','köln','frankfurt','stuttgart','düsseldorf',
+    'dortmund','essen','leipzig','bremen','dresden','hannover','nürnberg','duisburg',
+    'bochum','wuppertal','bielefeld','bonn','münster','karlsruhe','mannheim','augsburg',
+    'chemnitz','kiel','halle','magdeburg','freiburg','krefeld','lübeck','oberhausen',
+    'erfurt','rostock','mainz','kassel','hagen','saarbrücken','potsdam','mülheim'];
+  if (deutscheStaedte.some(s => o.includes(s))) return '🇩🇪';
+  if (o.includes('deutsch') || o.includes('germany') || o.includes(' de ') || o.endsWith(' de')) return '🇩🇪';
+  // Länder-Mapping
+  const laender = {
+    '🇦🇹': ['österreich','austria','wien','graz','innsbruck','salzburg','linz'],
+    '🇨🇭': ['schweiz','switzerland','zürich','bern','genf','basel'],
+    '🇫🇷': ['frankreich','france','paris','lyon','marseille'],
+    '🇮🇹': ['italien','italy','rom','mailand','turin','florenz'],
+    '🇳🇱': ['niederlande','netherlands','amsterdam','rotterdam','heerenveen','utrecht'],
+    '🇧🇪': ['belgien','belgium','brüssel','antwerpen','gent'],
+    '🇵🇱': ['polen','poland','warschau','krakau','gdansk','danzig','breslau'],
+    '🇨🇿': ['tschechien','czech','prag','brünn'],
+    '🇸🇰': ['slowakei','slovakia','bratislava'],
+    '🇭🇺': ['ungarn','hungary','budapest'],
+    '🇷🇺': ['russland','russia','moskau','st. petersburg'],
+    '🇺🇸': ['usa','united states','new york','los angeles','chicago'],
+    '🇬🇧': ['großbritannien','england','london','manchester','birmingham'],
+    '🇸🇪': ['schweden','sweden','stockholm','göteborg'],
+    '🇳🇴': ['norwegen','norway','oslo','bergen'],
+    '🇩🇰': ['dänemark','denmark','kopenhagen'],
+    '🇫🇮': ['finnland','finland','helsinki'],
+    '🇪🇸': ['spanien','spain','madrid','barcelona'],
+    '🇵🇹': ['portugal','lissabon','porto'],
+    '🇯🇵': ['japan','tokio','osaka'],
+    '🇨🇳': ['china','peking','shanghai'],
+    '🇰🇷': ['südkorea','korea','seoul'],
+    '🇨🇦': ['kanada','canada','toronto','montreal','vancouver'],
+    '🇦🇺': ['australien','australia','sydney','melbourne'],
+    '🇸🇮': ['slowenien','slovenia','ljubljana','celje'],
+    '🇭🇷': ['kroatien','croatia','zagreb'],
+    '🇷🇴': ['rumänien','romania','bukarest'],
+    '🇧🇬': ['bulgarien','bulgaria','sofia'],
+    '🇬🇷': ['griechenland','greece','athen'],
+    '🇹🇷': ['türkei','turkey','istanbul','ankara'],
+    '🇺🇦': ['ukraine','kiew','lwiw'],
+    '🇧🇾': ['weißrussland','belarus','minsk'],
+    '🇱🇹': ['litauen','lithuania','vilnius'],
+    '🇱🇻': ['lettland','latvia','riga'],
+    '🇪🇪': ['estland','estonia','tallinn'],
+    '🇷🇸': ['serbien','serbia','belgrad'],
+    '🇦🇲': ['armenien','armenia','jerewan'],
+    '🇬🇪': ['georgien','georgia','tiflis'],
+    '🇦🇿': ['aserbaidschan','azerbaijan','baku'],
+    '🇰🇿': ['kasachstan','kazakhstan','almaty'],
+    '🇺🇿': ['usbekistan','uzbekistan','taschkent'],
+    '🇮🇱': ['israel','tel aviv','jerusalem'],
+    '🇿🇦': ['südafrika','south africa','kapstadt','johannesburg'],
+    '🇧🇷': ['brasilien','brazil','rio','são paulo'],
+    '🇦🇷': ['argentinien','argentina','buenos aires'],
+    '🇲🇽': ['mexiko','mexico','mexiko-stadt'],
+    '🇨🇱': ['chile','santiago'],
+    '🇳🇿': ['neuseeland','new zealand','auckland'],
+    '🇮🇳': ['indien','india','mumbai','delhi'],
+    '🇸🇦': ['saudi-arabien','saudi arabia','riad'],
+    '🇦🇪': ['vereinigte arabische emirate','dubai','abu dhabi'],
+    '🇶🇦': ['katar','qatar','doha'],
+  };
+  for (const [flagge, namen] of Object.entries(laender)) {
+    if (namen.some(n => o.includes(n))) return flagge;
+  }
+  // Fallback: Globus
+  return '🌍';
+}
+
 function toast(msg, type='info') {
   const t = document.createElement('div');
   t.className = `alert alert-${type}`;
@@ -2114,7 +2223,9 @@ async function renderMeineMeldungen() {
     <div class="card"><div class="table-wrap mobile-cards"><table>
       <thead><tr><th>Nr.</th><th>Titel</th><th>Sportart</th><th>Datum</th><th>Status</th><th></th></tr></thead>
       <tbody>${gefiltert.length===0?'<tr><td colspan="8" class="text-center text-muted" style="padding:30px">Keine Meldungen.</td></tr>':
-        gefiltert.map(e=>`<tr class="clickable" onclick="navigateTo('erfolg-detail',{currentErfolgId:'${e.id}'})">
+        gefiltert.map(e=>`<tr class="clickable" onclick="navigateTo('erfolg-detail',{currentErfolgId:'${e.id}'})"
+          data-sportart="${esc(e.sportartText||'')}"
+          style="border-left:4px solid ${sportartFarbe(e.sportartText)}">
           <td class="text-xs text-muted">${esc(e.erfolgNr||'–')}</td>
           <td><strong>${esc(e.titel)}</strong></td>
           <td class="text-sm">${esc(e.meldungsart)}</td>

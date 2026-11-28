@@ -4054,11 +4054,25 @@ function zeigeCountdownModal() {
         </div>
         <div class="form-group">
           <label style="color:#fff">Ort</label>
-          <input type="text" id="cd-ort" placeholder="z.B. Schwimmhalle Landsberger Allee" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+          <input type="text" id="cd-ort" placeholder="z.B. Schwimmhalle Landsberger Allee" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px"
+            oninput="const f=document.getElementById('cd-flagge-override');const p=document.getElementById('cd-flagge-preview');if(!f?.value)p.textContent=ortZuFlagge(this.value)||'🌍'">
         </div>
         <div class="form-group">
           <label style="color:#fff">Sportart (optional)</label>
           <input type="text" id="cd-sportart" placeholder="z.B. Schwimmen" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+        </div>
+        <div class="form-group">
+          <label style="color:#fff">Link zur Veranstaltung / Livestream <span style="font-size:.72rem;color:#888">(optional)</span></label>
+          <input type="url" id="cd-link" placeholder="https://..." style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
+          <div style="font-size:.72rem;color:#888;margin-top:3px">Erscheint als QR-Code oder Kurzlink auf dem Poster</div>
+        </div>
+        <div class="form-group" style="display:flex;align-items:center;gap:10px">
+          <label style="color:#fff;margin:0">Flagge:</label>
+          <span id="cd-flagge-preview" style="font-size:2rem;min-width:40px;display:inline-block">🌍</span>
+          <span style="font-size:.78rem;color:#888">Wird automatisch aus dem Ort erkannt</span>
+          <input type="text" id="cd-flagge-override" placeholder="Eigene Flagge (Emoji)" maxlength="4"
+            style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:6px 8px;width:80px;font-size:1.2rem;text-align:center"
+            oninput="document.getElementById('cd-flagge-preview').textContent=this.value||ortZuFlagge(document.getElementById('cd-ort')?.value)||'🌍'">
         </div>
         ${posterBildInputHTML('cd-bild','Hintergrundbild')}
       </div>
@@ -4116,7 +4130,10 @@ async function cdVorschau() {
   cdFormatWechsel(format);
   const bildUrl = await posterBildLaden('cd-bild','poster-countdown');
   const sportartCd = document.getElementById('cd-sportart')?.value||'';
-  const opts = { eventName:name, eventDatum:datum, ort, sportart:sportartCd, format: format==='a3'?'hochformat':format, hintergrundbild:bildUrl };
+  const cdLink = document.getElementById('cd-link')?.value?.trim() || '';
+  const cdFlaggeOverride = document.getElementById('cd-flagge-override')?.value?.trim() || '';
+  const cdFlagge = cdFlaggeOverride || (typeof ortZuFlagge === 'function' ? ortZuFlagge(ort) : null);
+  const opts = { eventName:name, eventDatum:datum, ort, sportart:sportartCd, format: format==='a3'?'hochformat':format, hintergrundbild:bildUrl, link: cdLink, flagge: cdFlagge };
   if (format==='a3') {
     // A3-Druck: Countdown-Zahl + Event-Name im A3-Layout
     const canvas = document.getElementById('cd-canvas');
@@ -5167,6 +5184,10 @@ function zeigeKalenderEintragModal(eintrag = null) {
           <label style="font-weight:600">Klasse / Kader</label>
           <input type="text" id="ke-klasse" value="${esc(eintrag?.klasse||'')}" placeholder="z.B. U20 Kader" style="width:100%">
         </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label style="font-weight:600">Link zur Veranstaltung / Livestream <span style="font-size:.72rem;color:var(--slzb-text-muted)">(optional)</span></label>
+          <input type="url" id="ke-link" value="${esc(eintrag?.link||'')}" placeholder="https://..." style="width:100%">
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -5205,6 +5226,7 @@ async function speichereKalenderEintrag(id) {
   const veranstaltung = document.getElementById('ke-veranstaltung')?.value.trim();
   const ort = document.getElementById('ke-ort')?.value.trim();
   const klasse = document.getElementById('ke-klasse')?.value.trim();
+  const link = document.getElementById('ke-link')?.value.trim() || null;
   const prio = parseInt(document.getElementById('ke-prio')?.value || '4');
 
   if (!datum || !sportart || !veranstaltung) {
@@ -5230,7 +5252,7 @@ async function speichereKalenderEintrag(id) {
 
   const daten = {
     datum, datum_bis: datumBis, datum_anzeige: datumAnzeige,
-    sportart, veranstaltung, ort, klasse,
+    sportart, veranstaltung, ort, klasse, link,
     prioritaet: prio, prioritaet_text: prioTexte[prio] || '4 – Regulär',
     erstellt_von: Auth.id(), geaendert_am: new Date().toISOString(),
     // Bei SLZB_TERMINE-Überschreibung: Original-Name speichern zum Filtern
@@ -6192,7 +6214,10 @@ async function zeigeWochenvorschau(wochen = 1) {
                 <tbody>${termine.map(t => `<tr>
                   <td class="text-sm">${esc(t.sportart)}</td>
                   <td><strong>${esc(t.veranstaltung)}</strong></td>
-                  <td class="text-sm text-muted">${esc(t.ort||'–')}</td>
+                  <td class="text-sm text-muted">
+                    ${typeof ortZuFlagge === 'function' && t.ort ? `<span style="margin-right:4px">${ortZuFlagge(t.ort)||''}</span>` : ''}${esc(t.ort||'–')}
+                    ${t.link ? `<a href="${esc(t.link)}" target="_blank" style="margin-left:6px;font-size:.7rem;color:var(--slzb-primary)" title="Veranstaltungsseite">🔗</a>` : ''}
+                  </td>
                   <td class="text-sm text-muted">${esc(t.klasse||'–')}</td>
                   <td><span style="color:${prioFarbe(t.prioritaet)};font-size:.75rem;font-weight:700">${prioLabel(t.prioritaet)}</span></td>
                   <td><button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:2px 8px"
