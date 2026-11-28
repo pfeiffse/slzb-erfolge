@@ -11525,23 +11525,91 @@ async function euErstellePoster(veranstaltungsId, mitMeldung) {
   }
 }
 
+// ── Veranstaltungs-Workspace: Supabase + localStorage Fallback ───────────────
+// Cache für schnellen Zugriff
+let _wsCache = null;
+let _wsCacheTime = 0;
+
 function ladeGespeicherteVeranstaltungen() {
+  // Synchroner Zugriff: gibt Cache oder localStorage zurück
+  // Async-Version: ladeGespeicherteVeranstaltungenAsync()
+  if (_wsCache && (Date.now() - _wsCacheTime) < 30000) return _wsCache;
+  const lokal = JSON.parse(localStorage.getItem('slzb_av_veranstaltungen') || '[]');
+  return lokal;
+}
+
+async function ladeGespeicherteVeranstaltungenAsync() {
+  try {
+    const { data, error } = await Backend.client
+      .from('veranstaltungs_workspace')
+      .select('*')
+      .order('gespeichert_am', { ascending: false })
+      .limit(20);
+    if (!error && data?.length) {
+      // Konvertiere Supabase-Format zu lokalem Format
+      const liste = data.map(v => ({
+        id: v.id,
+        veranstaltung: v.veranstaltung,
+        ort: v.ort || '',
+        sportart: v.sportart || '',
+        format: v.format || 'carousel',
+        teamfotoUrl: v.teamfoto_url || null,
+        athleten: v.athleten || [],
+        gespeichertAm: v.gespeichert_am,
+        _supabase: true,
+      }));
+      _wsCache = liste;
+      _wsCacheTime = Date.now();
+      // Auch in localStorage für Offline-Zugriff
+      localStorage.setItem('slzb_av_veranstaltungen', JSON.stringify(liste.slice(0, 10)));
+      return liste;
+    }
+  } catch(e) { console.warn('[Workspace] Supabase nicht erreichbar:', e.message); }
+  // Fallback: localStorage
   return JSON.parse(localStorage.getItem('slzb_av_veranstaltungen') || '[]');
 }
 
-function speichereVeranstaltung(daten) {
-  const liste = ladeGespeicherteVeranstaltungen();
+async function speichereVeranstaltung(daten) {
   const id = 'av_' + Date.now();
   const eintrag = { id, ...daten, gespeichertAm: new Date().toISOString() };
-  liste.unshift(eintrag); // Neueste zuerst
-  // Maximal 10 gespeicherte Veranstaltungen
-  localStorage.setItem('slzb_av_veranstaltungen', JSON.stringify(liste.slice(0, 10)));
+
+  // 1. Immer in localStorage speichern (sofort verfügbar)
+  const lokal = JSON.parse(localStorage.getItem('slzb_av_veranstaltungen') || '[]');
+  lokal.unshift(eintrag);
+  localStorage.setItem('slzb_av_veranstaltungen', JSON.stringify(lokal.slice(0, 10)));
+  _wsCache = null; // Cache invalidieren
+
+  // 2. Auch in Supabase speichern (persistent, geräteübergreifend)
+  try {
+    const { error } = await Backend.client.from('veranstaltungs_workspace').insert([{
+      erstellt_von: Auth.id(),
+      veranstaltung: daten.veranstaltung,
+      ort: daten.ort || null,
+      sportart: daten.sportart || null,
+      format: daten.format || 'carousel',
+      teamfoto_url: daten.teamfotoUrl || null,
+      athleten: daten.athleten || [],
+      gespeichert_am: new Date().toISOString(),
+    }]);
+    if (error) console.warn('[Workspace] Supabase-Speicherung fehlgeschlagen:', error.message);
+  } catch(e) { console.warn('[Workspace] Supabase nicht erreichbar:', e.message); }
+
   return id;
 }
 
-function loescheGespeicherteVeranstaltung(id) {
-  const liste = ladeGespeicherteVeranstaltungen().filter(v => v.id !== id);
-  localStorage.setItem('slzb_av_veranstaltungen', JSON.stringify(liste));
+async function loescheGespeicherteVeranstaltung(id) {
+  // localStorage
+  const lokal = JSON.parse(localStorage.getItem('slzb_av_veranstaltungen') || '[]')
+    .filter(v => v.id !== id);
+  localStorage.setItem('slzb_av_veranstaltungen', JSON.stringify(lokal));
+  _wsCache = null;
+
+  // Supabase (wenn UUID-Format)
+  if (id && !id.startsWith('av_')) {
+    try {
+      await Backend.client.from('veranstaltungs_workspace').delete().eq('id', id);
+    } catch(e) { console.warn('[Workspace] Supabase-Löschung fehlgeschlagen:', e.message); }
+  }
 }
 
 
@@ -11600,8 +11668,9 @@ function avSpeichereWorkspace() {
   toast('✅ Veranstaltung gespeichert – unter "📋 Gespeicherte Veranstaltungen" abrufbar', 'success');
 }
 
-function zeigeVeranstaltungsWorkspace() {
-  const liste = ladeGespeicherteVeranstaltungen();
+async function zeigeVeranstaltungsWorkspace() {
+  // Lade aus Supabase (mit localStorage-Fallback)
+  const liste = await ladeGespeicherteVeranstaltungenAsync();
   console.log('[Workspace] Gespeicherte Veranstaltungen:', liste.length, liste.map(v=>v.veranstaltung));
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';

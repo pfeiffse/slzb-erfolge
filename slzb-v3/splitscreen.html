@@ -782,7 +782,7 @@ function injiziereVpCSS() {
     const style = doc.createElement('style');
     style.id = 'slzb-vp-css';
     style.textContent = `
-      body { font-size: 18px !important; font-family: Arial, sans-serif !important; }
+      body { font-size: 18px !important; font-family: Arial, sans-serif !important; padding-bottom: 60px !important; }
       table { width: 100% !important; border-collapse: collapse !important; }
       td, th { padding: 6px 8px !important; font-size: 16px !important; border: 1px solid #ddd !important; }
       th { background: #003366 !important; color: #fff !important; font-size: 15px !important; }
@@ -793,10 +793,17 @@ function injiziereVpCSS() {
       a { color: #003366 !important; }
       tr:nth-child(even) { background: #f5f7fb !important; }
       tr:hover { background: #e8f0fe !important; }
-      /* Orange Einträge (Änderungen) hervorheben */
       span[style*="255,128,64"] { font-weight: bold !important; }
     `;
     doc.head.appendChild(style);
+    // K. Endesfelder-Footer hinzufügen
+    if (!doc.getElementById('slzb-vp-footer')) {
+      const footer = doc.createElement('div');
+      footer.id = 'slzb-vp-footer';
+      footer.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#003366;color:#fff;padding:6px 16px;font-size:13px;font-family:Arial,sans-serif;display:flex;justify-content:space-between;align-items:center;z-index:9999';
+      footer.innerHTML = '<span>Schul- und Leistungssportzentrum Berlin</span><span style="opacity:.7">K. Endesfelder</span>';
+      doc.body.appendChild(footer);
+    }
   } catch(e) { /* Cross-Origin - kein Fehler */ }
 }
 
@@ -1146,24 +1153,58 @@ let _vpScrollPos = 0;
 
 function starteVpAutoScroll(geschwindigkeit = 30) {
   stoppeVpAutoScroll();
-  const wrap = document.getElementById('vplan-frame-wrap');
-  if (!wrap) return;
 
   _vpScrollTimer = setInterval(() => {
-    const maxScroll = wrap.scrollHeight - wrap.clientHeight;
-    if (maxScroll <= 0) return;
+    // Versuche zuerst den iFrame-Inhalt zu scrollen (Same-Origin)
+    const frame = document.getElementById('vplan-frame');
+    const wrap = document.getElementById('vplan-frame-wrap');
+
+    let scrollEl = null;
+    let maxScroll = 0;
+
+    // Methode 1: iFrame contentWindow (Same-Origin)
+    try {
+      const doc = frame?.contentDocument || frame?.contentWindow?.document;
+      if (doc?.documentElement) {
+        scrollEl = doc.documentElement;
+        maxScroll = scrollEl.scrollHeight - scrollEl.clientHeight;
+        if (maxScroll <= 0) {
+          scrollEl = doc.body;
+          maxScroll = scrollEl ? scrollEl.scrollHeight - scrollEl.clientHeight : 0;
+        }
+      }
+    } catch(e) { scrollEl = null; }
+
+    // Methode 2: Wrapper-Div scrollen (wenn iFrame overflow:auto hat)
+    if (!scrollEl || maxScroll <= 0) {
+      if (wrap) {
+        scrollEl = wrap;
+        maxScroll = wrap.scrollHeight - wrap.clientHeight;
+      }
+    }
+
+    if (!scrollEl || maxScroll <= 0) return;
 
     _vpScrollPos += _vpScrollDir * 1;
 
     if (_vpScrollPos >= maxScroll) {
       _vpScrollDir = -1;
-      // Pause oben
-      setTimeout(() => { _vpScrollDir = 1; _vpScrollPos = 0; wrap.scrollTop = 0; }, 3000);
+      // Pause am Ende: 3 Sekunden warten, dann zurück nach oben
+      clearInterval(_vpScrollTimer);
+      _vpScrollTimer = null;
+      setTimeout(() => {
+        _vpScrollDir = 1;
+        _vpScrollPos = 0;
+        if (scrollEl) scrollEl.scrollTop = 0;
+        // Neu starten
+        starteVpAutoScroll(geschwindigkeit);
+      }, 3000);
+      return;
     } else if (_vpScrollPos <= 0) {
       _vpScrollDir = 1;
     }
 
-    wrap.scrollTop = _vpScrollPos;
+    if (scrollEl) scrollEl.scrollTop = _vpScrollPos;
   }, geschwindigkeit);
 }
 
