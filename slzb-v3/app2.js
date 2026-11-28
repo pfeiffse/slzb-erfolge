@@ -11452,20 +11452,74 @@ async function euErstellePoster(veranstaltungsId, mitMeldung) {
   a.download = `SLZB_Update_${(athlet.name||'').replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.png`;
   canvas.toBlob(blob => { a.href = URL.createObjectURL(blob); a.click(); }, 'image/png');
 
-  // Optional: Meldung erstellen
+  // Optional: Meldung direkt in Supabase erstellen (mit Bild)
   if (mitMeldung && platz) {
-    toast('✅ Poster heruntergeladen! Meldung wird vorbereitet...', 'success');
-    setTimeout(() => {
-      navigateTo('neue-meldung');
-      setTimeout(() => {
-        const titelEl = document.getElementById('f-titel');
-        const sportEl = document.getElementById('f-sportart-text');
-        const schuelerEl = document.getElementById('f-schueler-text');
-        if (titelEl) titelEl.value = `${platz}. Platz${disziplin?' – '+disziplin:''} bei ${v.veranstaltung}`;
-        if (sportEl) sportEl.value = v.sportart || '';
-        if (schuelerEl) schuelerEl.value = athlet.name || '';
-      }, 300);
-    }, 1000);
+    toast('⏳ Meldung wird erstellt...', 'info');
+    try {
+      const beteiligte = athlet.name !== v.veranstaltung
+        ? [{ schuelerId: null, anzeigename: athlet.name || athletName, rolle: 'Athlet', einwilligungsstatus: 'Nicht geprüft' }]
+        : [];
+
+      const result = await DB.erstelleErfolg({
+        meldungsart: 'Einzelerfolg',
+        titel: `${platz}. Platz${disziplin ? ' – ' + disziplin : ''} bei ${v.veranstaltung}`,
+        sportartText: v.sportart || '',
+        sportartId: null,
+        wettbewerbText: v.veranstaltung,
+        wettbewerbId: null,
+        datum: new Date().toISOString().slice(0, 10),
+        ort: v.ort || '',
+        ebene: 'International',
+        platzierung: platz,
+        medaille: platz===1?'Gold':platz===2?'Silber':platz===3?'Bronze':'keine',
+        ergebnisText: `${platz}. Platz${disziplin?' – '+disziplin:''}${ergebnis?' ('+ergebnis+')':''}`,
+        kurzinfo: zusatz || '',
+        quelleUrl: '',
+        videoUrl: null,
+        status: 'Eingereicht',
+      }, beteiligte);
+
+      if (result?.ok) {
+        // Bild in Supabase hochladen wenn vorhanden
+        if (window._euBildDataUrl) {
+          try {
+            const userId = Auth.id();
+            const dateiname = `${Date.now()}_update_${athlet.name?.replace(/\s+/g,'_')||'athlet'}.jpg`;
+            const pfad = `${userId}/${result.id}/${dateiname}`;
+            // DataURL → Blob
+            const res = await fetch(window._euBildDataUrl);
+            const blob = await res.blob();
+            const { data: uploadData, error: uploadError } = await Backend.client.storage
+              .from('achievement-media').upload(pfad, blob, { cacheControl: '3600', upsert: false, contentType: 'image/jpeg' });
+            if (!uploadError) {
+              await Backend.client.from('achievement_media').insert([{
+                achievement_id: result.id,
+                storage_path: uploadData.path || pfad,
+                original_name: dateiname,
+                mime_type: 'image/jpeg',
+                creator: 'Wettkampf-Update',
+                source: v.veranstaltung,
+                uploaded_by: userId,
+                created_at: new Date().toISOString(),
+              }]);
+              toast(`✅ Meldung ${result.nr} erstellt + Bild gespeichert!`, 'success');
+            } else {
+              toast(`✅ Meldung ${result.nr} erstellt (Bild-Upload fehlgeschlagen)`, 'warning');
+            }
+          } catch(imgErr) {
+            toast(`✅ Meldung ${result.nr} erstellt (Bild: ${imgErr.message})`, 'warning');
+          }
+        } else {
+          toast(`✅ Meldung ${result.nr} erstellt!`, 'success');
+        }
+        APP._erfolgeCache = null;
+        navigateTo('erfolg-detail', { currentErfolgId: result.id });
+      } else {
+        throw new Error(result?.fehler || 'Unbekannter Fehler');
+      }
+    } catch(e) {
+      toast('Fehler beim Erstellen der Meldung: ' + e.message, 'danger');
+    }
   } else {
     toast('✅ Poster heruntergeladen!', 'success');
   }

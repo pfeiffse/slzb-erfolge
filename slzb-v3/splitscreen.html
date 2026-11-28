@@ -353,7 +353,10 @@ const ZEITPLAN_DEFAULT = [
   { von: '17:00', bis: '07:30', modus: 'nur-diashow', vplanTab: 'heute',  label: 'Nur Sportliche Erfolge' },
 ];
 
-let _zeitplan = [];
+let _zeitplan = [
+  { von: '07:30', bis: '14:00', modus: '60-40', vplanTab: 'heute',      label: 'Vormittag (Heute)' },
+  { von: '14:00', bis: '20:00', modus: '60-40', vplanTab: 'morgen',     label: 'Nachmittag (Morgen)' },
+];
 let _zeitplanTimer = null;
 let _zeitplanAktiv = false;
 
@@ -592,9 +595,14 @@ function starteAnzeige() {
   document.getElementById('layout').style.display = 'grid';
   setzeLayout(layout);
 
-  // Zeitplan starten
-  _zeitplanAktiv = document.getElementById('cfg-zeitplan-aktiv')?.checked || false;
-  if (_zeitplanAktiv) starteZeitplanTimer();
+  // Zeitplan standardmäßig aktivieren
+  const zeitplanCb = document.getElementById('cfg-zeitplan-aktiv');
+  if (zeitplanCb && !zeitplanCb.checked) {
+    zeitplanCb.checked = true;
+    zeitplanToggle(true);
+  }
+  _zeitplanAktiv = true;
+  starteZeitplanTimer();
 
   // Uhr starten
   setInterval(aktualisiereUhr, 1000);
@@ -604,7 +612,14 @@ function starteAnzeige() {
   setTimeout(aktualisiereVplanSkalierung, 500);
 
   // Auto-Scroll starten (Standard: an)
-  setTimeout(() => starteVpAutoScroll(40), 2000);
+  setTimeout(() => {
+    starteVpAutoScroll(40);
+    const scrollBtn = document.getElementById('ctrl-scroll-btn');
+    if (scrollBtn) { scrollBtn.textContent = '↕ Scroll: AN'; scrollBtn.classList.add('aktiv'); }
+  }, 2000);
+
+  // CSS in VP injizieren nach erstem Laden
+  setTimeout(injiziereVpCSS, 2000);
 
   // Vplan-Reload alle 5 Minuten
   setInterval(() => {
@@ -662,9 +677,13 @@ function zeigeVplanTab(tab, btn) {
   } else if (quelle === 'github' || quelle === 'url' || quelle === 'lokal') {
     const url = _vplanUrls[tab];
     if (url) {
-      document.getElementById('vplan-frame').src = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
-      // Datum nach Laden extrahieren
-      document.getElementById('vplan-frame').onload = () => extrahiereVpDatumAusFrame(tab);
+      const frame = document.getElementById('vplan-frame');
+      frame.src = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
+      // Datum nach Laden extrahieren + CSS injizieren
+      frame.onload = () => {
+        extrahiereVpDatumAusFrame(tab);
+        injiziereVpCSS();
+      };
     }
   }
   document.querySelectorAll('.vplan-tab').forEach(b => b.classList.remove('aktiv'));
@@ -731,6 +750,35 @@ function aktualisiereTabBeschriftung(tab, datum) {
 }
 
 // ── Uhr ───────────────────────────────────────────────────────
+// VP-CSS injizieren für bessere Lesbarkeit
+function injiziereVpCSS() {
+  try {
+    const frame = document.getElementById('vplan-frame');
+    const doc = frame.contentDocument || frame.contentWindow?.document;
+    if (!doc || !doc.head) return;
+    // Prüfe ob CSS bereits injiziert
+    if (doc.getElementById('slzb-vp-css')) return;
+    const style = doc.createElement('style');
+    style.id = 'slzb-vp-css';
+    style.textContent = `
+      body { font-size: 18px !important; font-family: Arial, sans-serif !important; }
+      table { width: 100% !important; border-collapse: collapse !important; }
+      td, th { padding: 6px 8px !important; font-size: 16px !important; border: 1px solid #ddd !important; }
+      th { background: #003366 !important; color: #fff !important; font-size: 15px !important; }
+      font[size="2"] { font-size: 16px !important; }
+      font[size="3"] { font-size: 18px !important; }
+      font[size="4"] { font-size: 22px !important; font-weight: bold !important; }
+      p { font-size: 16px !important; margin: 4px 0 !important; }
+      a { color: #003366 !important; }
+      tr:nth-child(even) { background: #f5f7fb !important; }
+      tr:hover { background: #e8f0fe !important; }
+      /* Orange Einträge (Änderungen) hervorheben */
+      span[style*="255,128,64"] { font-weight: bold !important; }
+    `;
+    doc.head.appendChild(style);
+  } catch(e) { /* Cross-Origin - kein Fehler */ }
+}
+
 function aktualisiereUhr() {
   const jetzt = new Date();
   document.getElementById('ctrl-uhr').textContent =
@@ -739,6 +787,97 @@ function aktualisiereUhr() {
 }
 
 // ── Vollbild ──────────────────────────────────────────────────
+// ── Livestream ───────────────────────────────────────────────────────────────
+function zeigeLivestreamDialog() {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:center;justify-content:center';
+  const card = document.createElement('div');
+  card.style.cssText = 'background:#1B1C1F;border-radius:16px;padding:24px;max-width:500px;width:90%;color:#fff';
+  card.innerHTML = `
+    <h3 style="margin-bottom:16px">📺 Livestream</h3>
+    <div style="margin-bottom:12px">
+      <label style="font-size:.78rem;color:#aaa;display:block;margin-bottom:4px">Schnellauswahl</label>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        <button onclick="setLivestreamUrl('https://www.youtube.com/embed/live_stream?channel=UCxxxxxx')" style="background:#E2001A;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:.78rem">▶ YouTube</button>
+        <button onclick="setLivestreamUrl('https://www.ardmediathek.de/live/Y3JpZDovL2Rhc2Vyc3RlLmRlL2xpdmUvbGl2ZQ')" style="background:#003366;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:.78rem">📺 ARD Live</button>
+        <button onclick="setLivestreamUrl('https://zdf.de/live-tv')" style="background:#003366;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:.78rem">📺 ZDF Live</button>
+        <button onclick="setLivestreamUrl('https://www.sportschau.de/live')" style="background:#003366;color:#fff;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:.78rem">🏅 Sportschau</button>
+      </div>
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="font-size:.78rem;color:#aaa;display:block;margin-bottom:4px">Eigene URL (YouTube-Embed, iFrame-URL)</label>
+      <input type="url" id="livestream-url" placeholder="https://www.youtube.com/embed/VIDEO_ID"
+        style="width:100%;background:#2A2C31;color:#fff;border:1px solid #444;border-radius:6px;padding:8px;font-size:.85rem">
+      <div style="font-size:.7rem;color:#666;margin-top:3px">Tipp: YouTube → Teilen → Einbetten → URL kopieren</div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="this.closest('div[style*=fixed]').remove()" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:6px;padding:8px 16px;cursor:pointer">Abbrechen</button>
+      <button onclick="starteLivestream()" style="background:#E2001A;color:#fff;border:none;border-radius:6px;padding:8px 16px;cursor:pointer;font-weight:700">▶ Starten</button>
+      <button onclick="stoppeLivestream();this.closest('div[style*=fixed]').remove()" style="background:#444;color:#fff;border:none;border-radius:6px;padding:8px 16px;cursor:pointer">⏹ Stoppen</button>
+    </div>
+  `;
+  overlay.appendChild(card);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+function setLivestreamUrl(url) {
+  const input = document.getElementById('livestream-url');
+  if (input) input.value = url;
+}
+
+function starteLivestream() {
+  const url = document.getElementById('livestream-url')?.value?.trim();
+  if (!url) { alert('Bitte URL eingeben'); return; }
+  document.querySelector('div[style*="position:fixed"][style*="9999"]')?.remove();
+
+  // Ersetze Diashow-Frame durch Livestream
+  const frame = document.getElementById('diashow-frame');
+  if (frame) {
+    window._diashowSrcBackup = frame.src;
+    // YouTube-URL in Embed-URL umwandeln
+    let embedUrl = url;
+    const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
+    if (ytMatch) embedUrl = `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=0`;
+    frame.src = embedUrl;
+    // SLZB-Header-Overlay anzeigen
+    zeigeLivestreamHeader();
+    toast('📺 Livestream gestartet', 'success');
+  }
+}
+
+function stoppeLivestream() {
+  const frame = document.getElementById('diashow-frame');
+  if (frame && window._diashowSrcBackup) {
+    frame.src = window._diashowSrcBackup;
+    window._diashowSrcBackup = null;
+  }
+  document.getElementById('livestream-header')?.remove();
+  toast('⏹ Livestream gestoppt', 'info');
+}
+
+function zeigeLivestreamHeader() {
+  document.getElementById('livestream-header')?.remove();
+  const header = document.createElement('div');
+  header.id = 'livestream-header';
+  header.style.cssText = `
+    position: absolute; top: 0; left: 0; right: 0; z-index: 50;
+    background: linear-gradient(135deg, #003366, #001F4D);
+    padding: 8px 16px; display: flex; align-items: center; gap: 12px;
+    border-bottom: 3px solid #E2001A;
+  `;
+  header.innerHTML = `
+    <img src="slzb-sport-erfolge-logo.png" alt="SLZB" style="height:36px;width:auto" onerror="this.style.display='none'">
+    <div style="color:#fff;font-weight:700;font-size:.9rem">Schul- und Leistungssportzentrum Berlin</div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+      <span style="background:#E2001A;color:#fff;padding:3px 10px;border-radius:12px;font-size:.75rem;font-weight:700;animation:live-pulse 1.2s ease-in-out infinite">● LIVE</span>
+      <button onclick="stoppeLivestream()" style="background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:.75rem">⏹ Stoppen</button>
+    </div>
+  `;
+  const panel = document.getElementById('panel-diashow');
+  if (panel) panel.appendChild(header);
+}
+
 function toggleVpScroll() {
   const btn = document.getElementById('ctrl-scroll-btn');
   if (_vpScrollTimer) {
@@ -1132,9 +1271,9 @@ if (params.get('autostart') === '1') {
             <input type="checkbox" id="tab-uebersicht-aktiv" style="accent-color:#E2001A">
             📋 Übersicht
             <select id="tab-uebersicht-dauer" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:5px;padding:3px 6px;color:#fff;font-size:.75rem;font-family:inherit;margin-left:auto">
-              <option value="20000">20 Sek</option>
+              <option value="20000" selected>20 Sek</option>
               <option value="30000">30 Sek</option>
-              <option value="60000" selected>60 Sek</option>
+              <option value="60000">60 Sek</option>
               <option value="120000">2 Min</option>
             </select>
           </label>
@@ -1335,6 +1474,7 @@ if (params.get('autostart') === '1') {
   <button class="ctrl-btn" onclick="vollbild()">⛶ Vollbild</button>
   <div class="ctrl-sep"></div>
   <button class="ctrl-btn aktiv" id="ctrl-scroll-btn" onclick="toggleVpScroll()" title="VP Auto-Scroll ein/aus">↕ Scroll: AN</button>
+  <button class="ctrl-btn" onclick="zeigeLivestreamDialog()" title="Livestream starten">📺 Livestream</button>
   <button class="ctrl-btn" onclick="zeigeKonfig()">⚙️ Einstellungen</button>
   <div class="ctrl-sep"></div>
   <span id="ctrl-status"></span>
