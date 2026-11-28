@@ -57,8 +57,9 @@
     width: 100%; height: 100%;
     border: none;
     display: block;
-    /* Skalierung für lesbare Darstellung */
     transform-origin: top left;
+    /* Schrift-Vergrößerung via zoom */
+    font-size: 120%;
   }
 
   /* ── Trennlinie ──────────────────────────────────────────── */
@@ -145,7 +146,7 @@
   #vplan-tabs {
     position: absolute;
     top: 0; left: 0; right: 0;
-    height: 36px;
+    height: 44px;
     background: #003366;
     display: flex;
     z-index: 10;
@@ -155,12 +156,12 @@
     border: none;
     background: transparent;
     color: rgba(255,255,255,.6);
-    font-size: .75rem;
+    font-size: .88rem;
     font-weight: 700;
     cursor: pointer;
     font-family: inherit;
     transition: background .15s, color .15s;
-    border-bottom: 2px solid transparent;
+    border-bottom: 3px solid transparent;
   }
   .vplan-tab.aktiv {
     color: #fff;
@@ -170,8 +171,9 @@
   .vplan-tab:hover { background: rgba(255,255,255,.1); }
   #vplan-frame-wrap {
     position: absolute;
-    top: 36px; left: 0; right: 0; bottom: 0;
-    overflow: hidden;
+    top: 44px; left: 0; right: 0; bottom: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   /* ── Konfigurationsscreen ────────────────────────────────── */
@@ -225,6 +227,17 @@
 </style>
 
 <script>
+// ── Globaler Fehler-Handler ──────────────────────────────────────────────────
+window.addEventListener('error', function(e) {
+  console.error('[Splitscreen Fehler]', e.message, 'in', e.filename, 'Zeile', e.lineno);
+  const status = document.getElementById('ctrl-status');
+  if (status) status.textContent = '⚠️ JS-Fehler: ' + e.message.slice(0, 50);
+});
+window.addEventListener('unhandledrejection', function(e) {
+  console.error('[Splitscreen Promise-Fehler]', e.reason);
+});
+
+
 // ── State ─────────────────────────────────────────────────────
 let _vplanUrls = { heute: '', morgen: '', uebersicht: '' };
 let _vplanHtml = { heute: null, morgen: null, uebersicht: null };
@@ -636,14 +649,69 @@ function setzeLayout(layout) {
 function zeigeVplanTab(tab, btn) {
   _aktuellerTab = tab;
   const quelle = document.getElementById('cfg-vplan-quelle')?.value || 'upload';
+
   if (quelle === 'upload' && _vplanHtml[tab]) {
     document.getElementById('vplan-frame').srcdoc = _vplanHtml[tab];
-  } else if (quelle === 'url') {
+    // Datum aus HTML extrahieren und Tab-Button aktualisieren
+    setTimeout(() => extrahiereVpDatum(tab), 300);
+  } else if (quelle === 'github' || quelle === 'url' || quelle === 'lokal') {
     const url = _vplanUrls[tab];
-    if (url) document.getElementById('vplan-frame').src = url;
+    if (url) {
+      document.getElementById('vplan-frame').src = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
+      // Datum nach Laden extrahieren
+      document.getElementById('vplan-frame').onload = () => extrahiereVpDatumAusFrame(tab);
+    }
   }
   document.querySelectorAll('.vplan-tab').forEach(b => b.classList.remove('aktiv'));
   if (btn) btn.classList.add('aktiv');
+}
+
+// Datum aus VP-HTML extrahieren (für Upload-Modus)
+function extrahiereVpDatum(tab) {
+  const html = _vplanHtml[tab];
+  if (!html) return;
+  // Suche nach Datum-Mustern: "Montag, 28.11.2026", "28.11.2026", "28. November 2026"
+  const patterns = [
+    /(\d{1,2}\.\s*\w+\s*\d{4})/,
+    /(\w+tag,?\s+\d{1,2}\.\d{1,2}\.\d{4})/i,
+    /(\d{1,2}\.\d{1,2}\.\d{4})/,
+    /(heute|morgen|übermorgen)/i,
+  ];
+  for (const p of patterns) {
+    const m = html.match(p);
+    if (m) {
+      aktualisiereTabBeschriftung(tab, m[1]);
+      return;
+    }
+  }
+}
+
+// Datum aus geladenem iFrame extrahieren
+function extrahiereVpDatumAusFrame(tab) {
+  try {
+    const frame = document.getElementById('vplan-frame');
+    const doc = frame.contentDocument || frame.contentWindow?.document;
+    if (!doc) return;
+    const text = doc.body?.innerText || doc.body?.textContent || '';
+    const patterns = [
+      /(\d{1,2}\.\s*\w+\s*\d{4})/,
+      /(\w+tag,?\s+\d{1,2}\.\d{1,2}\.\d{4})/i,
+      /(\d{1,2}\.\d{1,2}\.\d{4})/,
+    ];
+    for (const p of patterns) {
+      const m = text.match(p);
+      if (m) { aktualisiereTabBeschriftung(tab, m[1]); return; }
+    }
+  } catch(e) { /* Cross-Origin */ }
+}
+
+function aktualisiereTabBeschriftung(tab, datum) {
+  const tabIdx = ['heute', 'morgen', 'uebersicht'].indexOf(tab);
+  const tabs = document.querySelectorAll('.vplan-tab');
+  if (tabs[tabIdx] && datum) {
+    const icons = { heute: '📅', morgen: '📅', uebersicht: '📋' };
+    tabs[tabIdx].textContent = (icons[tab] || '📅') + ' ' + datum.trim().slice(0, 20);
+  }
 }
 
 // ── Uhr ───────────────────────────────────────────────────────
@@ -871,21 +939,23 @@ function aktualisiereVplanSkalierung() {
   if (!frame || !panel) return;
 
   const panelW = panel.clientWidth;
-  const panelH = panel.clientHeight - 36; // Minus Tab-Höhe
+  const panelH = panel.clientHeight - 44; // Minus Tab-Höhe (44px)
 
-  // Ziel: VP soll gut lesbar sein
-  // Annahme: VP ist für ~1200px Breite optimiert (nicht 1920)
+  // CSS zoom: skaliert den Inhalt ohne transform-Probleme
+  // Ziel: VP-Inhalt soll gut lesbar sein
+  // Annahme: VP ist für ~1200px Breite optimiert
   const vpZielBreite = 1200;
-  const scale = Math.min(panelW / vpZielBreite, 1.2); // Max 120% Zoom
+  const zoomFaktor = Math.min(panelW / vpZielBreite, 1.5);
 
-  frame.style.transform = `scale(${scale})`;
-  frame.style.transformOrigin = 'top left';
-  frame.style.width = `${vpZielBreite}px`;
-  // Höhe: genug für Inhalt, aber scrollbar
-  frame.style.height = `${Math.round(panelH / scale)}px`;
-  frame.style.minHeight = `${Math.round(panelH / scale)}px`;
+  // Nutze CSS zoom (besser als transform für scrollbare Inhalte)
+  frame.style.zoom = zoomFaktor;
+  frame.style.width = '100%';
+  frame.style.height = `${Math.round(panelH / zoomFaktor)}px`;
+  frame.style.minHeight = `${Math.round(panelH / zoomFaktor)}px`;
+  frame.style.transform = '';
+  frame.style.transformOrigin = '';
 
-  // Wrapper scrollbar machen
+  // Wrapper scrollbar
   if (wrap) {
     wrap.style.overflowY = 'auto';
     wrap.style.overflowX = 'hidden';
@@ -970,7 +1040,7 @@ if (params.get('autostart') === '1') {
       <label>Vertretungsplan-Quelle</label>
       <select id="cfg-vplan-quelle" onchange="vplanQuelleWechseln(this.value)">
         <option value="upload">📁 HTML-Dateien hochladen (itslearning/manuell)</option>
-        <option value="github">🔄 Automatisch von GitHub (AccessSchule-Skript)</option>
+        <option value="github" selected>🔄 Automatisch von GitHub (AccessSchule-Skript)</option>
         <option value="url">🔗 URL eingeben (eigener Server)</option>
         <option value="lokal">🏫 Lokaler Modus (schulinterne Monitore)</option>
       </select>

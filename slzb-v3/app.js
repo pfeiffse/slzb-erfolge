@@ -86,6 +86,21 @@ function einwilligungIcon(ok) {
   return ok?'<span class="ew-ok">✓</span>':'<span class="ew-nok">✗</span>';
 }
 
+
+// ── Globaler Fehler-Handler ──────────────────────────────────────────────────
+window.addEventListener('error', function(e) {
+  console.error('[SLZB Fehler]', e.message, 'in', e.filename?.split('/').pop(), 'Zeile', e.lineno);
+  // Zeige Fehler nur für Admins
+  if (typeof Auth !== 'undefined' && Auth.rolle && Auth.rolle() === 'admin') {
+    if (typeof toast === 'function') {
+      toast('⚠️ JS-Fehler: ' + e.message.slice(0, 60), 'warning');
+    }
+  }
+});
+window.addEventListener('unhandledrejection', function(e) {
+  console.error('[SLZB Promise-Fehler]', e.reason?.message || e.reason);
+});
+
 // ── Sportart → Akzentfarbe ────────────────────────────────────────────────────
 function sportartFarbe(sportart) {
   if (!sportart) return 'var(--sport-default)';

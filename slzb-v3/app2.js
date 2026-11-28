@@ -11087,11 +11087,16 @@ function zeigeErgebnisUpdateModal(veranstaltungsId) {
         </div>
       </div>
 
-      <!-- Live-Vorschau -->
-      <div id="eu-vorschau" style="background:var(--slzb-bg-secondary);border-radius:8px;padding:10px 14px;
-           font-size:.82rem;color:var(--slzb-text-muted);min-height:36px;border:1px solid var(--slzb-border)">
-        ← Athlet und Platz wählen für Vorschau
-      </div>
+      <!-- Live-Vorschau als Canvas-Poster -->\
+      <div id=\"eu-vorschau-wrap\" style=\"margin-top:8px\">\
+        <div style=\"font-size:.72rem;font-weight:700;color:var(--slzb-text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px\">🖼️ Poster-Vorschau</div>\
+        <canvas id=\"eu-preview-canvas\" width=\"540\" height=\"675\"\
+          style=\"max-width:100%;max-height:260px;display:block;margin:0 auto;border-radius:6px;background:#111\"></canvas>\
+      </div>\
+      <div id=\"eu-vorschau\" style=\"background:var(--slzb-bg-secondary);border-radius:8px;padding:8px 14px;\
+           font-size:.78rem;color:var(--slzb-text-muted);min-height:32px;border:1px solid var(--slzb-border);margin-top:6px\">\
+        ← Athlet und Platz wählen für Vorschau\
+      </div>\
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
@@ -11154,8 +11159,9 @@ function euSetPlatz(platz) {
 }
 
 // Live-Vorschau aktualisieren
-function euAktualisierePoster() {
+async function euAktualisierePoster() {
   const vorschau = document.getElementById('eu-vorschau');
+  const vorschauWrap = document.getElementById('eu-vorschau-wrap');
   if (!vorschau) return;
   const athlet = window._euAthlet;
   const platz = window._euPlatz;
@@ -11165,6 +11171,7 @@ function euAktualisierePoster() {
 
   if (!athlet || !platz) {
     vorschau.textContent = '← Athlet und Platz wählen für Vorschau';
+    if (vorschauWrap) vorschauWrap.style.display = 'none';
     return;
   }
 
@@ -11178,9 +11185,63 @@ function euAktualisierePoster() {
     zusatz ? `· ${esc(zusatz)}` : '',
   ].filter(Boolean);
 
-  vorschau.innerHTML = `✅ Poster: ${parts.join(' ')}`;
+  vorschau.innerHTML = `✅ ${parts.join(' ')}`;
   vorschau.style.color = 'var(--slzb-text)';
   vorschau.style.borderColor = '#4caf50';
+
+  // Canvas-Vorschau zeichnen
+  const canvas = document.getElementById('eu-preview-canvas');
+  if (!canvas || typeof zeichneAthletPortrait !== 'function') return;
+
+  if (vorschauWrap) vorschauWrap.style.display = 'block';
+
+  // Zoom-Controls anzeigen wenn Bild vorhanden
+  const zoomControls = document.getElementById('eu-zoom-controls');
+  if (zoomControls) zoomControls.style.display = window._euBildDataUrl ? 'block' : 'none';
+
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  // Bild laden
+  let bild = null;
+  if (window._euBildDataUrl) {
+    try {
+      bild = await new Promise((res) => {
+        const img = new Image();
+        img.onload = () => res(img);
+        img.onerror = () => res(null);
+        img.src = window._euBildDataUrl;
+      });
+      // Zoom/Position anwenden
+      if (bild) {
+        window._bildZoom = window._euBildZoom || 1.0;
+        window._bildOffset = { x: 0.5, y: window._euBildPosY || 0.2 };
+      }
+    } catch(e) { bild = null; }
+  }
+
+  // Veranstaltung aus Workspace
+  const v = window._euVeranstaltungsId
+    ? (ladeGespeicherteVeranstaltungen() || []).find(x => x.id === window._euVeranstaltungsId)
+    : null;
+
+  const athletName = athlet === '__alle__' ? (v?.veranstaltung || 'Alle') : athlet;
+  const nameParts = athletName.trim().split(' ');
+
+  await zeichneAthletPortrait(ctx, W, H, {
+    vorname: nameParts.slice(0, -1).join(' ') || athletName,
+    nachname: nameParts.length > 1 ? nameParts[nameParts.length-1] : '',
+    sportart: v?.sportart || '',
+    veranstaltung: v?.veranstaltung || '',
+    ort: v?.ort || '',
+    kader: disziplin || '',
+    erfolge: [
+      `${platz}. Platz${disziplin ? ' – ' + disziplin : ''}${ergebnis ? ' (' + ergebnis + ')' : ''}`,
+      ...(zusatz ? [zusatz] : []),
+    ],
+    bild,
+    akzent: 'rot',
+  });
 }
 
 
