@@ -5824,9 +5824,11 @@ async function renderKalender() {
             const _istHeuteN = t.datum === new Date().toISOString().slice(0,10);
             return `<tr style="${_istHeuteN?'background:rgba(226,0,26,0.12);':''}border-left:4px solid ${typeof sportartFarbe==='function'?sportartFarbe(t.sportart):'#003366'}">\
             <td class="text-sm"><strong>${esc(t.datumAnzeige)}</strong>${_istHeuteN?'<span class="badge badge-danger ml-1" style="font-size:.65rem">HEUTE</span>':''}</td>
-            <td class="text-sm">${esc(t.sportart)}</td>
+            <td class=\"text-sm\" style=\"border-left:3px solid ${typeof sportartFarbe==='function'?sportartFarbe(t.sportart):'#003366'};padding-left:8px\">${esc(t.sportart)}</td>\\
+
             <td><strong>${esc(t.veranstaltung)}</strong></td>
-            <td class="text-sm text-muted">${esc(t.ort||'–')}</td>
+            <td class=\"text-sm text-muted\">${typeof ortZuFlagge==='function'&&(t.land||t.ort)?`<span class=\"flagge-inline\" style=\"font-size:.85rem\">${ortZuFlagge(t.land||t.ort)||''}</span>`:''}${esc(t.ort||'–')}${t.link?`<a href=\"${esc(t.link)}\" target=\"_blank\" style=\"margin-left:4px;color:var(--slzb-primary);font-size:.72rem\" title=\"Veranstaltungsseite\">🔗</a>`:''}</td>\\
+
             <td class="text-sm text-muted">${esc(t.klasse||'–')}</td>
             <td><span style="color:${prioFarbe(t.prioritaet)};font-size:.75rem;font-weight:700">${prioLabel(t.prioritaet)}</span></td>
             <td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:2px 8px" onclick="kalenderCountdown(${JSON.stringify(t).replace(/"/g,'&quot;')})">⏳</button>
@@ -5844,9 +5846,11 @@ async function renderKalender() {
         <thead><tr><th>Datum</th><th>Sportart</th><th>Veranstaltung</th><th>Ort</th><th>Klasse</th><th>Priorität</th><th></th></tr></thead>
         <tbody>${gefiltertAlle.map(t=>`<tr>
           <td class="text-sm">${esc(t.datumAnzeige)}</td>
-          <td class="text-sm">${esc(t.sportart)}</td>
+          <td class=\"text-sm\" style=\"border-left:3px solid ${typeof sportartFarbe==='function'?sportartFarbe(t.sportart):'#003366'};padding-left:8px\">${esc(t.sportart)}</td>\\
+
           <td>${esc(t.veranstaltung)}</td>
-          <td class="text-sm text-muted">${esc(t.ort||'–')}</td>
+          <td class=\"text-sm text-muted\">${typeof ortZuFlagge==='function'&&(t.land||t.ort)?`<span class=\"flagge-inline\" style=\"font-size:.85rem\">${ortZuFlagge(t.land||t.ort)||''}</span>`:''}${esc(t.ort||'–')}${t.link?`<a href=\"${esc(t.link)}\" target=\"_blank\" style=\"margin-left:4px;color:var(--slzb-primary);font-size:.72rem\" title=\"Veranstaltungsseite\">🔗</a>`:''}</td>\\
+
           <td class="text-sm text-muted">${esc(t.klasse||'–')}</td>
           <td><span style="color:${prioFarbe(t.prioritaet)};font-size:.75rem;font-weight:700">${prioLabel(t.prioritaet)}</span></td>
           <td><button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:2px 8px" onclick="kalenderCountdown(${JSON.stringify(t).replace(/"/g,'&quot;')})">⏳</button></td>
@@ -5878,9 +5882,11 @@ async function renderKalender() {
             const _istHeute = t.datum === new Date().toISOString().slice(0,10);
             return `<tr style="border-left:3px solid ${prioFarbe(t.prioritaet)};${_istHeute?'background:rgba(226,0,26,0.12);':''}">
             <td class="text-sm"><strong>${esc(t.datumAnzeige)}</strong>${_istHeute?'<span class="badge badge-danger ml-1" style="font-size:.65rem">HEUTE</span>':''}</td>
-            <td class="text-sm">${esc(t.sportart)}</td>
+            <td class=\"text-sm\" style=\"border-left:3px solid ${typeof sportartFarbe==='function'?sportartFarbe(t.sportart):'#003366'};padding-left:8px\">${esc(t.sportart)}</td>\\
+
             <td><strong>${esc(t.veranstaltung)}</strong></td>
-            <td class="text-sm text-muted">${esc(t.ort||'–')}</td>
+            <td class=\"text-sm text-muted\">${typeof ortZuFlagge==='function'&&(t.land||t.ort)?`<span class=\"flagge-inline\" style=\"font-size:.85rem\">${ortZuFlagge(t.land||t.ort)||''}</span>`:''}${esc(t.ort||'–')}${t.link?`<a href=\"${esc(t.link)}\" target=\"_blank\" style=\"margin-left:4px;color:var(--slzb-primary);font-size:.72rem\" title=\"Veranstaltungsseite\">🔗</a>`:''}</td>\\
+
             <td class="text-sm text-muted">${esc(t.klasse||'–')}</td>
             <td><span style="color:${prioFarbe(t.prioritaet)};font-size:.75rem;font-weight:700">${prioLabel(t.prioritaet)}</span></td>
             <td><button class="btn btn-ghost btn-sm" style="font-size:.7rem;padding:2px 8px" onclick="kalenderCountdown(${JSON.stringify(t).replace(/"/g,'&quot;')})">⏳</button></td>
@@ -6379,7 +6385,8 @@ async function zeigeWochenvorschau(wochen = 1) {
                   <th>Sportart</th><th>Veranstaltung</th><th>Ort</th><th>Klasse</th><th>Priorität</th><th></th>
                 </tr></thead>
                 <tbody>${termine.map(t => `<tr>
-                  <td class="text-sm">${esc(t.sportart)}</td>
+                  <td class=\"text-sm\" style=\"border-left:3px solid ${typeof sportartFarbe==='function'?sportartFarbe(t.sportart):'#003366'};padding-left:8px\">${esc(t.sportart)}</td>\\
+
                   <td><strong>${esc(t.veranstaltung)}</strong></td>
                   <td class="text-sm text-muted">
                     ${typeof ortZuFlagge === 'function' && (t.land||t.ort) ? `<span class="flagge-inline">${ortZuFlagge(t.land||t.ort)||''}</span>` : ''}${esc(t.ort||'–')}

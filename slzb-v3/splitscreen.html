@@ -780,9 +780,9 @@ function setzeLayout(layout) {
   const panelV = document.getElementById('panel-vplan');
 
   switch(layout) {
-    case '60-40': el.style.gridTemplateColumns = '60fr 40fr'; break;
-    case '50-50': el.style.gridTemplateColumns = '50fr 50fr'; break;
-    case '70-30': el.style.gridTemplateColumns = '70fr 30fr'; break;
+    case '60-40': el.style.gridTemplateColumns = '60fr 6px 40fr'; if(window._setzeBreite) window._setzeBreite(60,true); break;
+    case '50-50': el.style.gridTemplateColumns = '50fr 6px 50fr'; if(window._setzeBreite) window._setzeBreite(50,true); break;
+    case '70-30': el.style.gridTemplateColumns = '70fr 6px 30fr'; if(window._setzeBreite) window._setzeBreite(70,true); break;
     case 'hochformat':
       el.style.gridTemplateColumns = '1fr';
       el.style.gridTemplateRows = '55fr 45fr';
@@ -857,56 +857,140 @@ document.addEventListener('keydown', e => {
   }
 });
 
-// ── Drag-to-Resize Divider ──────────────────────────────────────────────────
+// ── Drag-to-Resize Divider (Touch-optimiert mit Snap-Punkten) ───────────────
 (function() {
   let isDragging = false;
+  let currentPct = 60;
+  // Snap-Punkte: 20, 30, 40, 50, 60, 70, 80%
+  const SNAP_POINTS = [20, 30, 40, 50, 60, 70, 80];
+  const SNAP_THRESHOLD = 3; // Snap wenn < 3% entfernt
+
+  function snapToPunkt(pct) {
+    for (const snap of SNAP_POINTS) {
+      if (Math.abs(pct - snap) < SNAP_THRESHOLD) return snap;
+    }
+    return pct;
+  }
+
+  function setzeBreite(pct, animate) {
+    const layout = document.getElementById('layout');
+    if (!layout) return;
+    currentPct = Math.max(20, Math.min(80, pct));
+    if (animate) {
+      layout.style.transition = 'grid-template-columns .3s cubic-bezier(0.34,1.56,0.64,1)';
+      setTimeout(() => { layout.style.transition = ''; }, 350);
+    }
+    layout.style.gridTemplateColumns = `${currentPct}fr 6px ${100-currentPct}fr`;
+    // Preset-Buttons aktualisieren
+    document.querySelectorAll('.split-preset').forEach(btn => {
+      btn.classList.toggle('aktiv', parseInt(btn.dataset.pct) === currentPct);
+    });
+    aktualisiereVplanSkalierung();
+  }
 
   function initDivider() {
     const divider = document.getElementById('divider');
     const layout = document.getElementById('layout');
     if (!divider || !layout) return;
 
+    // Touch-Target vergrößern (unsichtbarer Bereich)
+    divider.style.position = 'relative';
+
+    // Mouse-Events
     divider.addEventListener('mousedown', (e) => {
       isDragging = true;
       document.body.style.cursor = 'col-resize';
       document.body.style.userSelect = 'none';
+      divider.style.background = '#E2001A';
       e.preventDefault();
     });
 
     document.addEventListener('mousemove', (e) => {
       if (!isDragging) return;
       const rect = layout.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const pct = Math.max(20, Math.min(80, (x / rect.width) * 100));
-      layout.style.gridTemplateColumns = `${pct}fr 6px ${100-pct}fr`;
+      const pct = (e.clientX - rect.left) / rect.width * 100;
+      const snapped = snapToPunkt(pct);
+      layout.style.gridTemplateColumns = `${Math.max(20,Math.min(80,snapped))}fr 6px ${100-Math.max(20,Math.min(80,snapped))}fr`;
     });
 
-    document.addEventListener('mouseup', () => {
-      if (isDragging) {
-        isDragging = false;
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
-        aktualisiereVplanSkalierung();
-      }
+    document.addEventListener('mouseup', (e) => {
+      if (!isDragging) return;
+      isDragging = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      divider.style.background = '';
+      const rect = layout.getBoundingClientRect();
+      const pct = (e.clientX - rect.left) / rect.width * 100;
+      setzeBreite(snapToPunkt(pct), true);
     });
 
+    // Touch-Events (großes Touch-Target: 44px)
     divider.addEventListener('touchstart', (e) => {
-      isDragging = true; e.preventDefault();
+      isDragging = true;
+      divider.style.background = '#E2001A';
+      e.preventDefault();
     }, { passive: false });
 
     document.addEventListener('touchmove', (e) => {
       if (!isDragging) return;
       const touch = e.touches[0];
       const rect = layout.getBoundingClientRect();
-      const pct = Math.max(20, Math.min(80, (touch.clientX - rect.left) / rect.width * 100));
-      layout.style.gridTemplateColumns = `${pct}fr 6px ${100-pct}fr`;
+      const pct = (touch.clientX - rect.left) / rect.width * 100;
+      const snapped = snapToPunkt(pct);
+      layout.style.gridTemplateColumns = `${Math.max(20,Math.min(80,snapped))}fr 6px ${100-Math.max(20,Math.min(80,snapped))}fr`;
+      e.preventDefault();
+    }, { passive: false });
+
+    document.addEventListener('touchend', (e) => {
+      if (!isDragging) return;
+      isDragging = false;
+      divider.style.background = '';
+      if (e.changedTouches.length) {
+        const touch = e.changedTouches[0];
+        const rect = layout.getBoundingClientRect();
+        const pct = (touch.clientX - rect.left) / rect.width * 100;
+        setzeBreite(snapToPunkt(pct), true);
+      }
     });
 
-    document.addEventListener('touchend', () => { isDragging = false; aktualisiereVplanSkalierung(); });
+    // Doppelklick → 50/50
+    divider.addEventListener('dblclick', () => setzeBreite(50, true));
   }
 
-  document.addEventListener('DOMContentLoaded', initDivider);
-  setTimeout(initDivider, 500);
+  // Preset-Buttons in Steuerleiste
+  function fuegePresetsHinzu() {
+    const controls = document.getElementById('controls');
+    if (!controls) return;
+    const sep = document.createElement('div');
+    sep.className = 'ctrl-sep';
+    const presetGroup = document.createElement('div');
+    presetGroup.style.cssText = 'display:flex;gap:4px;align-items:center';
+    [[30,'30/70'],[50,'50/50'],[60,'60/40'],[70,'70/30']].forEach(([pct, label]) => {
+      const btn = document.createElement('button');
+      btn.className = 'ctrl-btn split-preset';
+      btn.dataset.pct = pct;
+      btn.textContent = label;
+      btn.title = `Split ${label}`;
+      if (pct === 60) btn.classList.add('aktiv');
+      btn.onclick = () => setzeBreite(pct, true);
+      presetGroup.appendChild(btn);
+    });
+    // Vor der Uhr einfügen
+    const uhr = document.getElementById('ctrl-uhr');
+    if (uhr) {
+      controls.insertBefore(sep, uhr);
+      controls.insertBefore(presetGroup, uhr);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initDivider();
+    fuegePresetsHinzu();
+  });
+  setTimeout(() => { initDivider(); fuegePresetsHinzu(); }, 600);
+
+  // Globale Funktion für setzeLayout
+  window._setzeBreite = setzeBreite;
 })();
 
 // ── VP-Skalierung ────────────────────────────────────────────────────────────
