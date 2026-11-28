@@ -223,326 +223,6 @@
     margin-top: 10px; text-align: center; line-height: 1.5;
   }
 </style>
-</head>
-<body>
-
-<!-- Konfigurationsscreen -->
-<div id="config-screen">
-  <div class="config-card">
-    <h1>🖥️ Splitscreen-Anzeige</h1>
-    <p class="sub">Sportliche Erfolge + Vertretungsplan für Digital Signage</p>
-
-    <div class="cfg-row">
-      <div class="cfg-group">
-        <label>Layout</label>
-        <select id="cfg-layout">
-          <option value="60-40">60% Diashow | 40% Vplan</option>
-          <option value="50-50">50% | 50%</option>
-          <option value="70-30">70% Diashow | 30% Vplan</option>
-          <option value="hochformat">Hochformat (oben/unten)</option>
-          <option value="nur-diashow">Nur Diashow</option>
-          <option value="nur-vplan">Nur Vertretungsplan</option>
-        </select>
-      </div>
-      <div class="cfg-group">
-        <label>Diashow-Geschwindigkeit</label>
-        <select id="cfg-speed">
-          <option value="8000" selected>8 Sekunden</option>
-          <option value="12000">12 Sekunden</option>
-          <option value="20000">20 Sekunden</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- Vplan-Quelle wählen -->
-    <div class="cfg-group" style="margin-bottom:14px">
-      <label>Vertretungsplan-Quelle</label>
-      <select id="cfg-vplan-quelle" onchange="vplanQuelleWechseln(this.value)">
-        <option value="upload">📁 HTML-Dateien hochladen (itslearning/manuell)</option>
-        <option value="github">🔄 Automatisch von GitHub (AccessSchule-Skript)</option>
-        <option value="url">🔗 URL eingeben (eigener Server)</option>
-        <option value="lokal">🏫 Lokaler Modus (schulinterne Monitore)</option>
-      </select>
-    </div>
-
-    <!-- Upload-Variante -->
-    <div id="vplan-upload-bereich">
-      <div class="cfg-row">
-        <div class="cfg-group">
-          <label>📅 Heute (HTML-Datei)</label>
-          <input type="file" id="cfg-vplan-heute-file" accept=".html,.htm"
-            onchange="ladeVplanDatei('heute', this)"
-            style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
-                   border-radius:7px;padding:7px 10px;color:#fff;width:100%;font-family:inherit;font-size:.82rem">
-          <div id="heute-status" style="font-size:.7rem;color:rgba(255,255,255,.4);margin-top:3px"></div>
-        </div>
-        <div class="cfg-group">
-          <label>📅 Morgen (HTML-Datei)</label>
-          <input type="file" id="cfg-vplan-morgen-file" accept=".html,.htm"
-            onchange="ladeVplanDatei('morgen', this)"
-            style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
-                   border-radius:7px;padding:7px 10px;color:#fff;width:100%;font-family:inherit;font-size:.82rem">
-          <div id="morgen-status" style="font-size:.7rem;color:rgba(255,255,255,.4);margin-top:3px"></div>
-        </div>
-      </div>
-      <div class="cfg-row">
-        <div class="cfg-group">
-          <label>📋 Übersicht (HTML-Datei, optional)</label>
-          <input type="file" id="cfg-vplan-uebersicht-file" accept=".html,.htm"
-            onchange="ladeVplanDatei('uebersicht', this)"
-            style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
-                   border-radius:7px;padding:7px 10px;color:#fff;width:100%;font-family:inherit;font-size:.82rem">
-          <div id="uebersicht-status" style="font-size:.7rem;color:rgba(255,255,255,.4);margin-top:3px"></div>
-        </div>
-        <div class="cfg-group">
-          <label>Vplan-Tab wechseln alle</label>
-          <select id="cfg-tab-wechsel">
-            <option value="0">Nicht wechseln</option>
-            <option value="20000">20 Sekunden</option>
-            <option value="30000" selected>30 Sekunden</option>
-            <option value="60000">60 Sekunden</option>
-            <option value="120000">2 Minuten</option>
-            <option value="300000">5 Minuten</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Tab-Reihenfolge konfigurieren -->
-      <div style="background:rgba(255,255,255,.06);border-radius:8px;padding:10px 14px;margin-bottom:8px">
-        <div style="font-size:.75rem;font-weight:700;color:rgba(255,255,255,.6);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">Tab-Reihenfolge & Anzeigedauer</div>
-        <div style="display:flex;flex-direction:column;gap:6px" id="tab-reihenfolge-config">
-          <label style="display:flex;align-items:center;gap:8px;font-size:.8rem;color:rgba(255,255,255,.7)">
-            <input type="checkbox" id="tab-heute-aktiv" checked style="accent-color:#E2001A">
-            📅 Heute
-            <select id="tab-heute-dauer" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:5px;padding:3px 6px;color:#fff;font-size:.75rem;font-family:inherit;margin-left:auto">
-              <option value="20000">20 Sek</option>
-              <option value="30000" selected>30 Sek</option>
-              <option value="60000">60 Sek</option>
-              <option value="120000">2 Min</option>
-            </select>
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;font-size:.8rem;color:rgba(255,255,255,.7)">
-            <input type="checkbox" id="tab-morgen-aktiv" checked style="accent-color:#E2001A">
-            📅 Morgen
-            <select id="tab-morgen-dauer" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:5px;padding:3px 6px;color:#fff;font-size:.75rem;font-family:inherit;margin-left:auto">
-              <option value="20000">20 Sek</option>
-              <option value="30000" selected>30 Sek</option>
-              <option value="60000">60 Sek</option>
-              <option value="120000">2 Min</option>
-            </select>
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;font-size:.8rem;color:rgba(255,255,255,.7)">
-            <input type="checkbox" id="tab-uebersicht-aktiv" style="accent-color:#E2001A">
-            📋 Übersicht
-            <select id="tab-uebersicht-dauer" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:5px;padding:3px 6px;color:#fff;font-size:.75rem;font-family:inherit;margin-left:auto">
-              <option value="20000">20 Sek</option>
-              <option value="30000">30 Sek</option>
-              <option value="60000" selected>60 Sek</option>
-              <option value="120000">2 Min</option>
-            </select>
-          </label>
-        </div>
-      </div>
-
-      <div style="background:rgba(255,255,255,.06);border-radius:8px;padding:10px 14px;
-                  font-size:.75rem;color:rgba(255,255,255,.5);margin-bottom:4px">
-        💡 <strong>So geht's:</strong> HTML-Datei aus itslearning herunterladen → hier hochladen → fertig.
-        Die Datei wird lokal im Browser gespeichert und bleibt bis zum nächsten Upload erhalten.
-      </div>
-    </div>
-
-    <!-- Lokaler Modus (schulinterne Monitore) -->
-    <div id="vplan-lokal-bereich" style="display:none">
-      <div style="background:rgba(0,51,102,.2);border:1px solid rgba(0,51,102,.4);border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:.78rem;color:rgba(255,255,255,.8);line-height:1.7">
-        🏫 <strong>Lokaler Modus für schulinterne Monitore:</strong><br>
-        Die VP-Dateien werden von einem lokalen Server im Schulnetz geladen.<br>
-        Kein Internet nötig – ideal für Monitore im Schulgebäude.
-      </div>
-      <div class="cfg-row">
-        <div class="cfg-group">
-          <label>Lokale URL – Heute</label>
-          <input type="text" id="cfg-lokal-heute"
-            placeholder="http://192.168.1.100/vplan/heute.html"
-            style="width:100%">
-          <div style="font-size:.7rem;color:rgba(255,255,255,.4);margin-top:3px">IP-Adresse des lokalen Servers</div>
-        </div>
-        <div class="cfg-group">
-          <label>Lokale URL – Morgen</label>
-          <input type="text" id="cfg-lokal-morgen"
-            placeholder="http://192.168.1.100/vplan/morgen.html"
-            style="width:100%">
-        </div>
-      </div>
-      <div class="cfg-row">
-        <div class="cfg-group">
-          <label>Lokale URL – Übersicht (optional)</label>
-          <input type="text" id="cfg-lokal-uebersicht"
-            placeholder="http://192.168.1.100/vplan/uebersicht.html"
-            style="width:100%">
-        </div>
-        <div class="cfg-group">
-          <label>Auto-Reload alle</label>
-          <select id="cfg-lokal-reload">
-            <option value="60000">1 Minute</option>
-            <option value="300000" selected>5 Minuten</option>
-            <option value="600000">10 Minuten</option>
-            <option value="1800000">30 Minuten</option>
-          </select>
-        </div>
-      </div>
-      <div style="background:rgba(255,255,255,.06);border-radius:8px;padding:10px 14px;font-size:.75rem;color:rgba(255,255,255,.5)">
-        💡 <strong>Zukünftig:</strong> AccessSchule exportiert VP direkt als HTML → lokaler Server stellt sie bereit → diese Anzeige lädt sie automatisch.
-        Kein manuelles Hochladen mehr nötig.
-      </div>
-    </div>
-
-    <!-- GitHub-Variante (AccessSchule-Skript) -->
-    <div id="vplan-github-bereich" style="display:none">
-      <div class="cfg-group" style="margin-bottom:12px">
-        <label>GitHub Repository</label>
-        <input type="text" id="cfg-github-repo"
-          placeholder="pfeiffse/slzb-erfolge" value="pfeiffse/slzb-erfolge">
-      </div>
-      <div style="background:rgba(255,255,255,.06);border-radius:8px;padding:12px 14px;
-                  font-size:.75rem;color:rgba(255,255,255,.5);margin-bottom:12px;line-height:1.7">
-        🔄 <strong>Automatischer Modus:</strong> Das AccessSchule-Skript lädt die Vplan-Dateien
-        direkt nach dem Export zu GitHub hoch. Die Anzeige lädt sie automatisch alle 5 Minuten neu.<br>
-        📁 Erwartet werden: <code>slzb-v3/vplan-heute.html</code> und <code>slzb-v3/vplan-morgen.html</code>
-      </div>
-      <div class="cfg-row">
-        <div class="cfg-group">
-          <label>Vplan-Tab wechseln alle</label>
-          <select id="cfg-tab-wechsel-github">
-            <option value="0">Nicht wechseln</option>
-            <option value="30000" selected>30 Sekunden</option>
-            <option value="60000">60 Sekunden</option>
-          </select>
-        </div>
-        <div class="cfg-group">
-          <label>Neu laden alle</label>
-          <select id="cfg-reload-interval">
-            <option value="300000" selected>5 Minuten</option>
-            <option value="600000">10 Minuten</option>
-            <option value="1800000">30 Minuten</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <!-- URL-Variante -->
-    <div id="vplan-url-bereich" style="display:none">
-      <div class="cfg-row">
-        <div class="cfg-group">
-          <label>Vertretungsplan URL (Heute)</label>
-          <input type="url" id="cfg-vplan-heute"
-            placeholder="https://schule.de/vplan/heute.html" value="">
-        </div>
-        <div class="cfg-group">
-          <label>Vertretungsplan URL (Morgen)</label>
-          <input type="url" id="cfg-vplan-morgen"
-            placeholder="https://schule.de/vplan/morgen.html" value="">
-        </div>
-      </div>
-      <div class="cfg-row">
-        <div class="cfg-group">
-          <label>Vertretungsplan URL (Übersicht)</label>
-          <input type="url" id="cfg-vplan-uebersicht"
-            placeholder="https://schule.de/vplan/index.html" value="">
-        </div>
-        <div class="cfg-group">
-          <label>Vplan-Tab wechseln alle</label>
-          <select id="cfg-tab-wechsel-url">
-            <option value="0">Nicht wechseln</option>
-            <option value="30000" selected>30 Sekunden</option>
-            <option value="60000">60 Sekunden</option>
-            <option value="120000">2 Minuten</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <!-- Zeitplan -->
-    <div style="border-top:1px solid rgba(255,255,255,.1);margin:16px 0 14px;padding-top:14px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <label style="font-size:.75rem;font-weight:700;color:rgba(255,255,255,.6);
-                      text-transform:uppercase;letter-spacing:.05em">
-          ⏰ Automatischer Zeitplan
-        </label>
-        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
-          <input type="checkbox" id="cfg-zeitplan-aktiv" onchange="zeitplanToggle(this.checked)"
-            style="width:16px;height:16px;accent-color:#E2001A">
-          <span style="font-size:.8rem;color:rgba(255,255,255,.6)">Aktivieren</span>
-        </label>
-      </div>
-      <div id="zeitplan-bereich" style="display:none">
-        <div id="zeitplan-slots" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
-          <!-- Slots werden per JS generiert -->
-        </div>
-        <button onclick="zeitplanSlotHinzu()" style="
-          background:rgba(255,255,255,.08);border:1px dashed rgba(255,255,255,.2);
-          color:rgba(255,255,255,.6);border-radius:7px;padding:7px 14px;
-          font-size:.78rem;cursor:pointer;width:100%;font-family:inherit">
-          + Zeitraum hinzufügen
-        </button>
-      </div>
-    </div>
-
-    <button class="btn-start" onclick="starteAnzeige()">▶️ Anzeige starten</button>
-    <p class="hint">
-      Einstellungen werden im Browser gespeichert.<br>
-      Tastatur: F = Vollbild | D = Nur Diashow | V = Nur Vplan | S = Splitscreen | Esc = Konfiguration
-    </p>
-  </div>
-</div>
-
-<!-- Hauptlayout -->
-<div id="layout" style="display:none">
-  <!-- Diashow -->
-  <div id="panel-diashow">
-    <iframe id="diashow-frame"
-      src="diashow.html?autostart=1"
-      allow="autoplay; fullscreen"
-      title="SLZB Sportliche Erfolge">
-    </iframe>
-  </div>
-
-  <!-- Drag-to-Resize Divider -->
-  <div id="divider" title="Ziehen zum Anpassen der Breite"></div>
-
-  <!-- Vertretungsplan -->
-  <div id="panel-vplan">
-    <div id="vplan-tabs">
-      <button class="vplan-tab aktiv" onclick="zeigeVplanTab('heute', this)">📅 Heute</button>
-      <button class="vplan-tab" onclick="zeigeVplanTab('morgen', this)">📅 Morgen</button>
-      <button class="vplan-tab" onclick="zeigeVplanTab('uebersicht', this)">📋 Übersicht</button>
-    </div>
-    <div id="vplan-frame-wrap">
-      <iframe id="vplan-frame"
-        src="about:blank"
-        title="Vertretungsplan"
-        sandbox="allow-same-origin allow-scripts allow-forms">
-      </iframe>
-    </div>
-  </div>
-</div>
-
-<!-- Steuerleiste -->
-<div id="controls">
-  <button class="ctrl-btn" onclick="setzeLayout('60-40')">60/40</button>
-  <button class="ctrl-btn" onclick="setzeLayout('50-50')">50/50</button>
-  <button class="ctrl-btn" onclick="setzeLayout('70-30')">70/30</button>
-  <div class="ctrl-sep"></div>
-  <button class="ctrl-btn" onclick="setzeLayout('nur-diashow')">🏅 Nur Erfolge</button>
-  <button class="ctrl-btn" onclick="setzeLayout('nur-vplan')">📋 Nur Vplan</button>
-  <div class="ctrl-sep"></div>
-  <button class="ctrl-btn" onclick="vollbild()">⛶ Vollbild</button>
-  <div class="ctrl-sep"></div>
-  <button class="ctrl-btn aktiv" id="ctrl-scroll-btn" onclick="toggleVpScroll()" title="VP Auto-Scroll ein/aus">↕ Scroll: AN</button>
-  <button class="ctrl-btn" onclick="zeigeKonfig()">⚙️ Einstellungen</button>
-  <div class="ctrl-sep"></div>
-  <span id="ctrl-status"></span>
-  <span id="ctrl-uhr"></span>
-</div>
 
 <script>
 // ── State ─────────────────────────────────────────────────────
@@ -1154,6 +834,35 @@ document.addEventListener('keydown', e => {
   window._setzeBreite = setzeBreite;
 })();
 
+// Pinch-to-Zoom fuer Diashow-Panel
+(function() {
+  var initialDist=0, initialScale=1, currentScale=1;
+  function getDist(t1,t2){return Math.sqrt(Math.pow(t1.clientX-t2.clientX,2)+Math.pow(t1.clientY-t2.clientY,2));}
+  function initPinch(){
+    var panel=document.getElementById('panel-diashow');
+    var frame=document.getElementById('diashow-frame');
+    if(!panel||!frame)return;
+    panel.addEventListener('touchstart',function(e){
+      if(e.touches.length===2){initialDist=getDist(e.touches[0],e.touches[1]);initialScale=currentScale;e.preventDefault();}
+    },{passive:false});
+    panel.addEventListener('touchmove',function(e){
+      if(e.touches.length===2){
+        var s=Math.max(0.5,Math.min(3.0,initialScale*getDist(e.touches[0],e.touches[1])/initialDist));
+        currentScale=s;frame.style.transform='scale('+s+')';frame.style.transformOrigin='center center';e.preventDefault();
+      }
+    },{passive:false});
+    panel.addEventListener('touchend',function(){
+      if(Math.abs(currentScale-1.0)<0.15){currentScale=1;frame.style.transform='';frame.style.transformOrigin='';}
+    });
+    var lastTap=0;
+    panel.addEventListener('touchend',function(){
+      var now=Date.now();if(now-lastTap<300){currentScale=1;frame.style.transform='';frame.style.transformOrigin='';}lastTap=now;
+    });
+  }
+  document.addEventListener('DOMContentLoaded',initPinch);
+  setTimeout(initPinch,800);
+})();
+
 // ── VP-Skalierung (lesbar, scrollend) ───────────────────────────────────────
 function aktualisiereVplanSkalierung() {
   const frame = document.getElementById('vplan-frame');
@@ -1225,5 +934,327 @@ if (params.get('autostart') === '1') {
   ladeKonfig();
 }
 </script>
+</head>
+<body>
+
+<!-- Konfigurationsscreen -->
+<div id="config-screen">
+  <div class="config-card">
+    <h1>🖥️ Splitscreen-Anzeige</h1>
+    <p class="sub">Sportliche Erfolge + Vertretungsplan für Digital Signage</p>
+
+    <div class="cfg-row">
+      <div class="cfg-group">
+        <label>Layout</label>
+        <select id="cfg-layout">
+          <option value="60-40">60% Diashow | 40% Vplan</option>
+          <option value="50-50">50% | 50%</option>
+          <option value="70-30">70% Diashow | 30% Vplan</option>
+          <option value="hochformat">Hochformat (oben/unten)</option>
+          <option value="nur-diashow">Nur Diashow</option>
+          <option value="nur-vplan">Nur Vertretungsplan</option>
+        </select>
+      </div>
+      <div class="cfg-group">
+        <label>Diashow-Geschwindigkeit</label>
+        <select id="cfg-speed">
+          <option value="8000" selected>8 Sekunden</option>
+          <option value="12000">12 Sekunden</option>
+          <option value="20000">20 Sekunden</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Vplan-Quelle wählen -->
+    <div class="cfg-group" style="margin-bottom:14px">
+      <label>Vertretungsplan-Quelle</label>
+      <select id="cfg-vplan-quelle" onchange="vplanQuelleWechseln(this.value)">
+        <option value="upload">📁 HTML-Dateien hochladen (itslearning/manuell)</option>
+        <option value="github">🔄 Automatisch von GitHub (AccessSchule-Skript)</option>
+        <option value="url">🔗 URL eingeben (eigener Server)</option>
+        <option value="lokal">🏫 Lokaler Modus (schulinterne Monitore)</option>
+      </select>
+    </div>
+
+    <!-- Upload-Variante -->
+    <div id="vplan-upload-bereich">
+      <div class="cfg-row">
+        <div class="cfg-group">
+          <label>📅 Heute (HTML-Datei)</label>
+          <input type="file" id="cfg-vplan-heute-file" accept=".html,.htm"
+            onchange="ladeVplanDatei('heute', this)"
+            style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+                   border-radius:7px;padding:7px 10px;color:#fff;width:100%;font-family:inherit;font-size:.82rem">
+          <div id="heute-status" style="font-size:.7rem;color:rgba(255,255,255,.4);margin-top:3px"></div>
+        </div>
+        <div class="cfg-group">
+          <label>📅 Morgen (HTML-Datei)</label>
+          <input type="file" id="cfg-vplan-morgen-file" accept=".html,.htm"
+            onchange="ladeVplanDatei('morgen', this)"
+            style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+                   border-radius:7px;padding:7px 10px;color:#fff;width:100%;font-family:inherit;font-size:.82rem">
+          <div id="morgen-status" style="font-size:.7rem;color:rgba(255,255,255,.4);margin-top:3px"></div>
+        </div>
+      </div>
+      <div class="cfg-row">
+        <div class="cfg-group">
+          <label>📋 Übersicht (HTML-Datei, optional)</label>
+          <input type="file" id="cfg-vplan-uebersicht-file" accept=".html,.htm"
+            onchange="ladeVplanDatei('uebersicht', this)"
+            style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+                   border-radius:7px;padding:7px 10px;color:#fff;width:100%;font-family:inherit;font-size:.82rem">
+          <div id="uebersicht-status" style="font-size:.7rem;color:rgba(255,255,255,.4);margin-top:3px"></div>
+        </div>
+        <div class="cfg-group">
+          <label>Vplan-Tab wechseln alle</label>
+          <select id="cfg-tab-wechsel">
+            <option value="0">Nicht wechseln</option>
+            <option value="20000">20 Sekunden</option>
+            <option value="30000" selected>30 Sekunden</option>
+            <option value="60000">60 Sekunden</option>
+            <option value="120000">2 Minuten</option>
+            <option value="300000">5 Minuten</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Tab-Reihenfolge konfigurieren -->
+      <div style="background:rgba(255,255,255,.06);border-radius:8px;padding:10px 14px;margin-bottom:8px">
+        <div style="font-size:.75rem;font-weight:700;color:rgba(255,255,255,.6);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">Tab-Reihenfolge & Anzeigedauer</div>
+        <div style="display:flex;flex-direction:column;gap:6px" id="tab-reihenfolge-config">
+          <label style="display:flex;align-items:center;gap:8px;font-size:.8rem;color:rgba(255,255,255,.7)">
+            <input type="checkbox" id="tab-heute-aktiv" checked style="accent-color:#E2001A">
+            📅 Heute
+            <select id="tab-heute-dauer" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:5px;padding:3px 6px;color:#fff;font-size:.75rem;font-family:inherit;margin-left:auto">
+              <option value="20000">20 Sek</option>
+              <option value="30000" selected>30 Sek</option>
+              <option value="60000">60 Sek</option>
+              <option value="120000">2 Min</option>
+            </select>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:.8rem;color:rgba(255,255,255,.7)">
+            <input type="checkbox" id="tab-morgen-aktiv" checked style="accent-color:#E2001A">
+            📅 Morgen
+            <select id="tab-morgen-dauer" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:5px;padding:3px 6px;color:#fff;font-size:.75rem;font-family:inherit;margin-left:auto">
+              <option value="20000">20 Sek</option>
+              <option value="30000" selected>30 Sek</option>
+              <option value="60000">60 Sek</option>
+              <option value="120000">2 Min</option>
+            </select>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:.8rem;color:rgba(255,255,255,.7)">
+            <input type="checkbox" id="tab-uebersicht-aktiv" style="accent-color:#E2001A">
+            📋 Übersicht
+            <select id="tab-uebersicht-dauer" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:5px;padding:3px 6px;color:#fff;font-size:.75rem;font-family:inherit;margin-left:auto">
+              <option value="20000">20 Sek</option>
+              <option value="30000">30 Sek</option>
+              <option value="60000" selected>60 Sek</option>
+              <option value="120000">2 Min</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div style="background:rgba(255,255,255,.06);border-radius:8px;padding:10px 14px;
+                  font-size:.75rem;color:rgba(255,255,255,.5);margin-bottom:4px">
+        💡 <strong>So geht's:</strong> HTML-Datei aus itslearning herunterladen → hier hochladen → fertig.
+        Die Datei wird lokal im Browser gespeichert und bleibt bis zum nächsten Upload erhalten.
+      </div>
+    </div>
+
+    <!-- Lokaler Modus (schulinterne Monitore) -->
+    <div id="vplan-lokal-bereich" style="display:none">
+      <div style="background:rgba(0,51,102,.2);border:1px solid rgba(0,51,102,.4);border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:.78rem;color:rgba(255,255,255,.8);line-height:1.7">
+        🏫 <strong>Lokaler Modus für schulinterne Monitore:</strong><br>
+        Die VP-Dateien werden von einem lokalen Server im Schulnetz geladen.<br>
+        Kein Internet nötig – ideal für Monitore im Schulgebäude.
+      </div>
+      <div class="cfg-row">
+        <div class="cfg-group">
+          <label>Lokale URL – Heute</label>
+          <input type="text" id="cfg-lokal-heute"
+            placeholder="http://192.168.1.100/vplan/heute.html"
+            style="width:100%">
+          <div style="font-size:.7rem;color:rgba(255,255,255,.4);margin-top:3px">IP-Adresse des lokalen Servers</div>
+        </div>
+        <div class="cfg-group">
+          <label>Lokale URL – Morgen</label>
+          <input type="text" id="cfg-lokal-morgen"
+            placeholder="http://192.168.1.100/vplan/morgen.html"
+            style="width:100%">
+        </div>
+      </div>
+      <div class="cfg-row">
+        <div class="cfg-group">
+          <label>Lokale URL – Übersicht (optional)</label>
+          <input type="text" id="cfg-lokal-uebersicht"
+            placeholder="http://192.168.1.100/vplan/uebersicht.html"
+            style="width:100%">
+        </div>
+        <div class="cfg-group">
+          <label>Auto-Reload alle</label>
+          <select id="cfg-lokal-reload">
+            <option value="60000">1 Minute</option>
+            <option value="300000" selected>5 Minuten</option>
+            <option value="600000">10 Minuten</option>
+            <option value="1800000">30 Minuten</option>
+          </select>
+        </div>
+      </div>
+      <div style="background:rgba(255,255,255,.06);border-radius:8px;padding:10px 14px;font-size:.75rem;color:rgba(255,255,255,.5)">
+        💡 <strong>Zukünftig:</strong> AccessSchule exportiert VP direkt als HTML → lokaler Server stellt sie bereit → diese Anzeige lädt sie automatisch.
+        Kein manuelles Hochladen mehr nötig.
+      </div>
+    </div>
+
+    <!-- GitHub-Variante (AccessSchule-Skript) -->
+    <div id="vplan-github-bereich" style="display:none">
+      <div class="cfg-group" style="margin-bottom:12px">
+        <label>GitHub Repository</label>
+        <input type="text" id="cfg-github-repo"
+          placeholder="pfeiffse/slzb-erfolge" value="pfeiffse/slzb-erfolge">
+      </div>
+      <div style="background:rgba(255,255,255,.06);border-radius:8px;padding:12px 14px;
+                  font-size:.75rem;color:rgba(255,255,255,.5);margin-bottom:12px;line-height:1.7">
+        🔄 <strong>Automatischer Modus:</strong> Das AccessSchule-Skript lädt die Vplan-Dateien
+        direkt nach dem Export zu GitHub hoch. Die Anzeige lädt sie automatisch alle 5 Minuten neu.<br>
+        📁 Erwartet werden: <code>slzb-v3/vplan-heute.html</code> und <code>slzb-v3/vplan-morgen.html</code>
+      </div>
+      <div class="cfg-row">
+        <div class="cfg-group">
+          <label>Vplan-Tab wechseln alle</label>
+          <select id="cfg-tab-wechsel-github">
+            <option value="0">Nicht wechseln</option>
+            <option value="30000" selected>30 Sekunden</option>
+            <option value="60000">60 Sekunden</option>
+          </select>
+        </div>
+        <div class="cfg-group">
+          <label>Neu laden alle</label>
+          <select id="cfg-reload-interval">
+            <option value="300000" selected>5 Minuten</option>
+            <option value="600000">10 Minuten</option>
+            <option value="1800000">30 Minuten</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- URL-Variante -->
+    <div id="vplan-url-bereich" style="display:none">
+      <div class="cfg-row">
+        <div class="cfg-group">
+          <label>Vertretungsplan URL (Heute)</label>
+          <input type="url" id="cfg-vplan-heute"
+            placeholder="https://schule.de/vplan/heute.html" value="">
+        </div>
+        <div class="cfg-group">
+          <label>Vertretungsplan URL (Morgen)</label>
+          <input type="url" id="cfg-vplan-morgen"
+            placeholder="https://schule.de/vplan/morgen.html" value="">
+        </div>
+      </div>
+      <div class="cfg-row">
+        <div class="cfg-group">
+          <label>Vertretungsplan URL (Übersicht)</label>
+          <input type="url" id="cfg-vplan-uebersicht"
+            placeholder="https://schule.de/vplan/index.html" value="">
+        </div>
+        <div class="cfg-group">
+          <label>Vplan-Tab wechseln alle</label>
+          <select id="cfg-tab-wechsel-url">
+            <option value="0">Nicht wechseln</option>
+            <option value="30000" selected>30 Sekunden</option>
+            <option value="60000">60 Sekunden</option>
+            <option value="120000">2 Minuten</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Zeitplan -->
+    <div style="border-top:1px solid rgba(255,255,255,.1);margin:16px 0 14px;padding-top:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <label style="font-size:.75rem;font-weight:700;color:rgba(255,255,255,.6);
+                      text-transform:uppercase;letter-spacing:.05em">
+          ⏰ Automatischer Zeitplan
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+          <input type="checkbox" id="cfg-zeitplan-aktiv" onchange="zeitplanToggle(this.checked)"
+            style="width:16px;height:16px;accent-color:#E2001A">
+          <span style="font-size:.8rem;color:rgba(255,255,255,.6)">Aktivieren</span>
+        </label>
+      </div>
+      <div id="zeitplan-bereich" style="display:none">
+        <div id="zeitplan-slots" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px">
+          <!-- Slots werden per JS generiert -->
+        </div>
+        <button onclick="zeitplanSlotHinzu()" style="
+          background:rgba(255,255,255,.08);border:1px dashed rgba(255,255,255,.2);
+          color:rgba(255,255,255,.6);border-radius:7px;padding:7px 14px;
+          font-size:.78rem;cursor:pointer;width:100%;font-family:inherit">
+          + Zeitraum hinzufügen
+        </button>
+      </div>
+    </div>
+
+    <button class="btn-start" onclick="starteAnzeige()">▶️ Anzeige starten</button>
+    <p class="hint">
+      Einstellungen werden im Browser gespeichert.<br>
+      Tastatur: F = Vollbild | D = Nur Diashow | V = Nur Vplan | S = Splitscreen | Esc = Konfiguration
+    </p>
+  </div>
+</div>
+
+<!-- Hauptlayout -->
+<div id="layout" style="display:none">
+  <!-- Diashow -->
+  <div id="panel-diashow">
+    <iframe id="diashow-frame"
+      src="diashow.html?autostart=1"
+      allow="autoplay; fullscreen"
+      title="SLZB Sportliche Erfolge">
+    </iframe>
+  </div>
+
+  <!-- Drag-to-Resize Divider -->
+  <div id="divider" title="Ziehen zum Anpassen der Breite"></div>
+
+  <!-- Vertretungsplan -->
+  <div id="panel-vplan">
+    <div id="vplan-tabs">
+      <button class="vplan-tab aktiv" onclick="zeigeVplanTab('heute', this)">📅 Heute</button>
+      <button class="vplan-tab" onclick="zeigeVplanTab('morgen', this)">📅 Morgen</button>
+      <button class="vplan-tab" onclick="zeigeVplanTab('uebersicht', this)">📋 Übersicht</button>
+    </div>
+    <div id="vplan-frame-wrap">
+      <iframe id="vplan-frame"
+        src="about:blank"
+        title="Vertretungsplan"
+        sandbox="allow-same-origin allow-scripts allow-forms">
+      </iframe>
+    </div>
+  </div>
+</div>
+
+<!-- Steuerleiste -->
+<div id="controls">
+  <button class="ctrl-btn" onclick="setzeLayout('60-40')">60/40</button>
+  <button class="ctrl-btn" onclick="setzeLayout('50-50')">50/50</button>
+  <button class="ctrl-btn" onclick="setzeLayout('70-30')">70/30</button>
+  <div class="ctrl-sep"></div>
+  <button class="ctrl-btn" onclick="setzeLayout('nur-diashow')">🏅 Nur Erfolge</button>
+  <button class="ctrl-btn" onclick="setzeLayout('nur-vplan')">📋 Nur Vplan</button>
+  <div class="ctrl-sep"></div>
+  <button class="ctrl-btn" onclick="vollbild()">⛶ Vollbild</button>
+  <div class="ctrl-sep"></div>
+  <button class="ctrl-btn aktiv" id="ctrl-scroll-btn" onclick="toggleVpScroll()" title="VP Auto-Scroll ein/aus">↕ Scroll: AN</button>
+  <button class="ctrl-btn" onclick="zeigeKonfig()">⚙️ Einstellungen</button>
+  <div class="ctrl-sep"></div>
+  <span id="ctrl-status"></span>
+  <span id="ctrl-uhr"></span>
+</div>
+
+
 </body>
 </html>
