@@ -5352,7 +5352,16 @@ function zeigeKalenderEintragModal(eintrag = null) {
         </div>
         <div class="form-group" style="grid-column:1/-1">
           <label style="font-weight:600">Link zur Veranstaltung / Livestream <span style="font-size:.72rem;color:var(--slzb-text-muted)">(optional)</span></label>
-          <input type="url" id="ke-link" value="${esc(eintrag?.link||'')}" placeholder="https://..." style="width:100%">
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="url" id="ke-link" value="${esc(eintrag?.link||'')}" placeholder="https://..."
+              style="flex:1"
+              oninput="document.getElementById('ke-link-vorschlag').style.display='none'">
+            <button type="button" class="btn btn-ghost btn-sm" style="white-space:nowrap;font-size:.72rem"
+              onclick="const v=document.getElementById('ke-veranstaltung')?.value;const s=document.getElementById('ke-sportart')?.value;const url=typeof veranstalterLinkVorschlag==='function'?veranstalterLinkVorschlag(v,s):null;if(url){document.getElementById('ke-link').value=url;toast('🔗 Link vorgeschlagen','info');}else{toast('Kein Vorschlag für diese Veranstaltung','warning');}">
+              🔗 Vorschlag
+            </button>
+          </div>
+          <div id="ke-link-vorschlag" style="display:none;font-size:.72rem;color:var(--slzb-primary);margin-top:2px"></div>
         </div>
       </div>
     </div>

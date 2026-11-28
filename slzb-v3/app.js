@@ -101,6 +101,92 @@ window.addEventListener('unhandledrejection', function(e) {
   console.error('[SLZB Promise-Fehler]', e.reason?.message || e.reason);
 });
 
+
+// ── Veranstalter-Link-Mapping ─────────────────────────────────────────────────
+// Automatische URL-Vorschläge basierend auf Veranstaltungsname + Sportart
+const VERANSTALTER_LINKS = {
+  // Eisschnelllauf
+  'ISU': 'https://www.isu.org',
+  'ISU World Cup': 'https://www.isu.org/speed-skating/events',
+  'ISU Junior World Cup': 'https://www.isu.org/speed-skating/events',
+  'ISU European': 'https://www.isu.org/speed-skating/events',
+  'ISU World': 'https://www.isu.org/speed-skating/events',
+  'DESG': 'https://www.desg.de',
+  'Deutsche Meisterschaft Eisschnelllauf': 'https://www.desg.de',
+  // Eiskunstlauf
+  'ISU Grand Prix': 'https://www.isu.org/figure-skating/events',
+  'ISU Junior Grand Prix': 'https://www.isu.org/figure-skating/events',
+  'Deutsche Meisterschaft Eiskunstlauf': 'https://www.desg.de',
+  // Judo
+  'IJF': 'https://www.ijf.org',
+  'European Cup': 'https://www.eju.net',
+  'World Cup Judo': 'https://www.ijf.org',
+  'Deutsche Meisterschaft Judo': 'https://www.judobund.de',
+  // Boxen
+  'AIBA': 'https://www.iba.sport',
+  'Deutsche Meisterschaft Boxen': 'https://www.boxsport.de',
+  'EM Boxen': 'https://www.iba.sport',
+  // Bogenschießen
+  'World Archery': 'https://worldarchery.sport',
+  'Deutsche Meisterschaft Bogenschießen': 'https://www.bogensport.de',
+  // Fechten
+  'FIE': 'https://fie.org',
+  'Deutsche Meisterschaft Fechten': 'https://www.fechten.org',
+  // Leichtathletik
+  'World Athletics': 'https://worldathletics.org',
+  'Deutsche Meisterschaft Leichtathletik': 'https://www.leichtathletik.de',
+  // Schwimmen
+  'FINA': 'https://www.worldaquatics.com',
+  'World Aquatics': 'https://www.worldaquatics.com',
+  'Deutsche Meisterschaft Schwimmen': 'https://www.dsv.de',
+  'Kurzbahnmeisterschaft': 'https://www.dsv.de',
+  // Turnen
+  'FIG': 'https://www.gymnastics.sport',
+  'Deutsche Meisterschaft Turnen': 'https://www.dtb.de',
+  // Volleyball
+  'FIVB': 'https://www.fivb.com',
+  'Deutsche Meisterschaft Volleyball': 'https://www.volleyball.de',
+  // Allgemein
+  'DOSB': 'https://www.dosb.de',
+  'DSB': 'https://www.dsb.de',
+  'Berliner Meisterschaft': 'https://www.lsb-berlin.de',
+  'Landesmeisterschaft Berlin': 'https://www.lsb-berlin.de',
+  'Bundesmeisterschaft': 'https://www.dosb.de',
+  'Olympia': 'https://www.olympic.org',
+  'Paralympics': 'https://www.paralympic.org',
+};
+
+// Veranstaltungsname → URL-Vorschlag
+function veranstalterLinkVorschlag(veranstaltungsname, sportart) {
+  if (!veranstaltungsname) return null;
+  const name = veranstaltungsname.toLowerCase();
+  const sport = (sportart || '').toLowerCase();
+
+  // Exakter Match zuerst
+  for (const [key, url] of Object.entries(VERANSTALTER_LINKS)) {
+    if (name.includes(key.toLowerCase())) return url;
+  }
+
+  // Sportart-basierter Fallback
+  if (sport.includes('eisschnell')) return 'https://www.desg.de';
+  if (sport.includes('eiskunst')) return 'https://www.desg.de';
+  if (sport.includes('judo')) return 'https://www.judobund.de';
+  if (sport.includes('boxen')) return 'https://www.boxsport.de';
+  if (sport.includes('bogen')) return 'https://www.bogensport.de';
+  if (sport.includes('fechten')) return 'https://www.fechten.org';
+  if (sport.includes('schwimm')) return 'https://www.dsv.de';
+  if (sport.includes('leicht')) return 'https://www.leichtathletik.de';
+  if (sport.includes('turnen')) return 'https://www.dtb.de';
+  if (sport.includes('volleyball')) return 'https://www.volleyball.de';
+  if (sport.includes('handball')) return 'https://www.dhb.de';
+  if (sport.includes('basketball')) return 'https://www.basketball-bund.de';
+  if (sport.includes('fußball') || sport.includes('fussball')) return 'https://www.dfb.de';
+  if (sport.includes('radsport')) return 'https://www.rad-net.de';
+  if (sport.includes('gewicht')) return 'https://www.german-weightlifting.de';
+
+  return null;
+}
+
 // ── Sportart → Akzentfarbe ────────────────────────────────────────────────────
 function sportartFarbe(sportart) {
   if (!sportart) return 'var(--sport-default)';

@@ -4,7 +4,7 @@
 // ============================================================
 
 const CACHE_NAME = 'slzb-erfolge-v3';
-const CACHE_VERSION = '1.7.0-202611271516'; // Logos hinzugefügt, 404-Fehler behoben
+const CACHE_VERSION = '1.8.0-202611281200'; // Montserrat lokal, VP-Cache, Splitscreen
 const FULL_CACHE_NAME = `${CACHE_NAME}-${CACHE_VERSION}`;
 
 // Dateien die beim Installieren gecacht werden (App-Shell)
@@ -27,11 +27,26 @@ const APP_SHELL = [
   BASE_URL + 'manifest.json',
   BASE_URL + 'icons/icon-192x192.png',
   BASE_URL + 'icons/icon-512x512.png',
-  BASE_URL + 'slzb-sport-erfolge-logo.png',
-  BASE_URL + 'slzb-logo.png',
   BASE_URL + 'pdf.js',
-  BASE_URL + 'qrcode.min.js',
   BASE_URL + 'sw.js',
+  // Lokale Fonts (kein Google Fonts nötig)
+  BASE_URL + 'fonts/montserrat.css',
+  BASE_URL + 'fonts/Montserrat-Regular.woff2',
+  BASE_URL + 'fonts/Montserrat-Bold.woff2',
+  BASE_URL + 'fonts/Montserrat-BoldItalic.woff2',
+  BASE_URL + 'fonts/Montserrat-ExtraBold.woff2',
+  BASE_URL + 'fonts/Montserrat-Black.woff2',
+  // Splitscreen + Diashow
+  BASE_URL + 'splitscreen.html',
+  BASE_URL + 'diashow.html',
+];
+
+// VP-Dateien (werden separat gecacht - können sich täglich ändern)
+const VP_ROOT = '/slzb-erfolge/';
+const VP_FILES = [
+  VP_ROOT + 'VP%20heute.html',
+  VP_ROOT + 'VP%20morgen.html',
+  VP_ROOT + 'VP%20Uebersicht.html',
 ];
 
 // ── Installation ──────────────────────────────────────────────
@@ -73,6 +88,18 @@ self.addEventListener('activate', (event) => {
 });
 
 // ── Fetch-Strategie ───────────────────────────────────────────
+// VP-Dateien: Network-First mit Cache-Fallback (täglich aktuell)
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'CACHE_VP') {
+    // VP-Dateien manuell cachen (nach erfolgreichem Laden)
+    caches.open(FULL_CACHE_NAME + '-vp').then(cache => {
+      VP_FILES.forEach(url => {
+        fetch(url).then(r => { if(r.ok) cache.put(url, r); }).catch(() => {});
+      });
+    });
+  }
+});
+
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 

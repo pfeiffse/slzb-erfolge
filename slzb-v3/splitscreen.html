@@ -1280,7 +1280,24 @@ if (params.get('autostart') === '1') {
   const wantFullscreen = params.get('fullscreen') === '1' || params.get('autostart') === '1';
 
   if (wantFullscreen) {
-    // Zeige kurzen "Klick zum Starten"-Overlay (Browser braucht User-Gesture für Vollbild)
+    // Vollbild-Strategie:
+    // 1. Chrome --kiosk Modus: requestFullscreen() funktioniert ohne User-Gesture
+    // 2. Normaler Browser: Zeige Overlay mit Auto-Klick nach 2 Sekunden
+    // 3. Fallback: Manueller Klick
+
+    const startVollbildUndAnzeige = () => {
+      document.getElementById('fullscreen-start-overlay')?.remove();
+      document.documentElement.requestFullscreen().catch(() => {
+        // Vollbild nicht möglich (z.B. bereits Vollbild oder blockiert)
+        console.log('[Splitscreen] Vollbild nicht verfügbar - starte trotzdem');
+      });
+      setTimeout(starteAnzeige, 300);
+    };
+
+    // Versuche sofort Vollbild (funktioniert in Chrome --kiosk)
+    const sofortVersuch = document.documentElement.requestFullscreen().catch(() => null);
+
+    // Zeige Overlay mit Countdown (für normalen Browser)
     const overlay = document.createElement('div');
     overlay.id = 'fullscreen-start-overlay';
     overlay.style.cssText = `
@@ -1291,7 +1308,7 @@ if (params.get('autostart') === '1') {
       cursor: pointer; font-family: Arial, sans-serif;
     `;
     overlay.innerHTML = `
-      <img src="slzb-sport-erfolge-logo.png" alt="SLZB" 
+      <img src="slzb-sport-erfolge-logo.png" alt="SLZB"
         style="height:80px;margin-bottom:24px;opacity:.9"
         onerror="this.style.display='none'">
       <div style="color:#fff;font-size:1.8rem;font-weight:700;margin-bottom:8px">
@@ -1300,33 +1317,47 @@ if (params.get('autostart') === '1') {
       <div style="color:rgba(255,255,255,.6);font-size:1rem;margin-bottom:32px">
         Schul- und Leistungssportzentrum Berlin
       </div>
-      <div style="background:#E2001A;color:#fff;padding:16px 40px;border-radius:12px;
-                  font-size:1.1rem;font-weight:700;animation:live-pulse 1.5s ease-in-out infinite">
-        ▶ Anzeige starten
+      <div id="fs-countdown-ring" style="position:relative;width:80px;height:80px;margin-bottom:16px">
+        <svg width="80" height="80" style="transform:rotate(-90deg)">
+          <circle cx="40" cy="40" r="34" fill="none" stroke="rgba(255,255,255,.15)" stroke-width="6"/>
+          <circle id="fs-ring" cx="40" cy="40" r="34" fill="none" stroke="#E2001A" stroke-width="6"
+            stroke-dasharray="213.6" stroke-dashoffset="0" style="transition:stroke-dashoffset .1s linear"/>
+        </svg>
+        <div id="fs-countdown-num" style="position:absolute;inset:0;display:flex;align-items:center;
+          justify-content:center;color:#fff;font-size:1.6rem;font-weight:800">3</div>
       </div>
-      <div style="color:rgba(255,255,255,.3);font-size:.75rem;margin-top:16px">
-        Klicken oder beliebige Taste drücken
-      </div>
+      <div style="color:rgba(255,255,255,.5);font-size:.85rem">Startet automatisch... oder jetzt klicken</div>
+      <button id="fs-sofort-btn" style="margin-top:16px;background:#E2001A;color:#fff;border:none;
+        border-radius:8px;padding:10px 28px;font-size:.95rem;font-weight:700;cursor:pointer">
+        ▶ Jetzt starten
+      </button>
     `;
 
-    const startVollbild = () => {
-      overlay.remove();
-      // Vollbild aktivieren
-      document.documentElement.requestFullscreen().catch(() => {});
-      setTimeout(starteAnzeige, 300);
-    };
-
-    overlay.addEventListener('click', startVollbild);
-    document.addEventListener('keydown', startVollbild, { once: true });
+    overlay.addEventListener('click', startVollbildUndAnzeige);
+    document.getElementById && document.addEventListener('keydown', startVollbildUndAnzeige, { once: true });
     document.body.appendChild(overlay);
+
+    // Countdown: 3 Sekunden, dann automatisch starten
+    let countdown = 3;
+    const circumference = 213.6;
+    const countdownInterval = setInterval(() => {
+      countdown -= 0.1;
+      const ring = document.getElementById('fs-ring');
+      const num = document.getElementById('fs-countdown-num');
+      if (ring) ring.style.strokeDashoffset = circumference * (1 - countdown / 3);
+      if (num) num.textContent = Math.ceil(countdown);
+      if (countdown <= 0) {
+        clearInterval(countdownInterval);
+        startVollbildUndAnzeige();
+      }
+    }, 100);
 
     // Kiosk-Modus: Verhindere Verlassen des Vollbilds
     document.addEventListener('fullscreenchange', () => {
       if (!document.fullscreenElement && document.getElementById('layout')?.style.display !== 'none') {
-        // Vollbild wurde verlassen → nach 3s wieder aktivieren
         setTimeout(() => {
           document.documentElement.requestFullscreen().catch(() => {});
-        }, 3000);
+        }, 2000);
       }
     });
 
