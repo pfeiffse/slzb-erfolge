@@ -485,10 +485,12 @@ function starteAnzeige() {
   if (quelle === 'github') {
     const repo = document.getElementById('cfg-github-repo')?.value || 'pfeiffse/slzb-erfolge';
     const baseUrl = `https://${repo.split('/')[0]}.github.io/${repo.split('/')[1]}/slzb-v3`;
+    // VP-Dateien liegen im Root des Repos, nicht in slzb-v3
+    const rootUrl = `https://${repo.split('/')[0]}.github.io/${repo.split('/')[1]}`;
     _vplanUrls = {
-      heute:      `${baseUrl}/VP%20heute.html`,
-      morgen:     `${baseUrl}/VP%20morgen.html`,
-      uebersicht: `${baseUrl}/VP%20Uebersicht.html`,
+      heute:      `${rootUrl}/VP%20heute.html`,
+      morgen:     `${rootUrl}/VP%20morgen.html`,
+      uebersicht: `${rootUrl}/VP%20Uebersicht.html`,
     };
     // Cache-Busting damit immer die neueste Version geladen wird
     document.getElementById('vplan-frame').src = _vplanUrls.heute + '?t=' + Date.now();
