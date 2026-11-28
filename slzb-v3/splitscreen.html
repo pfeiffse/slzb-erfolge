@@ -58,8 +58,11 @@
     border: none;
     display: block;
     transform-origin: top left;
-    /* Schrift-Vergrößerung via zoom */
-    font-size: 120%;
+    background: #fff;
+  }
+  /* VP-Inhalt: Tabelle vergrößern */
+  #vplan-frame-wrap {
+    background: #fff;
   }
 
   /* ── Trennlinie ──────────────────────────────────────────── */
@@ -483,9 +486,9 @@ function starteAnzeige() {
     const repo = document.getElementById('cfg-github-repo')?.value || 'pfeiffse/slzb-erfolge';
     const baseUrl = `https://${repo.split('/')[0]}.github.io/${repo.split('/')[1]}/slzb-v3`;
     _vplanUrls = {
-      heute:      `${baseUrl}/vplan-heute.html`,
-      morgen:     `${baseUrl}/vplan-morgen.html`,
-      uebersicht: `${baseUrl}/vplan-index.html`,
+      heute:      `${baseUrl}/VP%20heute.html`,
+      morgen:     `${baseUrl}/VP%20morgen.html`,
+      uebersicht: `${baseUrl}/VP%20Uebersicht.html`,
     };
     // Cache-Busting damit immer die neueste Version geladen wird
     document.getElementById('vplan-frame').src = _vplanUrls.heute + '?t=' + Date.now();
@@ -671,16 +674,22 @@ function extrahiereVpDatum(tab) {
   const html = _vplanHtml[tab];
   if (!html) return;
   // Suche nach Datum-Mustern: "Montag, 28.11.2026", "28.11.2026", "28. November 2026"
+  // SLZB-Format: "Vertretungsplan vom Freitag, 27.11.2026"
   const patterns = [
-    /(\d{1,2}\.\s*\w+\s*\d{4})/,
-    /(\w+tag,?\s+\d{1,2}\.\d{1,2}\.\d{4})/i,
+    /Vertretungsplan vom ([\w]+,?\s+\d{1,2}\.\d{1,2}\.\d{4})/i,
+    /Vertretungsplan vom ([\w]+\s+\d{1,2}\.\s*\w+\s*\d{4})/i,
+    /([\w]+tag,?\s+\d{1,2}\.\d{1,2}\.\d{4})/i,
     /(\d{1,2}\.\d{1,2}\.\d{4})/,
     /(heute|morgen|übermorgen)/i,
   ];
   for (const p of patterns) {
     const m = html.match(p);
     if (m) {
-      aktualisiereTabBeschriftung(tab, m[1]);
+      // Kürze auf max 18 Zeichen für Tab-Button
+      let datum = m[1].trim();
+      // "Freitag, 27.11.2026" → "Fr 27.11."
+      datum = datum.replace(/(\w{2})\w+tag,?\s+(\d{1,2}\.\d{1,2})\.\d{4}/, '$1 $2.');
+      aktualisiereTabBeschriftung(tab, datum);
       return;
     }
   }
@@ -694,13 +703,18 @@ function extrahiereVpDatumAusFrame(tab) {
     if (!doc) return;
     const text = doc.body?.innerText || doc.body?.textContent || '';
     const patterns = [
-      /(\d{1,2}\.\s*\w+\s*\d{4})/,
-      /(\w+tag,?\s+\d{1,2}\.\d{1,2}\.\d{4})/i,
+      /Vertretungsplan vom ([\w]+,?\s+\d{1,2}\.\d{1,2}\.\d{4})/i,
+      /([\w]+tag,?\s+\d{1,2}\.\d{1,2}\.\d{4})/i,
       /(\d{1,2}\.\d{1,2}\.\d{4})/,
     ];
     for (const p of patterns) {
       const m = text.match(p);
-      if (m) { aktualisiereTabBeschriftung(tab, m[1]); return; }
+      if (m) {
+        let datum = m[1].trim();
+        datum = datum.replace(/(\w{2})\w+tag,?\s+(\d{1,2}\.\d{1,2})\.\d{4}/, '$1 $2.');
+        aktualisiereTabBeschriftung(tab, datum);
+        return;
+      }
     }
   } catch(e) { /* Cross-Origin */ }
 }
