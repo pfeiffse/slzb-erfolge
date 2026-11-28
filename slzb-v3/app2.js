@@ -4055,7 +4055,7 @@ function zeigeCountdownModal() {
         <div class="form-group">
           <label style="color:#fff">Ort</label>
           <input type="text" id="cd-ort" placeholder="z.B. Schwimmhalle Landsberger Allee" style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px"
-            oninput="const f=document.getElementById('cd-flagge-override');const p=document.getElementById('cd-flagge-preview');if(!f?.value)p.textContent=ortZuFlagge(this.value)||'🌍'">
+            oninput="const f=document.getElementById('cd-flagge-override');const p=document.getElementById('cd-flagge-preview');const l=document.getElementById('cd-land')?.value||'';if(!f?.value)p.textContent=ortZuFlagge(l||this.value)||'🌍'">
         </div>
         <div class="form-group">
           <label style="color:#fff">Sportart (optional)</label>
@@ -4066,13 +4066,18 @@ function zeigeCountdownModal() {
           <input type="url" id="cd-link" placeholder="https://..." style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px">
           <div style="font-size:.72rem;color:#888;margin-top:3px">Erscheint als QR-Code oder Kurzlink auf dem Poster</div>
         </div>
-        <div class="form-group" style="display:flex;align-items:center;gap:10px">
-          <label style="color:#fff;margin:0">Flagge:</label>
-          <span id="cd-flagge-preview" style="font-size:2rem;min-width:40px;display:inline-block">🌍</span>
-          <span style="font-size:.78rem;color:#888">Wird automatisch aus dem Ort erkannt</span>
-          <input type="text" id="cd-flagge-override" placeholder="Eigene Flagge (Emoji)" maxlength="4"
-            style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:6px 8px;width:80px;font-size:1.2rem;text-align:center"
-            oninput="document.getElementById('cd-flagge-preview').textContent=this.value||ortZuFlagge(document.getElementById('cd-ort')?.value)||'🌍'">
+        <div class="form-group">
+          <label style="color:#fff">Land <span style="font-size:.72rem;color:#888">(für Flagge, optional)</span></label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" id="cd-land" placeholder="z.B. Kanada, Österreich..."
+              style="flex:1;background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:8px"
+              oninput="const v=this.value||document.getElementById('cd-ort')?.value||'';const f=ortZuFlagge(v)||'🌍';document.getElementById('cd-flagge-preview').textContent=document.getElementById('cd-flagge-override')?.value||f">
+            <span id="cd-flagge-preview" style="font-size:2rem;min-width:44px;text-align:center">🌍</span>
+            <input type="text" id="cd-flagge-override" placeholder="✏️ Eigene" maxlength="4"
+              style="background:#222;color:#fff;border:1px solid #444;border-radius:6px;padding:6px 8px;width:72px;font-size:1.2rem;text-align:center"
+              oninput="document.getElementById('cd-flagge-preview').textContent=this.value||(ortZuFlagge(document.getElementById('cd-land')?.value||document.getElementById('cd-ort')?.value||'')||'🌍')">
+          </div>
+          <div style="font-size:.7rem;color:#666;margin-top:3px">Wird automatisch aus Ort/Land erkannt · Emoji direkt eingeben zum Überschreiben</div>
         </div>
         ${posterBildInputHTML('cd-bild','Hintergrundbild')}
       </div>
@@ -4131,9 +4136,10 @@ async function cdVorschau() {
   const bildUrl = await posterBildLaden('cd-bild','poster-countdown');
   const sportartCd = document.getElementById('cd-sportart')?.value||'';
   const cdLink = document.getElementById('cd-link')?.value?.trim() || '';
+  const cdLand = document.getElementById('cd-land')?.value?.trim() || '';
   const cdFlaggeOverride = document.getElementById('cd-flagge-override')?.value?.trim() || '';
-  const cdFlagge = cdFlaggeOverride || (typeof ortZuFlagge === 'function' ? ortZuFlagge(ort) : null);
-  const opts = { eventName:name, eventDatum:datum, ort, sportart:sportartCd, format: format==='a3'?'hochformat':format, hintergrundbild:bildUrl, link: cdLink, flagge: cdFlagge };
+  const cdFlagge = cdFlaggeOverride || (typeof ortZuFlagge === 'function' ? ortZuFlagge(cdLand || ort) : null);
+  const opts = { eventName:name, eventDatum:datum, ort, land:cdLand, sportart:sportartCd, format: format==='a3'?'hochformat':format, hintergrundbild:bildUrl, link: cdLink, flagge: cdFlagge };
   if (format==='a3') {
     // A3-Druck: Countdown-Zahl + Event-Name im A3-Layout
     const canvas = document.getElementById('cd-canvas');
@@ -5184,6 +5190,14 @@ function zeigeKalenderEintragModal(eintrag = null) {
           <label style="font-weight:600">Klasse / Kader</label>
           <input type="text" id="ke-klasse" value="${esc(eintrag?.klasse||'')}" placeholder="z.B. U20 Kader" style="width:100%">
         </div>
+        <div class="form-group">
+          <label style="font-weight:600">Land <span style="font-size:.72rem;color:var(--slzb-text-muted)">(für Flagge)</span></label>
+          <input type="text" id="ke-land" value="${esc(eintrag?.land||'')}" placeholder="z.B. Kanada, Österreich, USA..."
+            style="width:100%"
+            oninput="const f=document.getElementById('ke-flagge-preview');if(f)f.textContent=(typeof ortZuFlagge==='function'?ortZuFlagge(this.value||document.getElementById('ke-ort')?.value||'')||'🌍':'🌍')">
+          <div id="ke-flagge-preview" style="font-size:1.8rem;margin-top:4px">${typeof ortZuFlagge==='function'?ortZuFlagge(eintrag?.land||eintrag?.ort||'')||'':''}
+          </div>
+        </div>
         <div class="form-group" style="grid-column:1/-1">
           <label style="font-weight:600">Link zur Veranstaltung / Livestream <span style="font-size:.72rem;color:var(--slzb-text-muted)">(optional)</span></label>
           <input type="url" id="ke-link" value="${esc(eintrag?.link||'')}" placeholder="https://..." style="width:100%">
@@ -5227,6 +5241,7 @@ async function speichereKalenderEintrag(id) {
   const ort = document.getElementById('ke-ort')?.value.trim();
   const klasse = document.getElementById('ke-klasse')?.value.trim();
   const link = document.getElementById('ke-link')?.value.trim() || null;
+  const land = document.getElementById('ke-land')?.value.trim() || null;
   const prio = parseInt(document.getElementById('ke-prio')?.value || '4');
 
   if (!datum || !sportart || !veranstaltung) {
@@ -5252,7 +5267,7 @@ async function speichereKalenderEintrag(id) {
 
   const daten = {
     datum, datum_bis: datumBis, datum_anzeige: datumAnzeige,
-    sportart, veranstaltung, ort, klasse, link,
+    sportart, veranstaltung, ort, klasse, link, land,
     prioritaet: prio, prioritaet_text: prioTexte[prio] || '4 – Regulär',
     erstellt_von: Auth.id(), geaendert_am: new Date().toISOString(),
     // Bei SLZB_TERMINE-Überschreibung: Original-Name speichern zum Filtern
@@ -6215,7 +6230,7 @@ async function zeigeWochenvorschau(wochen = 1) {
                   <td class="text-sm">${esc(t.sportart)}</td>
                   <td><strong>${esc(t.veranstaltung)}</strong></td>
                   <td class="text-sm text-muted">
-                    ${typeof ortZuFlagge === 'function' && t.ort ? `<span style="margin-right:4px">${ortZuFlagge(t.ort)||''}</span>` : ''}${esc(t.ort||'–')}
+                    ${typeof ortZuFlagge === 'function' && (t.land||t.ort) ? `<span class="flagge-inline">${ortZuFlagge(t.land||t.ort)||''}</span>` : ''}${esc(t.ort||'–')}
                     ${t.link ? `<a href="${esc(t.link)}" target="_blank" style="margin-left:6px;font-size:.7rem;color:var(--slzb-primary)" title="Veranstaltungsseite">🔗</a>` : ''}
                   </td>
                   <td class="text-sm text-muted">${esc(t.klasse||'–')}</td>
