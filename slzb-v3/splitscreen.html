@@ -1262,6 +1262,8 @@ function stoppeVpAutoScroll() {
 // ── Auto-Start wenn URL-Parameter ────────────────────────────
 const params = new URLSearchParams(window.location.search);
 if (params.get('autostart') === '1') {
+  // Warte auf DOM-Bereitschaft (Script steht im <head>)
+  const _doAutostart = () => {
   ladeKonfig();
   // Wenn keine Konfiguration gespeichert: GitHub-Modus als Standard
   const gespeichert = localStorage.getItem('slzb_splitscreen');
@@ -1365,8 +1367,18 @@ if (params.get('autostart') === '1') {
     // Kein Vollbild gewünscht: direkt starten
     setTimeout(starteAnzeige, 500);
   }
+  }; // Ende _doAutostart
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _doAutostart);
+  } else {
+    _doAutostart(); // DOM bereits bereit
+  }
 } else {
-  ladeKonfig();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', ladeKonfig);
+  } else {
+    ladeKonfig();
+  }
 }
 </script>
 </head>
