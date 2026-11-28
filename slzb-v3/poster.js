@@ -2860,6 +2860,22 @@ function bisZumLabel(eventName) {
   // Standard: "BIS ZUM"
   return 'BIS ZUM';
 }
+
+// ── Flaggen-Emoji → ISO-Ländercode (für flagcdn.com) ─────────────────────────
+function flagEmojiZuIso(emoji) {
+  if (!emoji || emoji.length < 2) return null;
+  // Flaggen-Emojis bestehen aus zwei Regional Indicator Symbols (U+1F1E6 bis U+1F1FF)
+  const codePoints = [...emoji].map(c => c.codePointAt(0));
+  if (codePoints.length >= 2 && codePoints[0] >= 0x1F1E6 && codePoints[0] <= 0x1F1FF) {
+    const a = String.fromCodePoint(codePoints[0] - 0x1F1E6 + 65);
+    const b = String.fromCodePoint(codePoints[1] - 0x1F1E6 + 65);
+    return (a + b).toLowerCase();
+  }
+  // Berliner Flagge (🏴) → de-be (nicht standard, fallback zu de)
+  if (emoji === '🏴') return 'de';
+  return null;
+}
+
 async function zeichneCountdownPoster(canvasId, opts) {
   // opts: { eventName, eventDatum, ort, sportart, format:'hochformat'|'querformat', hintergrundbild }
   const canvas = document.getElementById(canvasId);
@@ -2981,22 +2997,55 @@ async function zeichneCountdownPoster(canvasId, opts) {
     if (opts.ort) { ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.fillText(opts.ort, CX, ortY+infoSz+6, W-80); }
   }
 
-  // 8. Flagge (wehend, links) – wenn Ort angegeben
-  const flagge = opts.flagge || (typeof ortZuFlagge === 'function' ? ortZuFlagge(opts.ort||'') : null);
+  // 8. Flagge (als Bild, links) – wenn Ort/Land angegeben
+  const flagge = opts.flagge || (typeof ortZuFlagge === 'function' ? ortZuFlagge(opts.land||opts.ort||'') : null);
   if (flagge && flagge !== '🌍') {
-    const flagX = querformat ? 40 : 30;
-    const flagY = querformat ? H*0.30 : H*0.28;
-    const flagSz = querformat ? Math.round(H*0.12) : Math.round(H*0.08);
-    ctx.save();
-    ctx.font = `${flagSz}px Arial`;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.globalAlpha = 0.85;
-    // Leichter Schatten für Tiefe
-    ctx.shadowColor = 'rgba(0,0,0,0.4)';
-    ctx.shadowBlur = 8;
-    ctx.fillText(flagge, flagX, flagY);
-    ctx.restore();
+    const flagX = querformat ? 30 : 20;
+    const flagY = querformat ? H*0.26 : H*0.24;
+    const flagW = querformat ? Math.round(H*0.14) : Math.round(H*0.09);
+    const flagH = Math.round(flagW * 0.67); // 3:2 Seitenverhältnis
+    try {
+      // Emoji → ISO-Code → flagcdn.com Bild
+      const isoCode = flagEmojiZuIso(flagge);
+      if (isoCode) {
+        const flagImg = await new Promise((res) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => res(img);
+          img.onerror = () => res(null);
+          img.src = `https://flagcdn.com/w${Math.round(flagW*2)}/${isoCode}.png`;
+          setTimeout(() => res(null), 3000); // Timeout
+        });
+        if (flagImg) {
+          ctx.save();
+          // Abgerundete Ecken für die Flagge
+          ctx.beginPath();
+          const r = 4;
+          ctx.moveTo(flagX + r, flagY);
+          ctx.lineTo(flagX + flagW - r, flagY);
+          ctx.quadraticCurveTo(flagX + flagW, flagY, flagX + flagW, flagY + r);
+          ctx.lineTo(flagX + flagW, flagY + flagH - r);
+          ctx.quadraticCurveTo(flagX + flagW, flagY + flagH, flagX + flagW - r, flagY + flagH);
+          ctx.lineTo(flagX + r, flagY + flagH);
+          ctx.quadraticCurveTo(flagX, flagY + flagH, flagX, flagY + flagH - r);
+          ctx.lineTo(flagX, flagY + r);
+          ctx.quadraticCurveTo(flagX, flagY, flagX + r, flagY);
+          ctx.closePath();
+          ctx.clip();
+          ctx.globalAlpha = 0.9;
+          ctx.drawImage(flagImg, flagX, flagY, flagW, flagH);
+          ctx.restore();
+          // Schatten-Rahmen
+          ctx.save();
+          ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.roundRect(flagX, flagY, flagW, flagH, 4);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+    } catch(e) { /* Flagge nicht verfügbar – kein Fehler */ }
   }
 
   // 9. Link als Kurztext (wenn angegeben)

@@ -5670,7 +5670,7 @@ async function renderKalender() {
         <tbody>${naechste.length===0?'<tr><td colspan="6" class="text-center text-muted" style="padding:30px">Keine Termine in den nächsten 30 Tagen.</td></tr>':
           naechste.map(t=>{
             const _istHeuteN = t.datum === new Date().toISOString().slice(0,10);
-            return `<tr style="${_istHeuteN?'background:rgba(226,0,26,0.12);':''}">
+            return `<tr style="${_istHeuteN?'background:rgba(226,0,26,0.12);':''}border-left:4px solid ${typeof sportartFarbe==='function'?sportartFarbe(t.sportart):'#003366'}">\
             <td class="text-sm"><strong>${esc(t.datumAnzeige)}</strong>${_istHeuteN?'<span class="badge badge-danger ml-1" style="font-size:.65rem">HEUTE</span>':''}</td>
             <td class="text-sm">${esc(t.sportart)}</td>
             <td><strong>${esc(t.veranstaltung)}</strong></td>
