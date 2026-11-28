@@ -1297,7 +1297,14 @@ if (params.get('autostart') === '1') {
     };
 
     // Versuche sofort Vollbild (funktioniert in Chrome --kiosk)
-    const sofortVersuch = document.documentElement.requestFullscreen().catch(() => null);
+    // DOM ist hier bereits bereit (DOMContentLoaded-Wrapper)
+    document.documentElement.requestFullscreen().then(() => {
+      // Vollbild sofort erfolgreich (Chrome --kiosk) → direkt starten
+      setTimeout(starteAnzeige, 300);
+      return;
+    }).catch(() => {
+      // Vollbild nicht sofort möglich → Overlay zeigen
+    });
 
     // Zeige Overlay mit Countdown (für normalen Browser)
     const overlay = document.createElement('div');
@@ -1354,14 +1361,19 @@ if (params.get('autostart') === '1') {
       }
     }, 100);
 
-    // Kiosk-Modus: Verhindere Verlassen des Vollbilds
-    document.addEventListener('fullscreenchange', () => {
-      if (!document.fullscreenElement && document.getElementById('layout')?.style.display !== 'none') {
-        setTimeout(() => {
-          document.documentElement.requestFullscreen().catch(() => {});
-        }, 2000);
-      }
-    });
+    // Kiosk-Modus: Verhindere Verlassen des Vollbilds (nur einmal registrieren)
+    if (!window._kioskListenerRegistered) {
+      window._kioskListenerRegistered = true;
+      document.addEventListener('fullscreenchange', () => {
+        if (!document.fullscreenElement && 
+            document.getElementById('layout')?.style.display === 'grid') {
+          // Nur zurück wenn Anzeige läuft (nicht beim Konfigurationsscreen)
+          setTimeout(() => {
+            document.documentElement.requestFullscreen().catch(() => {});
+          }, 2000);
+        }
+      });
+    }
 
   } else {
     // Kein Vollbild gewünscht: direkt starten

@@ -1882,7 +1882,7 @@ async function speichereErfolg(status, meldungsart) {
     toast(`Erfolg ${result.nr} ${status==='Entwurf'?'als Entwurf gespeichert':'eingereicht'}!`,'success');
     // Push an Redakteure/ÖA/Admin bei neuer Einreichung
     if (status === 'Eingereicht') {
-      sendeRedaktionsPush(result.id, daten.titel||'Neue Meldung').catch(()=>{});
+      sendeRedaktionsPush(result.id, daten.titel||'Neue Meldung', { sportart: daten.sportartText, datum: daten.datum }).catch(()=>{});
     }
     navigateTo('erfolg-detail',{currentErfolgId:result.id});
   } catch(e) {

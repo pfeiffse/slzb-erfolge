@@ -8569,23 +8569,40 @@ async function renderPosterEntwuerfeInTab(erfolgId) {
 // ══════════════════════════════════════════════════════════════
 // PUSH AN REDAKTION: Neue Meldung eingereicht
 // ══════════════════════════════════════════════════════════════
-async function sendeRedaktionsPush(erfolgId, titel) {
-  // In-App-Benachrichtigung: Speichere in Supabase notifications-Tabelle
-  // Redakteure/OEA/Admins sehen die Benachrichtigung beim nächsten Laden
+async function sendeRedaktionsPush(erfolgId, titel, extra = {}) {
+  // 1. In-App-Benachrichtigung (Supabase notifications-Tabelle)
   try {
     await Backend.client.from('notifications').insert([{
       typ: 'neue_meldung',
       titel: `Neue Meldung: ${titel}`,
-      nachricht: `Eine neue Meldung wurde eingereicht und wartet auf Prüfung.`,
+      nachricht: `${Auth.name()} hat eine neue Meldung eingereicht.`,
       link: `/erfolg-detail/${erfolgId}`,
       erstellt_von: Auth.id(),
       erstellt_von_name: Auth.name(),
       gelesen: false,
     }]);
   } catch(e) {
-    // Tabelle existiert möglicherweise noch nicht - kein Fehler
-    console.info('[Push] Benachrichtigung nicht gespeichert:', e.message);
+    console.info('[Push] In-App-Benachrichtigung:', e.message);
   }
+
+  // 2. E-Mail via Edge Function (notify-new-meldung)
+  try {
+    const { error } = await Backend.client.functions.invoke('notify-new-meldung', {
+      body: {
+        erfolgId,
+        titel,
+        melder: Auth.name(),
+        sportart: extra.sportart || '',
+        datum: extra.datum || new Date().toLocaleDateString('de-DE'),
+      }
+    });
+    if (error) console.warn('[Push] E-Mail-Fehler:', error.message);
+    else console.info('[Push] E-Mail gesendet für:', titel);
+  } catch(e) {
+    // Edge Function nicht verfügbar - kein Fehler für den Nutzer
+    console.info('[Push] E-Mail nicht gesendet:', e.message);
+  }
+
   return { ok: true };
 }
 
