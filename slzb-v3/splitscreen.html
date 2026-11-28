@@ -261,6 +261,7 @@
         <option value="upload">📁 HTML-Dateien hochladen (itslearning/manuell)</option>
         <option value="github">🔄 Automatisch von GitHub (AccessSchule-Skript)</option>
         <option value="url">🔗 URL eingeben (eigener Server)</option>
+        <option value="lokal">🏫 Lokaler Modus (schulinterne Monitore)</option>
       </select>
     </div>
 
@@ -297,16 +298,101 @@
           <label>Vplan-Tab wechseln alle</label>
           <select id="cfg-tab-wechsel">
             <option value="0">Nicht wechseln</option>
+            <option value="20000">20 Sekunden</option>
             <option value="30000" selected>30 Sekunden</option>
             <option value="60000">60 Sekunden</option>
             <option value="120000">2 Minuten</option>
+            <option value="300000">5 Minuten</option>
           </select>
         </div>
       </div>
+
+      <!-- Tab-Reihenfolge konfigurieren -->
+      <div style="background:rgba(255,255,255,.06);border-radius:8px;padding:10px 14px;margin-bottom:8px">
+        <div style="font-size:.75rem;font-weight:700;color:rgba(255,255,255,.6);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">Tab-Reihenfolge & Anzeigedauer</div>
+        <div style="display:flex;flex-direction:column;gap:6px" id="tab-reihenfolge-config">
+          <label style="display:flex;align-items:center;gap:8px;font-size:.8rem;color:rgba(255,255,255,.7)">
+            <input type="checkbox" id="tab-heute-aktiv" checked style="accent-color:#E2001A">
+            📅 Heute
+            <select id="tab-heute-dauer" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:5px;padding:3px 6px;color:#fff;font-size:.75rem;font-family:inherit;margin-left:auto">
+              <option value="20000">20 Sek</option>
+              <option value="30000" selected>30 Sek</option>
+              <option value="60000">60 Sek</option>
+              <option value="120000">2 Min</option>
+            </select>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:.8rem;color:rgba(255,255,255,.7)">
+            <input type="checkbox" id="tab-morgen-aktiv" checked style="accent-color:#E2001A">
+            📅 Morgen
+            <select id="tab-morgen-dauer" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:5px;padding:3px 6px;color:#fff;font-size:.75rem;font-family:inherit;margin-left:auto">
+              <option value="20000">20 Sek</option>
+              <option value="30000" selected>30 Sek</option>
+              <option value="60000">60 Sek</option>
+              <option value="120000">2 Min</option>
+            </select>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:.8rem;color:rgba(255,255,255,.7)">
+            <input type="checkbox" id="tab-uebersicht-aktiv" style="accent-color:#E2001A">
+            📋 Übersicht
+            <select id="tab-uebersicht-dauer" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:5px;padding:3px 6px;color:#fff;font-size:.75rem;font-family:inherit;margin-left:auto">
+              <option value="20000">20 Sek</option>
+              <option value="30000">30 Sek</option>
+              <option value="60000" selected>60 Sek</option>
+              <option value="120000">2 Min</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
       <div style="background:rgba(255,255,255,.06);border-radius:8px;padding:10px 14px;
                   font-size:.75rem;color:rgba(255,255,255,.5);margin-bottom:4px">
         💡 <strong>So geht's:</strong> HTML-Datei aus itslearning herunterladen → hier hochladen → fertig.
         Die Datei wird lokal im Browser gespeichert und bleibt bis zum nächsten Upload erhalten.
+      </div>
+    </div>
+
+    <!-- Lokaler Modus (schulinterne Monitore) -->
+    <div id="vplan-lokal-bereich" style="display:none">
+      <div style="background:rgba(0,51,102,.2);border:1px solid rgba(0,51,102,.4);border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:.78rem;color:rgba(255,255,255,.8);line-height:1.7">
+        🏫 <strong>Lokaler Modus für schulinterne Monitore:</strong><br>
+        Die VP-Dateien werden von einem lokalen Server im Schulnetz geladen.<br>
+        Kein Internet nötig – ideal für Monitore im Schulgebäude.
+      </div>
+      <div class="cfg-row">
+        <div class="cfg-group">
+          <label>Lokale URL – Heute</label>
+          <input type="text" id="cfg-lokal-heute"
+            placeholder="http://192.168.1.100/vplan/heute.html"
+            style="width:100%">
+          <div style="font-size:.7rem;color:rgba(255,255,255,.4);margin-top:3px">IP-Adresse des lokalen Servers</div>
+        </div>
+        <div class="cfg-group">
+          <label>Lokale URL – Morgen</label>
+          <input type="text" id="cfg-lokal-morgen"
+            placeholder="http://192.168.1.100/vplan/morgen.html"
+            style="width:100%">
+        </div>
+      </div>
+      <div class="cfg-row">
+        <div class="cfg-group">
+          <label>Lokale URL – Übersicht (optional)</label>
+          <input type="text" id="cfg-lokal-uebersicht"
+            placeholder="http://192.168.1.100/vplan/uebersicht.html"
+            style="width:100%">
+        </div>
+        <div class="cfg-group">
+          <label>Auto-Reload alle</label>
+          <select id="cfg-lokal-reload">
+            <option value="60000">1 Minute</option>
+            <option value="300000" selected>5 Minuten</option>
+            <option value="600000">10 Minuten</option>
+            <option value="1800000">30 Minuten</option>
+          </select>
+        </div>
+      </div>
+      <div style="background:rgba(255,255,255,.06);border-radius:8px;padding:10px 14px;font-size:.75rem;color:rgba(255,255,255,.5)">
+        💡 <strong>Zukünftig:</strong> AccessSchule exportiert VP direkt als HTML → lokaler Server stellt sie bereit → diese Anzeige lädt sie automatisch.
+        Kein manuelles Hochladen mehr nötig.
       </div>
     </div>
 
@@ -485,6 +571,7 @@ function vplanQuelleWechseln(quelle) {
   document.getElementById('vplan-upload-bereich').style.display  = quelle === 'upload'  ? '' : 'none';
   document.getElementById('vplan-github-bereich').style.display  = quelle === 'github'  ? '' : 'none';
   document.getElementById('vplan-url-bereich').style.display     = quelle === 'url'     ? '' : 'none';
+  const lokalEl = document.getElementById('vplan-lokal-bereich'); if (lokalEl) lokalEl.style.display = quelle === 'lokal' ? '' : 'none';\
 }
 
 // Gespeicherte Vplan-HTMLs laden
@@ -530,17 +617,30 @@ function ladeKonfig() {
 }
 
 function speichereKonfig() {
+  const g = id => (document.getElementById(id) || {});
   localStorage.setItem('slzb_splitscreen', JSON.stringify({
-    vplanHeute:      (document.getElementById('cfg-vplan-heute') || {}).value || '',
-    vplanMorgen:     (document.getElementById('cfg-vplan-morgen') || {}).value || '',
-    vplanUebersicht: (document.getElementById('cfg-vplan-uebersicht') || {}).value || '',
-    layout:          document.getElementById('cfg-layout').value,
-    speed:           document.getElementById('cfg-speed').value,
-    tabWechsel:      (document.getElementById('cfg-tab-wechsel') || {}).value || '30000',
-    quelle:          (document.getElementById('cfg-vplan-quelle') || {}).value || 'upload',
-    githubRepo:      (document.getElementById('cfg-github-repo') || {}).value || '',
+    vplanHeute:      g('cfg-vplan-heute').value || '',
+    vplanMorgen:     g('cfg-vplan-morgen').value || '',
+    vplanUebersicht: g('cfg-vplan-uebersicht').value || '',
+    layout:          g('cfg-layout').value,
+    speed:           g('cfg-speed').value,
+    tabWechsel:      g('cfg-tab-wechsel').value || '30000',
+    quelle:          g('cfg-vplan-quelle').value || 'upload',
+    githubRepo:      g('cfg-github-repo').value || '',
     zeitplanAktiv:   document.getElementById('cfg-zeitplan-aktiv')?.checked || false,
     zeitplan:        _zeitplan,
+    // Tab-Konfiguration
+    tabHeuteAktiv:      g('tab-heute-aktiv').checked ?? true,
+    tabMorgenAktiv:     g('tab-morgen-aktiv').checked ?? true,
+    tabUebersichtAktiv: g('tab-uebersicht-aktiv').checked ?? false,
+    tabHeuteDauer:      g('tab-heute-dauer').value || '30000',
+    tabMorgenDauer:     g('tab-morgen-dauer').value || '30000',
+    tabUebersichtDauer: g('tab-uebersicht-dauer').value || '60000',
+    // Lokaler Modus
+    lokalHeute:      g('cfg-lokal-heute').value || '',
+    lokalMorgen:     g('cfg-lokal-morgen').value || '',
+    lokalUebersicht: g('cfg-lokal-uebersicht').value || '',
+    lokalReload:     g('cfg-lokal-reload').value || '300000',
   }));
 }
 
@@ -709,6 +809,32 @@ function starteAnzeige() {
       }
     }, reloadInterval);
 
+  } else if (quelle === 'lokal') {
+    // Lokaler Modus: URLs aus lokalen Feldern
+    const lokalHeute = document.getElementById('cfg-lokal-heute')?.value?.trim();
+    const lokalMorgen = document.getElementById('cfg-lokal-morgen')?.value?.trim();
+    const lokalUebersicht = document.getElementById('cfg-lokal-uebersicht')?.value?.trim();
+    const lokalReload = parseInt(document.getElementById('cfg-lokal-reload')?.value || '300000');
+
+    if (lokalHeute) {
+      _vplanUrls = {
+        heute: lokalHeute,
+        morgen: lokalMorgen || '',
+        uebersicht: lokalUebersicht || '',
+      };
+      document.getElementById('vplan-frame').src = lokalHeute + '?t=' + Date.now();
+
+      // Auto-Reload für lokalen Modus
+      setInterval(() => {
+        const frame = document.getElementById('vplan-frame');
+        const currentUrl = _vplanUrls[_aktuellerTab];
+        if (currentUrl) {
+          frame.src = currentUrl + '?t=' + Date.now();
+          document.getElementById('ctrl-status').textContent =
+            '🔄 VP aktualisiert ' + new Date().toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit'});
+        }
+      }, lokalReload);
+    }
   } else if (quelle === 'upload' && _vplanHtml.heute) {
     document.getElementById('vplan-frame').srcdoc = _vplanHtml.heute;
   } else if (quelle === 'url' && _vplanUrls.heute) {
@@ -730,20 +856,37 @@ function starteAnzeige() {
   document.querySelectorAll('.vplan-tab')[1].style.display = hatMorgen ? '' : 'none';
   document.querySelectorAll('.vplan-tab')[2].style.display = hatUebersicht ? '' : 'none';
 
-  // Tab-Wechsel-Timer
-  if (tabWechsel > 0) {
-    clearInterval(_tabTimer);
-    _tabReihenfolge = ['heute'];
-    if (hatMorgen) _tabReihenfolge.push('morgen');
-    if (hatUebersicht) _tabReihenfolge.push('uebersicht');
+  // Verbesserter Tab-Wechsel mit individuellen Zeiten pro Tab
+  clearInterval(_tabTimer);
+  _tabReihenfolge = [];
+
+  // Tab-Reihenfolge aus Konfiguration lesen
+  const tabKonfig = [
+    { id: 'heute',      aktiv: document.getElementById('tab-heute-aktiv')?.checked ?? true,
+      dauer: parseInt(document.getElementById('tab-heute-dauer')?.value || '30000') },
+    { id: 'morgen',     aktiv: document.getElementById('tab-morgen-aktiv')?.checked ?? true && hatMorgen,
+      dauer: parseInt(document.getElementById('tab-morgen-dauer')?.value || '30000') },
+    { id: 'uebersicht', aktiv: document.getElementById('tab-uebersicht-aktiv')?.checked ?? false && hatUebersicht,
+      dauer: parseInt(document.getElementById('tab-uebersicht-dauer')?.value || '60000') },
+  ].filter(t => t.aktiv && (t.id === 'heute' || (t.id === 'morgen' && hatMorgen) || (t.id === 'uebersicht' && hatUebersicht)));
+
+  _tabReihenfolge = tabKonfig.map(t => t.id);
+  _tabDauern = Object.fromEntries(tabKonfig.map(t => [t.id, t.dauer]));
+
+  if (_tabReihenfolge.length > 1) {
     let tabIdx = 0;
-    _tabTimer = setInterval(() => {
+    function naechsterTab() {
       tabIdx = (tabIdx + 1) % _tabReihenfolge.length;
       const tab = _tabReihenfolge[tabIdx];
       const tabBtn = document.querySelectorAll('.vplan-tab')[
         ['heute','morgen','uebersicht'].indexOf(tab)];
       zeigeVplanTab(tab, tabBtn);
-    }, tabWechsel);
+      // Nächsten Wechsel mit individueller Dauer planen
+      _tabTimer = setTimeout(naechsterTab, _tabDauern[tab] || 30000);
+    }
+    // Ersten Tab sofort zeigen, dann nach seiner Dauer wechseln
+    const ersterTab = _tabReihenfolge[0];
+    _tabTimer = setTimeout(naechsterTab, _tabDauern[ersterTab] || 30000);
   }
 
   // Layout setzen
