@@ -4126,6 +4126,158 @@ function cdFormatWechsel(format) {
   }
 }
 
+async 
+// ── Flagge als HTML-Overlay über Canvas (CORS-sicher, draggable) ──────────────
+// Wird nach dem Canvas-Rendering aufgerufen
+// canvasId: ID des Canvas-Elements
+// flagge: Flaggen-Emoji (z.B. '🇦🇹')
+// land: ISO-Code oder Land-Name
+// opts: { x, y, w, removable, draggable }
+function slzbZeigeFlaggeAlsOverlay(canvasId, flagge, land, opts = {}) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas || !flagge || flagge === '🌍') return;
+
+  // Bestehende Flagge entfernen
+  const existingFlag = document.getElementById(canvasId + '-flagge');
+  if (existingFlag) existingFlag.remove();
+
+  const isoCode = typeof flagEmojiZuIso === 'function' ? flagEmojiZuIso(flagge) : null;
+  if (!isoCode) return;
+
+  // Canvas-Position und -Größe
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = rect.width / canvas.width;
+  const scaleY = rect.height / canvas.height;
+
+  // Standard-Position: oben links
+  const defaultX = opts.x !== undefined ? opts.x : (canvas.width * 0.025);
+  const defaultY = opts.y !== undefined ? opts.y : (canvas.height * 0.24);
+  const flagW = opts.w || (canvas.width * 0.09);
+  const flagH = flagW * 0.67;
+
+  // HTML-Overlay erstellen
+  const wrapper = document.createElement('div');
+  wrapper.id = canvasId + '-flagge';
+  wrapper.style.cssText = `
+    position: absolute;
+    left: ${defaultX * scaleX}px;
+    top: ${defaultY * scaleY}px;
+    width: ${flagW * scaleX}px;
+    height: ${flagH * scaleY}px;
+    z-index: 10;
+    cursor: ${opts.draggable !== false ? 'grab' : 'default'};
+    user-select: none;
+    border-radius: 3px;
+    overflow: hidden;
+    box-shadow: 2px 2px 8px rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.25);
+    transition: box-shadow .15s;
+  `;
+
+  // Flaggen-Bild
+  const img = document.createElement('img');
+  img.src = `https://flagcdn.com/w${Math.round(flagW * scaleX * 2)}/${isoCode}.png`;
+  img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;pointer-events:none';
+  img.onerror = () => {
+    // Fallback: Emoji-Text
+    wrapper.innerHTML = '';
+    wrapper.style.background = 'rgba(0,0,0,0.5)';
+    wrapper.style.display = 'flex';
+    wrapper.style.alignItems = 'center';
+    wrapper.style.justifyContent = 'center';
+    wrapper.style.fontSize = `${flagW * scaleX * 0.6}px`;
+    wrapper.textContent = flagge;
+  };
+  wrapper.appendChild(img);
+
+  // Entfernen-Button (erscheint bei Hover)
+  if (opts.removable !== false) {
+    const removeBtn = document.createElement('button');
+    removeBtn.textContent = '✕';
+    removeBtn.title = 'Flagge entfernen';
+    removeBtn.style.cssText = `
+      position: absolute; top: -8px; right: -8px;
+      width: 20px; height: 20px;
+      background: #E2001A; color: #fff; border: none;
+      border-radius: 50%; font-size: 10px; font-weight: 700;
+      cursor: pointer; display: none; align-items: center;
+      justify-content: center; z-index: 20; line-height: 1;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    `;
+    removeBtn.onclick = (e) => {
+      e.stopPropagation();
+      wrapper.remove();
+      // Merke dass Flagge entfernt wurde
+      window[canvasId + '_flaggeEntfernt'] = true;
+    };
+    wrapper.addEventListener('mouseenter', () => { removeBtn.style.display = 'flex'; });
+    wrapper.addEventListener('mouseleave', () => { removeBtn.style.display = 'none'; });
+    wrapper.appendChild(removeBtn);
+  }
+
+  // Drag-and-Drop
+  if (opts.draggable !== false) {
+    let isDragging = false, startX, startY, startLeft, startTop;
+
+    wrapper.addEventListener('mousedown', (e) => {
+      if (e.target === wrapper.querySelector('button')) return;
+      isDragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      startLeft = parseInt(wrapper.style.left) || 0;
+      startTop = parseInt(wrapper.style.top) || 0;
+      wrapper.style.cursor = 'grabbing';
+      wrapper.style.boxShadow = '4px 4px 16px rgba(0,0,0,0.6)';
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      wrapper.style.left = (startLeft + dx) + 'px';
+      wrapper.style.top = (startTop + dy) + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (isDragging) {
+        isDragging = false;
+        wrapper.style.cursor = 'grab';
+        wrapper.style.boxShadow = '2px 2px 8px rgba(0,0,0,0.4)';
+      }
+    });
+
+    // Touch-Support
+    wrapper.addEventListener('touchstart', (e) => {
+      const touch = e.touches[0];
+      isDragging = true;
+      startX = touch.clientX;
+      startY = touch.clientY;
+      startLeft = parseInt(wrapper.style.left) || 0;
+      startTop = parseInt(wrapper.style.top) || 0;
+      e.preventDefault();
+    }, { passive: false });
+
+    document.addEventListener('touchmove', (e) => {
+      if (!isDragging) return;
+      const touch = e.touches[0];
+      wrapper.style.left = (startLeft + touch.clientX - startX) + 'px';
+      wrapper.style.top = (startTop + touch.clientY - startY) + 'px';
+    });
+
+    document.addEventListener('touchend', () => { isDragging = false; });
+  }
+
+  // Canvas-Container muss position:relative haben
+  const container = canvas.parentElement;
+  if (container) {
+    if (getComputedStyle(container).position === 'static') {
+      container.style.position = 'relative';
+    }
+    container.appendChild(wrapper);
+  }
+}
+
 async function cdVorschau() {
   const name = document.getElementById('cd-name')?.value||'';
   const datum = document.getElementById('cd-datum')?.value||'';
@@ -8160,6 +8312,18 @@ async function posterEditorAktualisieren() {
     await wechsleSocialFormat(window._smFormat || 'beitrag', eNeu.id);
   }
   toast('✅ Vorschau aktualisiert', 'success');
+  // Flagge als HTML-Overlay (CORS-sicher, verschiebbar)
+  const _cdFlaggeAktuell = document.getElementById('cd-flagge-override')?.value?.trim() ||
+    (typeof ortZuFlagge === 'function' ? ortZuFlagge(
+      document.getElementById('cd-land')?.value ||
+      document.getElementById('cd-ort')?.value || '') : null);
+  if (_cdFlaggeAktuell && _cdFlaggeAktuell !== '\ud83c\udf0d' && !window['cd-canvas_flaggeEntfernt']) {
+    setTimeout(() => {
+      if (typeof slzbZeigeFlaggeAlsOverlay === 'function') {
+        slzbZeigeFlaggeAlsOverlay('cd-canvas', _cdFlaggeAktuell, '', { draggable: true, removable: true });
+      }
+    }, 200);
+  }
 }
 
 // ══════════════════════════════════════════════════════════════

@@ -2997,56 +2997,9 @@ async function zeichneCountdownPoster(canvasId, opts) {
     if (opts.ort) { ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.fillText(opts.ort, CX, ortY+infoSz+6, W-80); }
   }
 
-  // 8. Flagge (als Bild, links) – wenn Ort/Land angegeben
-  const flagge = opts.flagge || (typeof ortZuFlagge === 'function' ? ortZuFlagge(opts.land||opts.ort||'') : null);
-  if (flagge && flagge !== '🌍') {
-    const flagX = querformat ? 30 : 20;
-    const flagY = querformat ? H*0.26 : H*0.24;
-    const flagW = querformat ? Math.round(H*0.14) : Math.round(H*0.09);
-    const flagH = Math.round(flagW * 0.67); // 3:2 Seitenverhältnis
-    try {
-      // Emoji → ISO-Code → flagcdn.com Bild
-      const isoCode = flagEmojiZuIso(flagge);
-      if (isoCode) {
-        const flagImg = await new Promise((res) => {
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          img.onload = () => res(img);
-          img.onerror = () => res(null);
-          img.src = `https://flagcdn.com/w${Math.round(flagW*2)}/${isoCode}.png`;
-          setTimeout(() => res(null), 3000); // Timeout
-        });
-        if (flagImg) {
-          ctx.save();
-          // Abgerundete Ecken für die Flagge
-          ctx.beginPath();
-          const r = 4;
-          ctx.moveTo(flagX + r, flagY);
-          ctx.lineTo(flagX + flagW - r, flagY);
-          ctx.quadraticCurveTo(flagX + flagW, flagY, flagX + flagW, flagY + r);
-          ctx.lineTo(flagX + flagW, flagY + flagH - r);
-          ctx.quadraticCurveTo(flagX + flagW, flagY + flagH, flagX + flagW - r, flagY + flagH);
-          ctx.lineTo(flagX + r, flagY + flagH);
-          ctx.quadraticCurveTo(flagX, flagY + flagH, flagX, flagY + flagH - r);
-          ctx.lineTo(flagX, flagY + r);
-          ctx.quadraticCurveTo(flagX, flagY, flagX + r, flagY);
-          ctx.closePath();
-          ctx.clip();
-          ctx.globalAlpha = 0.9;
-          ctx.drawImage(flagImg, flagX, flagY, flagW, flagH);
-          ctx.restore();
-          // Schatten-Rahmen
-          ctx.save();
-          ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.roundRect(flagX, flagY, flagW, flagH, 4);
-          ctx.stroke();
-          ctx.restore();
-        }
-      }
-    } catch(e) { /* Flagge nicht verfügbar – kein Fehler */ }
-  }
+  // 8. Flagge: wird als HTML-Overlay über dem Canvas gerendert (CORS-sicher)
+  // Die Flagge wird NACH dem Canvas-Rendering als HTML-Element eingefügt
+  // Siehe: slzbZeigeFlaggeAlsOverlay() in app2.js
 
   // 9. Link als Kurztext (wenn angegeben)
   if (opts.link) {
