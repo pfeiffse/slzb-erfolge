@@ -298,8 +298,23 @@ function ladeKonfig() {
     if (saved.layout)          document.getElementById('cfg-layout').value = saved.layout;
     if (saved.speed)           document.getElementById('cfg-speed').value = saved.speed;
     if (saved.tabWechsel)      { const el = document.getElementById('cfg-tab-wechsel'); if(el) el.value = saved.tabWechsel; }
-    if (saved.quelle)          { const el = document.getElementById('cfg-vplan-quelle'); if(el) { el.value = saved.quelle; vplanQuelleWechseln(saved.quelle); } }
+    // Quelle laden (Standard: github wenn nichts gespeichert)
+    const quelleWert = saved.quelle || 'github';
+    const quelleEl = document.getElementById('cfg-vplan-quelle');
+    if (quelleEl) { quelleEl.value = quelleWert; vplanQuelleWechseln(quelleWert); }
     if (saved.githubRepo) { const el = document.getElementById('cfg-github-repo'); if(el) el.value = saved.githubRepo; }
+    // Tab-Konfiguration wiederherstellen
+    if (saved.tabHeuteAktiv !== undefined) { const el = document.getElementById('tab-heute-aktiv'); if(el) el.checked = saved.tabHeuteAktiv; }
+    if (saved.tabMorgenAktiv !== undefined) { const el = document.getElementById('tab-morgen-aktiv'); if(el) el.checked = saved.tabMorgenAktiv; }
+    if (saved.tabUebersichtAktiv !== undefined) { const el = document.getElementById('tab-uebersicht-aktiv'); if(el) el.checked = saved.tabUebersichtAktiv; }
+    if (saved.tabHeuteDauer) { const el = document.getElementById('tab-heute-dauer'); if(el) el.value = saved.tabHeuteDauer; }
+    if (saved.tabMorgenDauer) { const el = document.getElementById('tab-morgen-dauer'); if(el) el.value = saved.tabMorgenDauer; }
+    if (saved.tabUebersichtDauer) { const el = document.getElementById('tab-uebersicht-dauer'); if(el) el.value = saved.tabUebersichtDauer; }
+    // Lokaler Modus
+    if (saved.lokalHeute) { const el = document.getElementById('cfg-lokal-heute'); if(el) el.value = saved.lokalHeute; }
+    if (saved.lokalMorgen) { const el = document.getElementById('cfg-lokal-morgen'); if(el) el.value = saved.lokalMorgen; }
+    if (saved.lokalUebersicht) { const el = document.getElementById('cfg-lokal-uebersicht'); if(el) el.value = saved.lokalUebersicht; }
+    if (saved.lokalReload) { const el = document.getElementById('cfg-lokal-reload'); if(el) el.value = saved.lokalReload; }
     if (saved.zeitplanAktiv) {
       const cb = document.getElementById('cfg-zeitplan-aktiv');
       if (cb) { cb.checked = true; zeitplanToggle(true); }
@@ -307,8 +322,14 @@ function ladeKonfig() {
     if (saved.zeitplan?.length) {
       _zeitplan = saved.zeitplan;
       renderZeitplanSlots();
+    } else {
+      // Standard-Zeitplan rendern
+      renderZeitplanSlots();
     }
-  } catch(e) {}
+  } catch(e) {
+    // Bei Fehler: Standard-Zeitplan rendern
+    renderZeitplanSlots();
+  }
   ladeGespeicherteVplans();
 }
 
@@ -1154,7 +1175,20 @@ function stoppeVpAutoScroll() {
 const params = new URLSearchParams(window.location.search);
 if (params.get('autostart') === '1') {
   ladeKonfig();
-  setTimeout(starteAnzeige, 300);
+  // Wenn keine Konfiguration gespeichert: GitHub-Modus als Standard
+  const gespeichert = localStorage.getItem('slzb_splitscreen');
+  if (!gespeichert) {
+    // Setze GitHub als Standard-Quelle
+    const quelleEl = document.getElementById('cfg-vplan-quelle');
+    if (quelleEl) { quelleEl.value = 'github'; vplanQuelleWechseln('github'); }
+  }
+  // URL-Parameter: ?quelle=github|upload|url|lokal
+  const quelleParam = params.get('quelle');
+  if (quelleParam) {
+    const quelleEl = document.getElementById('cfg-vplan-quelle');
+    if (quelleEl) { quelleEl.value = quelleParam; vplanQuelleWechseln(quelleParam); }
+  }
+  setTimeout(starteAnzeige, 500);
 } else {
   ladeKonfig();
 }
