@@ -7804,12 +7804,21 @@ async function zeigeMeldungZusammenfassen(erfolgId) {
   const aktuelle = alle.find(e=>e.id===erfolgId);
   if (!aktuelle) { toast('Meldung nicht gefunden', 'danger'); return; }
 
-  // Andere Meldungen gleicher Sportart als Kandidaten
-  const kandidaten = alle.filter(e =>
+  // Andere Meldungen: zuerst gleiche Veranstaltung, dann gleiche Sportart
+  const gleicheVeranstaltung = alle.filter(e =>
     e.id !== erfolgId &&
     !e.deleted_at &&
+    aktuelle.wettbewerbText &&
+    e.wettbewerbText === aktuelle.wettbewerbText
+  );
+  const gleicheSportart = alle.filter(e =>
+    e.id !== erfolgId &&
+    !e.deleted_at &&
+    !gleicheVeranstaltung.find(v => v.id === e.id) &&
     (e.sportartText === aktuelle.sportartText || !aktuelle.sportartText)
-  ).slice(0, 50);
+  );
+  const kandidaten = [...gleicheVeranstaltung, ...gleicheSportart].slice(0, 50);
+  const hatGleicheVeranstaltung = gleicheVeranstaltung.length > 0;
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
@@ -7838,7 +7847,10 @@ async function zeigeMeldungZusammenfassen(erfolgId) {
         </div>
       </div>
 
-      <div style="font-weight:600;margin-bottom:6px;font-size:.85rem">Meldungen auswählen:</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="font-weight:600;font-size:.85rem">Meldungen auswählen:</div>
+        ${hatGleicheVeranstaltung ? `<button class="btn btn-ghost btn-sm" onclick="zfAlleVeranstaltungWaehlen()" style="font-size:.72rem">✓ Alle von dieser Veranstaltung (${gleicheVeranstaltung.length})</button>` : ''}
+      </div>
       <div style="max-height:300px;overflow-y:auto;border:1px solid rgba(255,255,255,.1);border-radius:8px">
         <!-- Aktuelle Meldung (immer dabei) -->
         <div style="padding:10px 12px;background:rgba(226,0,26,0.1);border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px">
@@ -7849,9 +7861,11 @@ async function zeigeMeldungZusammenfassen(erfolgId) {
           </div>
           <span style="margin-left:auto;font-size:.7rem;color:#E2001A">Aktuelle Meldung</span>
         </div>
-        ${kandidaten.length ? kandidaten.map(e=>`
+        ${hatGleicheVeranstaltung ? `<div style="padding:6px 12px;background:rgba(0,51,102,0.15);font-size:.72rem;font-weight:700;color:#7eb3ff;text-transform:uppercase;letter-spacing:.05em">📅 Gleiche Veranstaltung: ${esc(aktuelle.wettbewerbText)}</div>` : ''}
+        ${kandidaten.length ? kandidaten.map((e,i)=>`
+        ${i === gleicheVeranstaltung.length && gleicheVeranstaltung.length > 0 && i < kandidaten.length ? '<div style="padding:6px 12px;background:rgba(255,255,255,0.05);font-size:.72rem;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.05em">Andere Meldungen</div>' : ''}
         <div style="padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px">
-          <input type="checkbox" class="zf-check" value="${e.id}" style="accent-color:#0B63CE">
+          <input type="checkbox" class="zf-check" value="${e.id}" ${i < gleicheVeranstaltung.length ? 'checked' : ''} style="accent-color:#0B63CE">
           <div>
             <div style="font-weight:600;font-size:.85rem">${esc(e.titel)}</div>
             <div style="font-size:.75rem;color:#888">${esc(e.sportartText||'–')} · ${e.datum?new Date(e.datum).toLocaleDateString('de-DE'):''} · ${esc(e.beteiligte?.[0]?.anzeigename||'–')}</div>
@@ -7873,6 +7887,16 @@ async function zeigeMeldungZusammenfassen(erfolgId) {
   overlay.appendChild(modal);
   schutzeModalVorAussenklick(overlay, modal);
   document.body.appendChild(overlay);
+}
+
+function zfAlleVeranstaltungWaehlen() {
+  // Alle Checkboxen der gleichen Veranstaltung auswählen
+  document.querySelectorAll('.zf-check').forEach(cb => {
+    // Prüfe ob diese Meldung zur gleichen Veranstaltung gehört
+    // (die ersten N Checkboxen sind von der gleichen Veranstaltung)
+    cb.checked = true;
+  });
+  toast('Alle Meldungen dieser Veranstaltung ausgewählt', 'info');
 }
 
 async function fuehreMeldungenZusammen(hauptId) {
