@@ -3360,57 +3360,163 @@ function setErsatzbildModus(modus) {
 async function zeigeHighlightsKarussell() {
   const alle = await ladeErfolge();
   const jetzt = new Date();
-  const monat = jetzt.getMonth();
-  const jahr = jetzt.getFullYear();
-
-  // Vormonat berechnen
-  const vormonat = monat === 0 ? 11 : monat - 1;
-  const vormonatJahr = monat === 0 ? jahr - 1 : jahr;
   const monatNamen = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
 
-  // Erfolge des Vormonats (freigegeben/veröffentlicht)
-  const highlights = alle.filter(e => {
-    if (!['Freigegeben','Veröffentlicht'].includes(e.status)) return false;
-    const d = e.datum ? new Date(e.datum) : null;
-    if (!d) return false;
-    return d.getMonth() === vormonat && d.getFullYear() === vormonatJahr;
-  }).slice(0, 10);
+  // Monat-Auswahl: letzten 12 Monate anbieten
+  const monatOptionen = [];
+  for (let i = 1; i <= 12; i++) {
+    let m = jetzt.getMonth() - i;
+    let j = jetzt.getFullYear();
+    if (m < 0) { m += 12; j--; }
+    monatOptionen.push({ monat: m, jahr: j, label: `${monatNamen[m]} ${j}` });
+  }
+  // Auch aktuellen Monat anbieten
+  monatOptionen.unshift({ monat: jetzt.getMonth(), jahr: jetzt.getFullYear(), label: `${monatNamen[jetzt.getMonth()]} ${jetzt.getFullYear()} (aktuell)` });
 
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   const modal = document.createElement('div');
   modal.className = 'modal modal-xl';
 
-  const monatLabel = `${monatNamen[vormonat]} ${vormonatJahr}`;
-
   modal.innerHTML = `
-    <div class="modal-header">
-      <h3>🎠 Highlights-Karussell – ${esc(monatLabel)}</h3>
-      <button class="btn btn-ghost btn-sm close-x">✕</button>
+    <div class="modal-header" style="background:linear-gradient(135deg,#1B1C1F,#2A2C31)">
+      <div>
+        <h3 style="color:#fff">🎠 Monats-Highlights-Karussell</h3>
+        <div style="font-size:.75rem;color:rgba(255,255,255,.5)">„Das war der SLZB-Monat" – Instagram-Karussell</div>
+      </div>
+      <button class="btn btn-ghost btn-sm close-x" style="color:#fff">✕</button>
     </div>
     <div class="modal-body" style="background:#111;padding:16px">
-      ${highlights.length === 0 ? `<div class="alert alert-warning"><span class="alert-icon">⚠️</span><span>Keine freigegebenen Erfolge für ${esc(monatLabel)} gefunden.</span></div>` : `
-      <div class="alert alert-info mb-3"><span class="alert-icon">ℹ️</span>
-        <span>${highlights.length} Erfolge gefunden. Jede Karte einzeln herunterladen.</span></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-        ${highlights.map((_,i)=>`<button class="tab-btn ${i===0?'active':''}" onclick="highlightKarteZeigen(${i})">${i+1}</button>`).join('')}
+      <!-- Monat-Auswahl -->
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px;background:rgba(255,255,255,.05);padding:12px;border-radius:8px">
+        <div style="flex:1;min-width:200px">
+          <label style="color:#aaa;font-size:.78rem;font-weight:700;display:block;margin-bottom:4px">Monat auswählen</label>
+          <select id="highlight-monat-select" style="width:100%;background:#2A2C31;color:#fff;border:1px solid #444;border-radius:6px;padding:8px 10px;font-size:.88rem">
+            ${monatOptionen.map((o,i) => `<option value="${i}">${esc(o.label)}</option>`).join('')}
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <label style="color:#aaa;font-size:.78rem;display:flex;align-items:center;gap:6px;cursor:pointer">
+            <input type="checkbox" id="highlight-mit-deckblatt" checked style="width:16px;height:16px">
+            <span>Deckblatt „Das war unser Monat"</span>
+          </label>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="highlightMonatLaden()" style="white-space:nowrap">
+          🔄 Laden
+        </button>
       </div>
-      <div style="text-align:center">
-        <canvas id="highlight-canvas" width="1080" height="1080"
-          style="max-width:100%;max-height:55vh;display:block;margin:0 auto;border-radius:8px"></canvas>
-        <p class="text-xs mt-2" style="color:#888" id="highlight-info">Karte 1 von ${highlights.length}</p>
-      </div>`}
+
+      <div id="highlight-inhalt">
+        <div style="text-align:center;color:#888;padding:40px">
+          ← Monat auswählen und auf „Laden" klicken
+        </div>
+      </div>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost close-btn">Schließen</button>
-      ${highlights.length>0?`
-      <button class="btn btn-outline" onclick="highlightAlleHerunterladen()">⬇️ Alle herunterladen</button>
-      <button class="btn btn-primary" onclick="highlightKarteHerunterladen()">🖼️ Diese Karte</button>`:''}
+    <div class="modal-footer" style="background:#1B1C1F;border-top:1px solid #333">
+      <button class="btn btn-ghost close-btn" style="color:#aaa">Schließen</button>
+      <div id="highlight-download-btns" style="display:none;gap:8px;display:flex">
+        <button class="btn btn-outline" onclick="highlightAlleHerunterladen()" style="color:#fff;border-color:#555">⬇️ Alle herunterladen</button>
+        <button class="btn btn-primary" onclick="highlightKarteHerunterladen()">🖼️ Diese Karte</button>
+      </div>
     </div>`;
 
   modal.querySelector('.close-x').onclick = ()=>overlay.remove();
   modal.querySelector('.close-btn').onclick = ()=>overlay.remove();
   overlay.appendChild(modal);
+
+  // Monat-Optionen im window speichern
+  window._highlightMonatOptionen = monatOptionen;
+  window._highlightAlleErfolge = alle;
+
+  schutzeModalVorAussenklick(overlay, modal);
+  document.body.appendChild(overlay);
+}
+
+async function highlightMonatLaden() {
+  const select = document.getElementById('highlight-monat-select');
+  const mitDeckblatt = document.getElementById('highlight-mit-deckblatt')?.checked;
+  const idx = parseInt(select?.value || '0');
+  const opt = (window._highlightMonatOptionen || [])[idx];
+  if (!opt) return;
+
+  const alle = window._highlightAlleErfolge || [];
+  const highlights = alle.filter(e => {
+    if (!['Freigegeben','Veröffentlicht'].includes(e.status)) return false;
+    const d = e.datum ? new Date(e.datum) : null;
+    if (!d) return false;
+    return d.getMonth() === opt.monat && d.getFullYear() === opt.jahr;
+  }).slice(0, 10);
+
+  const monatLabel = `${['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'][opt.monat]} ${opt.jahr}`;
+  window._highlightMonat = monatLabel;
+  window._highlightMitDeckblatt = mitDeckblatt;
+
+  const inhalt = document.getElementById('highlight-inhalt');
+  const dlBtns = document.getElementById('highlight-download-btns');
+
+  if (!highlights.length) {
+    if (inhalt) inhalt.innerHTML = `<div class="alert alert-warning" style="margin:0"><span class="alert-icon">⚠️</span><span>Keine freigegebenen Erfolge für <strong>${esc(monatLabel)}</strong> gefunden.</span></div>`;
+    if (dlBtns) dlBtns.style.display = 'none';
+    return;
+  }
+
+  // Karten-Nummern: mit oder ohne Deckblatt
+  const offset = mitDeckblatt ? 1 : 0;
+  const gesamtKarten = highlights.length + offset;
+
+  window._highlightErfolge = highlights;
+  window._highlightAktuell = 0;
+
+  if (inhalt) {
+    inhalt.innerHTML = `
+      <div class="alert alert-info mb-3" style="background:rgba(0,51,102,.2);border-color:rgba(0,51,102,.3)">
+        <span class="alert-icon">ℹ️</span>
+        <span style="color:#aaa">${gesamtKarten} Karten${mitDeckblatt?' (inkl. Deckblatt)':''} für <strong style="color:#fff">${esc(monatLabel)}</strong></span>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+        ${mitDeckblatt ? `<button class="tab-btn active" onclick="highlightKarteZeigenMitDeckblatt(-1)">🎠 Deckblatt</button>` : ''}
+        ${highlights.map((_,i)=>`<button class="tab-btn ${!mitDeckblatt&&i===0?'active':''}" onclick="highlightKarteZeigenMitDeckblatt(${i})">${i+1+offset}</button>`).join('')}
+      </div>
+      <div style="text-align:center">
+        <canvas id="highlight-canvas" width="1080" height="1080"
+          style="max-width:100%;max-height:52vh;display:block;margin:0 auto;border-radius:8px"></canvas>
+        <p style="color:#888;font-size:.78rem;margin-top:8px" id="highlight-info">Karte wird geladen...</p>
+      </div>`;
+  }
+  if (dlBtns) dlBtns.style.display = 'flex';
+
+  // Erste Karte anzeigen
+  setTimeout(() => highlightKarteZeigenMitDeckblatt(mitDeckblatt ? -1 : 0), 100);
+}
+
+async function highlightKarteZeigenMitDeckblatt(nr) {
+  // nr = -1 → Deckblatt, nr >= 0 → Erfolg-Karte
+  const erfolge = window._highlightErfolge || [];
+  const monatLabel = window._highlightMonat || '';
+  const mitDeckblatt = window._highlightMitDeckblatt;
+  const offset = mitDeckblatt ? 1 : 0;
+  const gesamt = erfolge.length + offset;
+
+  window._highlightAktuell = nr;
+
+  // Tab-Buttons aktualisieren
+  document.querySelectorAll('.modal .tab-btn').forEach((b, i) => {
+    const btnNr = mitDeckblatt ? i - 1 : i;
+    b.classList.toggle('active', btnNr === nr);
+  });
+
+  const info = document.getElementById('highlight-info');
+
+  if (nr === -1) {
+    // Deckblatt
+    if (info) info.textContent = `Deckblatt · ${monatLabel}`;
+    await zeichneMonatsDeckblatt('highlight-canvas', monatLabel, erfolge.length);
+  } else {
+    const e = await DB.getErfolgById(erfolge[nr].id);
+    if (info) info.textContent = `Karte ${nr+1+offset} von ${gesamt} · ${e.titel||''}`;
+    await zeichneHighlightKarte('highlight-canvas', e, nr+1+offset, gesamt);
+  }
+}
 
   // Ausblenden-Buttons per JS hinzufügen (vermeidet Template-String-Escaping-Probleme)
   setTimeout(() => {
@@ -3449,14 +3555,6 @@ async function zeigeHighlightsKarussell() {
   overlay.addEventListener('click', ev=>{ if(ev.target===overlay) overlay.remove(); });
   document.body.appendChild(overlay);
 
-  if (highlights.length > 0) {
-    window._highlightErfolge = highlights;
-    window._highlightAktuell = 0;
-    window._highlightMonat = monatLabel;
-    setTimeout(()=>highlightKarteZeigen(0), 100);
-  }
-}
-
 async function highlightKarteZeigen(nr) {
   const erfolge = window._highlightErfolge || [];
   if (!erfolge[nr]) return;
@@ -3491,6 +3589,220 @@ async function highlightAlleHerunterladen() {
     await new Promise(r=>setTimeout(r,200));
   }
   toast('Alle Karten heruntergeladen!','success');
+}
+
+// ── Highlight-Karte zeichnen (1080×1080 Instagram-Post) ──────────────────────
+async function zeichneHighlightKarte(canvasId, e, nr, gesamt) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  // Bild laden
+  let bild = null;
+  if (e.bilder?.length) {
+    const b = e.bilder.find(b => b.signedUrl) || e.bilder[0];
+    if (b?.signedUrl) {
+      try {
+        bild = await new Promise((res, rej) => {
+          const img = new Image(); img.crossOrigin = 'anonymous';
+          img.onload = () => res(img);
+          img.onerror = () => res(null);
+          img.src = b.signedUrl;
+        });
+      } catch(e) { bild = null; }
+    }
+  }
+
+  // Hintergrund
+  ctx.fillStyle = '#1B1C1F';
+  ctx.fillRect(0, 0, W, H);
+
+  if (bild) {
+    // Bild als Hintergrund mit Abdunkelung
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    const scale = Math.max(W/bild.width, H/bild.height);
+    const bw = bild.width * scale, bh = bild.height * scale;
+    const bx = (W - bw) / 2, by = (H - bh) / 2;
+    ctx.drawImage(bild, bx, by, bw, bh);
+    ctx.restore();
+  } else {
+    // Silhouette-Fallback
+    const sportart = e.sportartText || e.sport_id || '';
+    if (typeof zeichneSportartSilhouette === 'function') {
+      zeichneSportartSilhouette(ctx, sportart, W/2, H*0.38, Math.min(W,H)*0.28, 'rgba(255,255,255,0.08)');
+    }
+  }
+
+  // Roter Gradient unten
+  const grad = ctx.createLinearGradient(0, H*0.45, 0, H);
+  grad.addColorStop(0, 'rgba(0,0,0,0)');
+  grad.addColorStop(0.4, 'rgba(180,0,20,0.55)');
+  grad.addColorStop(1, 'rgba(226,0,26,0.95)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Header: Logo + SLZB
+  if (typeof zeichneSlzbHeader === 'function') {
+    zeichneSlzbHeader(ctx, W, H, '', '');
+  } else {
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(0, 0, W, 90);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 22px Montserrat, Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText('SLZB Berlin', 20, 55);
+  }
+
+  // Karussell-Nummer oben rechts
+  const monat = window._highlightMonat || '';
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  const numW = 90, numH = 36;
+  const numX = W - numW - 16, numY = 16;
+  ctx.beginPath();
+  ctx.roundRect(numX, numY, numW, numH, 8);
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 16px Montserrat, Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${nr} / ${gesamt}`, numX + numW/2, numY + 24);
+
+  // Sportart-Badge
+  const sportartText = e.sportartText || '';
+  if (sportartText) {
+    ctx.fillStyle = '#E2001A';
+    const badgeW = ctx.measureText(sportartText.toUpperCase()).width + 32;
+    const badgeX = (W - badgeW) / 2;
+    const badgeY = H * 0.52;
+    ctx.beginPath();
+    ctx.roundRect(badgeX, badgeY, badgeW, 32, 16);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 13px Montserrat, Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(sportartText.toUpperCase(), W/2, badgeY + 21);
+  }
+
+  // Platzierung / Medaille
+  const platz = e.platzierung;
+  const medaille = e.medaille && e.medaille !== 'keine' ? e.medaille : null;
+  if (platz || medaille) {
+    const medFarben = { Gold: '#C9A227', Silber: '#BFC8D2', Bronze: '#C2783A' };
+    const farbe = medaille ? (medFarben[medaille] || '#E2001A') : '#fff';
+    const platzText = medaille ? `🥇 ${medaille}` : `${platz}. Platz`;
+    ctx.fillStyle = farbe;
+    ctx.font = 'bold italic 52px Montserrat, Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(platzText.replace('🥇','').replace('🥈','').replace('🥉','').trim(), W/2, H * 0.67);
+    if (medaille) {
+      const emojis = { Gold: '🥇', Silber: '🥈', Bronze: '🥉' };
+      ctx.font = '44px Arial';
+      ctx.fillText(emojis[medaille] || '', W/2 - ctx.measureText(platzText.replace('🥇','').replace('🥈','').replace('🥉','').trim()).width/2 - 30, H * 0.67);
+    }
+  }
+
+  // Titel (mehrzeilig)
+  const titel = e.titel || e.athletenName || '';
+  if (titel) {
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 34px Montserrat, Arial';
+    ctx.textAlign = 'center';
+    // Zeilenumbruch bei langen Titeln
+    const maxW = W * 0.85;
+    const words = titel.split(' ');
+    let lines = [], line = '';
+    for (const w of words) {
+      const test = line ? line + ' ' + w : w;
+      if (ctx.measureText(test).width > maxW && line) {
+        lines.push(line); line = w;
+      } else { line = test; }
+    }
+    if (line) lines.push(line);
+    lines = lines.slice(0, 3);
+    const lineH = 42;
+    const startY = H * 0.74 - (lines.length - 1) * lineH / 2;
+    lines.forEach((l, i) => ctx.fillText(l, W/2, startY + i * lineH));
+  }
+
+  // Athletenname
+  const athlet = e.athletenName || '';
+  if (athlet) {
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.font = '22px Montserrat, Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(athlet, W/2, H * 0.87);
+  }
+
+  // Footer
+  if (typeof zeichneSlzbFooterNeu === 'function') {
+    zeichneSlzbFooterNeu(ctx, W, H);
+  } else {
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(0, H - 70, W, 70);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 16px Montserrat, Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Schul- und Leistungssportzentrum Berlin', W/2, H - 38);
+    ctx.fillStyle = '#E2001A';
+    ctx.font = 'bold italic 22px Montserrat, Arial';
+    ctx.fillText('#SLZBerlin', W/2, H - 14);
+  }
+}
+
+// ── Deckblatt für Monats-Karussell ───────────────────────────────────────────
+async function zeichneMonatsDeckblatt(canvasId, monatLabel, anzahl) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  // Hintergrund
+  ctx.fillStyle = '#1B1C1F';
+  ctx.fillRect(0, 0, W, H);
+
+  // Roter Gradient
+  const grad = ctx.createLinearGradient(0, H*0.3, 0, H);
+  grad.addColorStop(0, 'rgba(0,0,0,0)');
+  grad.addColorStop(1, 'rgba(226,0,26,0.9)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Header
+  if (typeof zeichneSlzbHeader === 'function') {
+    zeichneSlzbHeader(ctx, W, H, '', '');
+  }
+
+  // Haupttext: "DAS WAR"
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold italic 72px Montserrat, Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText('DAS WAR', W/2, H * 0.42);
+
+  // "UNSER MONAT"
+  ctx.fillStyle = '#E2001A';
+  ctx.font = 'bold italic 72px Montserrat, Arial';
+  ctx.fillText('UNSER MONAT', W/2, H * 0.52);
+
+  // Monat-Name
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 48px Montserrat, Arial';
+  ctx.fillText(monatLabel.toUpperCase(), W/2, H * 0.64);
+
+  // Anzahl Erfolge
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.font = '24px Montserrat, Arial';
+  ctx.fillText(`${anzahl} sportliche Erfolge`, W/2, H * 0.73);
+
+  // Swipe-Hinweis
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.font = '18px Montserrat, Arial';
+  ctx.fillText('→ Wische für alle Highlights', W/2, H * 0.82);
+
+  // Footer
+  if (typeof zeichneSlzbFooterNeu === 'function') {
+    zeichneSlzbFooterNeu(ctx, W, H);
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -4869,12 +5181,31 @@ function zeigeKalenderEintragModal(eintrag = null) {
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Abbrechen</button>
+      ${!istNeu && eintrag ? `<button class="btn btn-outline btn-sm" onclick="kalenderZuMeldung(${JSON.stringify(eintrag).replace(/"/g,'&quot;')});this.closest('.modal-overlay').remove()" title="Meldung aus diesem Termin erstellen">⚡ Meldung erstellen</button>` : ''}
       <button class="btn btn-primary" onclick="speichereKalenderEintrag('${eintrag?._id||''}')">💾 Speichern</button>
     </div>`;
 
   overlay.appendChild(modal);
   schutzeModalVorAussenklick(overlay, modal);
   document.body.appendChild(overlay);
+}
+
+// Kalender-Eintrag → Meldung erstellen (Vorausfüllung)
+function kalenderZuMeldung(eintrag) {
+  if (!eintrag) return;
+  // Felder vorausfüllen
+  window._kalenderVorausfuellung = {
+    sportartText: eintrag.sportart || '',
+    wettbewerbText: eintrag.veranstaltung || '',
+    datum: eintrag.datum || '',
+    ort: eintrag.ort || '',
+    titel: eintrag.veranstaltung || '',
+  };
+  // Zur Meldungsart-Auswahl navigieren
+  if (typeof zeigeSportmeldungsartAuswahl === 'function') {
+    zeigeSportmeldungsartAuswahl();
+    toast('Felder aus Kalender-Eintrag vorausgefüllt', 'info');
+  }
 }
 
 async function speichereKalenderEintrag(id) {
