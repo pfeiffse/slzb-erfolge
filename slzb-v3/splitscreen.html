@@ -450,6 +450,8 @@
   <button class="ctrl-btn" onclick="setzeLayout('nur-vplan')">📋 Nur Vplan</button>
   <div class="ctrl-sep"></div>
   <button class="ctrl-btn" onclick="vollbild()">⛶ Vollbild</button>
+  <div class="ctrl-sep"></div>
+  <button class="ctrl-btn aktiv" id="ctrl-scroll-btn" onclick="toggleVpScroll()" title="VP Auto-Scroll ein/aus">↕ Scroll: AN</button>
   <button class="ctrl-btn" onclick="zeigeKonfig()">⚙️ Einstellungen</button>
   <div class="ctrl-sep"></div>
   <span id="ctrl-status"></span>
@@ -760,6 +762,9 @@ function starteAnzeige() {
   // VP-Skalierung initialisieren
   setTimeout(aktualisiereVplanSkalierung, 500);
 
+  // Auto-Scroll starten (Standard: an)
+  setTimeout(() => starteVpAutoScroll(40), 2000);
+
   // Vplan-Reload alle 5 Minuten
   setInterval(() => {
     const frame = document.getElementById('vplan-frame');
@@ -827,6 +832,19 @@ function aktualisiereUhr() {
 }
 
 // ── Vollbild ──────────────────────────────────────────────────
+function toggleVpScroll() {
+  const btn = document.getElementById('ctrl-scroll-btn');
+  if (_vpScrollTimer) {
+    stoppeVpAutoScroll();
+    if (btn) btn.textContent = '↕ Scroll: AUS';
+    if (btn) btn.classList.remove('aktiv');
+  } else {
+    starteVpAutoScroll(40);
+    if (btn) btn.textContent = '↕ Scroll: AN';
+    if (btn) btn.classList.add('aktiv');
+  }
+}
+
 function vollbild() {
   if (!document.fullscreenElement) {
     document.documentElement.requestFullscreen().catch(() => {});
@@ -993,21 +1011,67 @@ document.addEventListener('keydown', e => {
   window._setzeBreite = setzeBreite;
 })();
 
-// ── VP-Skalierung ────────────────────────────────────────────────────────────
+// ── VP-Skalierung (lesbar, scrollend) ───────────────────────────────────────
 function aktualisiereVplanSkalierung() {
   const frame = document.getElementById('vplan-frame');
   const panel = document.getElementById('panel-vplan');
+  const wrap = document.getElementById('vplan-frame-wrap');
   if (!frame || !panel) return;
+
   const panelW = panel.clientWidth;
-  const panelH = panel.clientHeight - 36;
-  const vpBreite = 1920;
-  const scale = Math.min(panelW / vpBreite, 1.0);
+  const panelH = panel.clientHeight - 36; // Minus Tab-Höhe
+
+  // Ziel: VP soll gut lesbar sein
+  // Annahme: VP ist für ~1200px Breite optimiert (nicht 1920)
+  const vpZielBreite = 1200;
+  const scale = Math.min(panelW / vpZielBreite, 1.2); // Max 120% Zoom
+
   frame.style.transform = `scale(${scale})`;
   frame.style.transformOrigin = 'top left';
-  frame.style.width = `${vpBreite}px`;
+  frame.style.width = `${vpZielBreite}px`;
+  // Höhe: genug für Inhalt, aber scrollbar
   frame.style.height = `${Math.round(panelH / scale)}px`;
+  frame.style.minHeight = `${Math.round(panelH / scale)}px`;
+
+  // Wrapper scrollbar machen
+  if (wrap) {
+    wrap.style.overflowY = 'auto';
+    wrap.style.overflowX = 'hidden';
+  }
 }
 window.addEventListener('resize', aktualisiereVplanSkalierung);
+
+// Auto-Scroll für VP (langsam nach unten, dann zurück)
+let _vpScrollTimer = null;
+let _vpScrollDir = 1;
+let _vpScrollPos = 0;
+
+function starteVpAutoScroll(geschwindigkeit = 30) {
+  stoppeVpAutoScroll();
+  const wrap = document.getElementById('vplan-frame-wrap');
+  if (!wrap) return;
+
+  _vpScrollTimer = setInterval(() => {
+    const maxScroll = wrap.scrollHeight - wrap.clientHeight;
+    if (maxScroll <= 0) return;
+
+    _vpScrollPos += _vpScrollDir * 1;
+
+    if (_vpScrollPos >= maxScroll) {
+      _vpScrollDir = -1;
+      // Pause oben
+      setTimeout(() => { _vpScrollDir = 1; _vpScrollPos = 0; wrap.scrollTop = 0; }, 3000);
+    } else if (_vpScrollPos <= 0) {
+      _vpScrollDir = 1;
+    }
+
+    wrap.scrollTop = _vpScrollPos;
+  }, geschwindigkeit);
+}
+
+function stoppeVpAutoScroll() {
+  if (_vpScrollTimer) { clearInterval(_vpScrollTimer); _vpScrollTimer = null; }
+}
 
 // ── Auto-Start wenn URL-Parameter ────────────────────────────
 const params = new URLSearchParams(window.location.search);

@@ -158,6 +158,54 @@ function zeichneSlzbHeader(ctx, W, H, sportart, datum, akzent='rot') {
 
 // ── Mehrzeilige Erfolgs-Liste zeichnen ───────────────────────
 // Gibt die neue Y-Position zurück
+// Zentrierte Version der Ergebnisliste (für Update-Poster und Athletenvorstellung)
+function zeichneErgebnisListeZentriert(ctx, ergRaw, cx, y, maxW, maxH, fontSize) {
+  if (!ergRaw) return y;
+  const zeilen = ergRaw.includes(' | ')
+    ? ergRaw.split(' | ').filter(z=>z.trim())
+    : ergRaw.split('\n').filter(z=>z.trim());
+  if (!zeilen.length) return y;
+
+  // Gemeinsamen Athletennamen-Präfix entfernen
+  const prefixMatch = zeilen[0].match(/^([^:]+):/);
+  const gemeinsamerName = prefixMatch && zeilen.every(z=>z.startsWith(prefixMatch[1]+':'))
+    ? prefixMatch[1].trim() : null;
+  const bereinigte = gemeinsamerName
+    ? zeilen.map(z=>z.replace(gemeinsamerName+':', '').trim())
+    : zeilen;
+
+  const sz = fontSize || Math.max(11, Math.min(16, Math.floor(maxH / (bereinigte.length * 1.5))));
+  const zH = Math.round(sz * 1.45);
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+
+  for (const zeile of bereinigte) {
+    if (y + zH > y + maxH) break;
+    // Platz fett, Rest normal – aber zentriert
+    const platzMatch = zeile.match(/^(\d+\.\s*Platz\s*[–-]\s*)(.*)/i);
+    if (platzMatch) {
+      // Platz in Akzentfarbe, Disziplin darunter
+      ctx.fillStyle = 'rgba(0,51,102,0.9)';
+      ctx.font = `bold ${sz}px Montserrat, Arial, sans-serif`;
+      ctx.fillText(platzMatch[1].trim(), cx, y, maxW);
+      y += Math.round(sz * 1.2);
+      if (platzMatch[2]) {
+        ctx.fillStyle = '#1B1C1F';
+        ctx.font = `${Math.round(sz*0.9)}px Montserrat, Arial, sans-serif`;
+        ctx.fillText(platzMatch[2].trim(), cx, y, maxW);
+        y += Math.round(sz * 1.1);
+      }
+    } else {
+      ctx.fillStyle = '#1B1C1F';
+      ctx.font = `${sz}px Montserrat, Arial, sans-serif`;
+      ctx.fillText(zeile, cx, y, maxW);
+      y += zH;
+    }
+  }
+  return y;
+}
+
 function zeichneErgebnisListe(ctx, ergRaw, x, y, maxW, maxH, fontSize) {
   if (!ergRaw) return y;
   // Athletennamen entfernen wenn alle gleich (z.B. "Willy Hoffmann: ...")

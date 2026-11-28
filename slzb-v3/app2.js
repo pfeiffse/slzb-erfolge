@@ -11043,12 +11043,24 @@ function zeigeErgebnisUpdateModal(veranstaltungsId) {
           style="width:100%" oninput="euAktualisierePoster()">
       </div>
 
-      <!-- Foto -->
+      <!-- Foto mit Zoom-Editor -->
       <div class="form-group mb-3">
         <label style="font-size:.78rem;font-weight:700;color:var(--slzb-text-muted)">📸 Foto (optional)</label>
         <input type="file" id="eu-bild" accept="image/jpeg,image/png,image/webp"
           onchange="euBildVorschau(this)" style="width:100%;margin-top:4px">
-        <img id="eu-bild-preview" src="" style="display:none;max-height:70px;margin-top:6px;border-radius:6px">
+        <div id="eu-bild-editor" style="display:none;margin-top:8px;background:var(--slzb-bg-secondary);border-radius:8px;padding:10px">
+          <img id="eu-bild-preview" src="" style="max-height:80px;border-radius:6px;display:block;margin:0 auto 8px">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <label style="font-size:.72rem;color:var(--slzb-text-muted);white-space:nowrap">Zoom:</label>
+            <input type="range" id="eu-bild-zoom" min="50" max="200" value="100" step="5"
+              style="flex:1;min-width:80px" oninput="euBildZoomAktualisieren()">
+            <span id="eu-bild-zoom-val" style="font-size:.72rem;color:var(--slzb-text-muted);min-width:35px">100%</span>
+            <label style="font-size:.72rem;color:var(--slzb-text-muted);white-space:nowrap">Pos Y:</label>
+            <input type="range" id="eu-bild-pos-y" min="0" max="100" value="20" step="5"
+              style="flex:1;min-width:80px" oninput="euBildZoomAktualisieren()">
+            <button class="btn btn-ghost btn-sm" onclick="euBildEntfernen()" style="font-size:.72rem">✕ Entfernen</button>
+          </div>
+        </div>
       </div>
 
       <!-- Live-Vorschau -->
@@ -11245,10 +11257,50 @@ function euBildVorschau(input) {
   const reader = new FileReader();
   reader.onload = ev => {
     const preview = document.getElementById('eu-bild-preview');
-    if (preview) { preview.src = ev.target.result; preview.style.display = 'block'; }
+    const editor = document.getElementById('eu-bild-editor');
+    if (preview) { preview.src = ev.target.result; }
+    if (editor) editor.style.display = 'block';
     window._euBildDataUrl = ev.target.result;
+    // Zoom zurücksetzen
+    const zoom = document.getElementById('eu-bild-zoom');
+    const posY = document.getElementById('eu-bild-pos-y');
+    if (zoom) zoom.value = 100;
+    if (posY) posY.value = 20;
+    euBildZoomAktualisieren();
   };
   reader.readAsDataURL(file);
+}
+
+function euBildZoomAktualisieren() {
+  const zoom = parseInt(document.getElementById('eu-bild-zoom')?.value || 100);
+  const posY = parseInt(document.getElementById('eu-bild-pos-y')?.value || 20);
+  const zoomVal = document.getElementById('eu-bild-zoom-val');
+  if (zoomVal) zoomVal.textContent = zoom + '%';
+  // Speichere Zoom/Position für Poster-Rendering
+  window._euBildZoom = zoom / 100;
+  window._euBildPosY = posY / 100;
+  // Vorschau-Bild aktualisieren
+  const preview = document.getElementById('eu-bild-preview');
+  if (preview) {
+    preview.style.objectFit = 'cover';
+    preview.style.objectPosition = `center ${posY}%`;
+    preview.style.transform = `scale(${zoom/100})`;
+    preview.style.transformOrigin = `center ${posY}%`;
+  }
+  euAktualisierePoster();
+}
+
+function euBildEntfernen() {
+  window._euBildDataUrl = null;
+  window._euBildZoom = 1.0;
+  window._euBildPosY = 0.2;
+  const preview = document.getElementById('eu-bild-preview');
+  const editor = document.getElementById('eu-bild-editor');
+  const input = document.getElementById('eu-bild');
+  if (preview) { preview.src = ''; }
+  if (editor) editor.style.display = 'none';
+  if (input) input.value = '';
+  euAktualisierePoster();
 }
 
 async function euErstellePoster(veranstaltungsId, mitMeldung) {
@@ -11268,14 +11320,17 @@ async function euErstellePoster(veranstaltungsId, mitMeldung) {
   document.querySelector('.modal-overlay')?.remove();
   toast('⏳ Poster wird erstellt...', 'info');
 
-  // Bild laden
+  // Bild laden (mit Zoom/Position)
   let bild = null;
   if (window._euBildDataUrl) {
     bild = await new Promise(res => {
       const img = new Image(); img.onload = () => res(img); img.onerror = () => res(null);
       img.src = window._euBildDataUrl;
     });
-    window._euBildDataUrl = null;
+    // Zoom und Position für Canvas übernehmen
+    window._bildZoom = window._euBildZoom || 1.0;
+    window._bildOffset = { x: 0.5, y: window._euBildPosY || 0.2 };
+    // NICHT zurücksetzen - damit Bild beim nächsten Mal noch da ist
   }
 
   // Athlet-Daten aus Workspace
@@ -11550,6 +11605,50 @@ function zeigeAthletenVorstellungMitDaten() {
       }
     }
   }, 150);
+}
+
+
+// Athletenvorstellung-Daten speichern (ohne Download)
+function speichereAthletenVorstellungDaten() {
+  const veranstaltung = document.getElementById('av-veranstaltung')?.value?.trim();
+  const ort = document.getElementById('av-ort')?.value?.trim();
+  const sportart = document.getElementById('av-sportart')?.value?.trim();
+  const format = document.getElementById('av-format')?.value;
+
+  if (!veranstaltung) {
+    toast('Bitte Veranstaltungsname eingeben', 'warning');
+    document.getElementById('av-veranstaltung')?.focus();
+    return;
+  }
+
+  // Athleten-Daten sammeln
+  const athleten = [];
+  let i = 1;
+  while (document.getElementById(`av-vorname-${i}`)) {
+    const vorname = document.getElementById(`av-vorname-${i}`)?.value?.trim();
+    const nachname = document.getElementById(`av-nachname-${i}`)?.value?.trim();
+    const kader = document.getElementById(`av-kader-${i}`)?.value?.trim();
+    const erfolge = document.getElementById(`av-erfolge-${i}`)?.value?.trim();
+    const starts = document.getElementById(`av-starts-${i}`)?.value?.trim();
+    const bildDataUrl = window[`_avBildDataUrl_${i}`] || null;
+    const bildObj = window[`_avBildObj_${i}`] ? true : false;
+
+    if (vorname || nachname) {
+      athleten.push({ vorname, nachname, kader, erfolge, starts, hatBild: bildObj });
+    }
+    i++;
+  }
+
+  // In localStorage speichern
+  const daten = {
+    veranstaltung, ort, sportart, format,
+    athleten,
+    gespeichertAm: new Date().toISOString(),
+  };
+  localStorage.setItem('slzb_av_entwurf', JSON.stringify(daten));
+  window._avGespeicherteDaten = daten;
+
+  toast(`✅ Entwurf gespeichert: ${veranstaltung} (${athleten.length} Athlet${athleten.length!==1?'en':''})`, 'success');
 }
 
 async function erstelleAthletenVorstellung() {
