@@ -1276,8 +1276,8 @@ if (params.get('autostart') === '1') {
     if (quelleEl) { quelleEl.value = quelleParam; vplanQuelleWechseln(quelleParam); }
   }
 
-  // Vollbild-Modus: ?fullscreen=1 oder ?autostart=1&fullscreen=1
-  const wantFullscreen = params.get('fullscreen') === '1' || params.get('autostart') === '1';
+  // Vollbild-Modus: nur wenn explizit ?fullscreen=1
+  const wantFullscreen = params.get('fullscreen') === '1';
 
   if (wantFullscreen) {
     // Vollbild-Strategie:
@@ -1362,6 +1362,7 @@ if (params.get('autostart') === '1') {
     });
 
   } else {
+    // Kein Vollbild gewünscht: direkt starten
     setTimeout(starteAnzeige, 500);
   }
 } else {

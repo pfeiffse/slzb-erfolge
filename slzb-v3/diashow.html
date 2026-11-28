@@ -763,7 +763,7 @@ function dsLivestreamStarten() {
   const header = document.createElement('div');
   header.id = 'ds-live-header';
   header.style.cssText = 'position:absolute;top:0;left:0;right:0;z-index:51;background:linear-gradient(135deg,#003366,#001F4D);padding:8px 16px;display:flex;align-items:center;gap:12px;border-bottom:3px solid #E2001A';
-  header.innerHTML = '<img src="slzb-sport-erfolge-logo.png" alt="SLZB" style="height:32px;width:auto" onerror="this.style.display='none'"><div style="color:#fff;font-weight:700;font-size:.85rem">Schul- und Leistungssportzentrum Berlin</div><span style="background:#E2001A;color:#fff;padding:2px 10px;border-radius:12px;font-size:.72rem;font-weight:700;margin-left:auto">● LIVE</span>';
+  header.innerHTML = '<img src="slzb-sport-erfolge-logo.png" alt="SLZB" style="height:32px;width:auto"><div style="color:#fff;font-weight:700;font-size:.85rem">Schul- und Leistungssportzentrum Berlin</div><span style="background:#E2001A;color:#fff;padding:2px 10px;border-radius:12px;font-size:.72rem;font-weight:700;margin-left:auto">● LIVE</span>';
   const container = document.getElementById('diashow');
   if (container) { container.appendChild(liveFrame); container.appendChild(header); }
 }

@@ -8570,11 +8570,23 @@ async function renderPosterEntwuerfeInTab(erfolgId) {
 // PUSH AN REDAKTION: Neue Meldung eingereicht
 // ══════════════════════════════════════════════════════════════
 async function sendeRedaktionsPush(erfolgId, titel) {
-  // Bewusst deaktiviert: Die Edge Function notify-status-change ist nicht
-  // bereitgestellt. Diese No-op-Funktion erhält bestehende Aufrufe, löst aber
-  // keine fehlgeschlagenen Netzwerkrequests aus.
-  console.info('[Push] Übersprungen:', { erfolgId, titel });
-  return { ok: true, skipped: true };
+  // In-App-Benachrichtigung: Speichere in Supabase notifications-Tabelle
+  // Redakteure/OEA/Admins sehen die Benachrichtigung beim nächsten Laden
+  try {
+    await Backend.client.from('notifications').insert([{
+      typ: 'neue_meldung',
+      titel: `Neue Meldung: ${titel}`,
+      nachricht: `Eine neue Meldung wurde eingereicht und wartet auf Prüfung.`,
+      link: `/erfolg-detail/${erfolgId}`,
+      erstellt_von: Auth.id(),
+      erstellt_von_name: Auth.name(),
+      gelesen: false,
+    }]);
+  } catch(e) {
+    // Tabelle existiert möglicherweise noch nicht - kein Fehler
+    console.info('[Push] Benachrichtigung nicht gespeichert:', e.message);
+  }
+  return { ok: true };
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -11689,6 +11701,66 @@ function avSpeichereWorkspace() {
 
   speichereVeranstaltung(daten);
   toast('✅ Veranstaltung gespeichert – unter "📋 Gespeicherte Veranstaltungen" abrufbar', 'success');
+}
+
+
+// ── Veranstaltungs-Vorlagen (wiederkehrende Events) ──────────────────────────
+async function zeigeVeranstaltungsVorlagen() {
+  // Lade aus Supabase (geräteübergreifend)
+  const liste = await ladeGespeicherteVeranstaltungenAsync();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.maxWidth = '600px';
+
+  modal.innerHTML = `
+    <div class="modal-header">
+      <h3>📋 Veranstaltungs-Vorlagen</h3>
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="alert alert-info mb-3">
+        <span class="alert-icon">ℹ️</span>
+        <span>Gespeicherte Veranstaltungen als Vorlage für neue Athletenvorstellungen verwenden.</span>
+      </div>
+      ${!liste.length ? '<p class="text-muted">Noch keine Vorlagen gespeichert.</p>' :
+        liste.map(v => `
+          <div style="border:1px solid var(--slzb-border);border-radius:8px;padding:12px;margin-bottom:10px;display:flex;align-items:center;gap:12px">
+            <div style="flex:1">
+              <div style="font-weight:700">${esc(v.veranstaltung)}</div>
+              <div style="font-size:.78rem;color:var(--slzb-text-muted)">
+                ${v.sportart ? esc(v.sportart) + ' · ' : ''}
+                ${v.ort ? '📍 ' + esc(v.ort) + ' · ' : ''}
+                ${(v.athleten||[]).length} Athlet(en) ·
+                ${new Date(v.gespeichertAm).toLocaleDateString('de-DE')}
+              </div>
+            </div>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-primary btn-sm" onclick="ladeVeranstaltungWorkspace('${v.id}');this.closest('.modal-overlay').remove()">
+                ▶ Laden
+              </button>
+              <button class="btn btn-outline btn-sm" onclick="zeigeErgebnisUpdateModal('${v.id}')">
+                🏆 Update
+              </button>
+              <button class="btn btn-ghost btn-sm" style="color:#E2001A"
+                onclick="loescheGespeicherteVeranstaltung('${v.id}');this.closest('.modal-overlay').remove();zeigeVeranstaltungsVorlagen()">
+                🗑️
+              </button>
+            </div>
+          </div>`).join('')}
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">Schließen</button>
+      <button class="btn btn-primary" onclick="this.closest('.modal-overlay').remove();zeigeAthletenVorstellung()">
+        + Neue Veranstaltung
+      </button>
+    </div>`;
+
+  overlay.appendChild(modal);
+  schutzeModalVorAussenklick(overlay, modal);
+  document.body.appendChild(overlay);
 }
 
 async function zeigeVeranstaltungsWorkspace() {
